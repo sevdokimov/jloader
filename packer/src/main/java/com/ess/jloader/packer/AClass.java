@@ -30,7 +30,7 @@ public class AClass {
     private FiledInfo[] fields;
     private MethodInfo[] methods;
 
-    private AttrInfo[] attrs;
+    private List<AttrInfo> attrs;
 
     public AClass(byte[] code) throws InvalidClassException, IOException {
         this.code = code;

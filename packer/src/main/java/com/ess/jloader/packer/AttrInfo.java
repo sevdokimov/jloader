@@ -2,6 +2,8 @@ package com.ess.jloader.packer;
 
 import java.io.DataInput;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Sergey Evdokimov
@@ -27,11 +29,11 @@ public class AttrInfo {
         return data;
     }
 
-    public static AttrInfo[] readAttrs(DataInput in) throws IOException {
+    public static List<AttrInfo> readAttrs(DataInput in) throws IOException {
         int attrCount = in.readUnsignedShort();
-        AttrInfo[] res = new AttrInfo[attrCount];
+        List<AttrInfo> res = new ArrayList<AttrInfo>();
         for (int i = 0; i < attrCount; i++) {
-            res[i] = new AttrInfo(in);
+            res.add(new AttrInfo(in));
         }
 
         return res;

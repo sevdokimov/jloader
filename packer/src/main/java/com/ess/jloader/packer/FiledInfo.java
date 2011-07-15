@@ -3,6 +3,7 @@ package com.ess.jloader.packer;
 import java.io.DataInput;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 
 /**
  * @author Sergey Evdokimov
@@ -12,7 +13,7 @@ public class FiledInfo {
     private int accessFlag;
     private int nameIndex;
     private int descriptorIndex;
-    private AttrInfo[] attrs;
+    private List<AttrInfo> attrs;
 
     public FiledInfo(DataInput in) throws IOException {
         accessFlag = in.readUnsignedShort();
@@ -33,7 +34,7 @@ public class FiledInfo {
         return descriptorIndex;
     }
 
-    public AttrInfo[] getAttrs() {
+    public List<AttrInfo> getAttrs() {
         return attrs;
     }
 }
