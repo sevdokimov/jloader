@@ -15,15 +15,14 @@ import java.util.zip.GZIPOutputStream;
  */
 public class JarPacker {
 
-    private final Map<String, byte[]> classMap;
+    private final Map<String, AClass> classMap;
 
     public JarPacker() {
-        classMap = new HashMap<String, byte[]>();
+        classMap = new HashMap<String, AClass>();
     }
 
     private void addClass(String className, InputStream inputStream) throws IOException {
-        byte[] bytes = IOUtils.toByteArray(inputStream);
-        classMap.put(className, bytes);
+        classMap.put(className, AClass.createFromCode(inputStream));
     }
 
     public void addJar(File jarFile) throws IOException {
@@ -55,11 +54,11 @@ public class JarPacker {
 
         DataOutputStream dataOutputStream = new DataOutputStream(gzipOutputStream);
 
-        for (Map.Entry<String, byte[]> entry : classMap.entrySet()) {
-            byte[] classCode = entry.getValue();
-            dataOutputStream.writeInt(classCode.length);
+        for (Map.Entry<String, AClass> entry : classMap.entrySet()) {
+            AClass aClass = entry.getValue();
+            dataOutputStream.writeInt(aClass.getCode().length);
             dataOutputStream.writeUTF(entry.getKey());
-            dataOutputStream.write(classCode);
+            aClass.store(dataOutputStream);
         }
 
         dataOutputStream.writeInt(-1);

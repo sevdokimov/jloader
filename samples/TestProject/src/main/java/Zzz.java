@@ -4,7 +4,7 @@ import ru.testdata.Rrr;
 /**
  * @author Sergey Evdokimov
  */
-public class Zzz {
+public final class Zzz {
 
     public Rrr getRrr() {
         return null;
