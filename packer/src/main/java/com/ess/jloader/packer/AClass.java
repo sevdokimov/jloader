@@ -23,9 +23,14 @@ public class AClass {
 
     private int superClassIndex;
 
-    private int interfaceCount;
-
     private final List<Const> consts = new ArrayList<Const>();
+
+    private final int[] interfaces;
+
+    private FiledInfo[] fields;
+    private MethodInfo[] methods;
+
+    private AttrInfo[] attrs;
 
     public AClass(byte[] code) throws InvalidClassException, IOException {
         this.code = code;
@@ -47,7 +52,28 @@ public class AClass {
         thisClassIndex = in.readUnsignedShort();
         superClassIndex = in.readUnsignedShort();
 
-        interfaceCount = in.readUnsignedShort();
+        int interfaceCount = in.readUnsignedShort();
+
+        interfaces = new int[interfaceCount];
+        for (int i = 0; i < interfaceCount; i++) {
+            interfaces[i] = in.readUnsignedShort();
+        }
+
+        int fieldCount = in.readUnsignedShort();
+        fields = new FiledInfo[fieldCount];
+        for (int i = 0; i < fieldCount; i++) {
+            fields[i] = new FiledInfo(in);
+        }
+
+        int methodCount = in.readUnsignedShort();
+        methods = new MethodInfo[methodCount];
+        for (int i = 0; i < methodCount; i++) {
+            methods[i] = new MethodInfo(in);
+        }
+
+        attrs = AttrInfo.readAttrs(in);
+
+        assert in.read() == -1;
     }
 
     public byte[] getCode() {
