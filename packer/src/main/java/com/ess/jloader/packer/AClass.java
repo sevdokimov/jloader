@@ -66,9 +66,6 @@ public class AClass {
             interfaces[i] = in.readUnsignedShort();
         }
 
-        int headSize = code.length - in.available();
-        int dataSize = in.available();
-
         int fieldCount = in.readUnsignedShort();
         fields = new FiledInfo[fieldCount];
         for (int i = 0; i < fieldCount; i++) {
@@ -84,10 +81,10 @@ public class AClass {
         attrs = AttrInfo.readAttrs(in);
 
         assert in.read() == -1;
+    }
 
-        if (log.isDebugEnabled()) {
-            log.debug(String.format("Parsed class [size=%d, headSize=%d, dataSize=%d, constCount=%d]", code.length, headSize, dataSize, constPoolSize));
-        }
+    public void printStatistic() {
+
     }
 
     public byte[] getCode() {

@@ -44,8 +44,8 @@ public class TestLoad {
 
     @Test
     public void packOpenApi() throws IOException {
-        File src = new File("samples/openapi.jar");
-        File dest = new File("samples/openapi.pack");
+        File src = new File("samples/freemarker.jar");
+        File dest = new File("samples/freemarker.pack");
         JarPacker.pack(src, dest);
     }
 
