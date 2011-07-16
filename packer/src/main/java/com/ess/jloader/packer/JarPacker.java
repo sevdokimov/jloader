@@ -1,7 +1,7 @@
 package com.ess.jloader.packer;
 
 import com.ess.jloader.loader.Utils;
-import org.apache.commons.io.IOUtils;
+import org.apache.log4j.Logger;
 
 import java.io.*;
 import java.util.HashMap;
@@ -15,6 +15,8 @@ import java.util.zip.GZIPOutputStream;
  */
 public class JarPacker {
 
+    private static final Logger log = Logger.getLogger(JarPacker.class);
+
     private final Map<String, AClass> classMap;
 
     public JarPacker() {
@@ -22,6 +24,10 @@ public class JarPacker {
     }
 
     private void addClass(String className, InputStream inputStream) throws IOException {
+        if (log.isDebugEnabled()) {
+            log.debug("Add class: " + className);
+        }
+
         classMap.put(className, AClass.createFromCode(inputStream));
     }
 

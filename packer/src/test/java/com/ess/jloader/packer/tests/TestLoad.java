@@ -42,6 +42,12 @@ public class TestLoad {
         assert "XXX".equals(res);
     }
 
+    @Test
+    public void packOpenApi() throws IOException {
+        File src = new File("samples/openapi.jar");
+        File dest = new File("samples/openapi.pack");
+        JarPacker.pack(src, dest);
+    }
 
 //    @Test
 //    public void pack() throws IOException {

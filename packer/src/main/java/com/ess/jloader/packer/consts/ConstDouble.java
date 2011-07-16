@@ -22,4 +22,9 @@ public class ConstDouble extends Const {
     public byte getCode() {
         return 6;
     }
+
+    @Override
+    public boolean isGet2ElementsInPool() {
+        return true;
+    }
 }

@@ -8,6 +8,10 @@ import java.io.IOException;
  */
 public abstract class Const {
 
+    public boolean isGet2ElementsInPool() {
+        return false;
+    }
+
     public abstract byte getCode();
 
 }

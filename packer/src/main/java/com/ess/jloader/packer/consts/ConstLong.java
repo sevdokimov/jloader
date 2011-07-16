@@ -22,4 +22,9 @@ public class ConstLong extends Const {
     public byte getCode() {
         return 5;
     }
+
+    @Override
+    public boolean isGet2ElementsInPool() {
+        return true;
+    }
 }

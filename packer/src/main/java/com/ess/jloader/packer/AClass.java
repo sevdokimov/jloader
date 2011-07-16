@@ -3,6 +3,7 @@ package com.ess.jloader.packer;
 import com.ess.jloader.packer.consts.Const;
 import com.ess.jloader.packer.consts.ConstFactory;
 import org.apache.commons.io.IOUtils;
+import org.apache.log4j.Logger;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -12,6 +13,8 @@ import java.util.List;
  * @author Sergey Evdokimov
  */
 public class AClass {
+
+    private static final Logger log = Logger.getLogger(AClass.class);
 
     private final byte[] code;
 
@@ -32,7 +35,7 @@ public class AClass {
 
     private List<AttrInfo> attrs;
 
-    public AClass(byte[] code) throws InvalidClassException, IOException {
+    public AClass(byte[] code) throws IOException {
         this.code = code;
 
         DataInputStream in = new DataInputStream(new ByteArrayInputStream(code));
@@ -43,8 +46,12 @@ public class AClass {
         int constPoolSize = in.readUnsignedShort();
         consts.add(null);
 
-        for (int i = 1; i < constPoolSize; i++) {
-            consts.add(ConstFactory.readConst(in));
+        while (consts.size() < constPoolSize) {
+            Const c = ConstFactory.readConst(in);
+            if (c.isGet2ElementsInPool()) {
+                consts.add(null);
+            }
+            consts.add(c);
         }
 
         accessFlags = in.readUnsignedShort();
@@ -58,6 +65,9 @@ public class AClass {
         for (int i = 0; i < interfaceCount; i++) {
             interfaces[i] = in.readUnsignedShort();
         }
+
+        int headSize = code.length - in.available();
+        int dataSize = in.available();
 
         int fieldCount = in.readUnsignedShort();
         fields = new FiledInfo[fieldCount];
@@ -74,13 +84,17 @@ public class AClass {
         attrs = AttrInfo.readAttrs(in);
 
         assert in.read() == -1;
+
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Parsed class [size=%d, headSize=%d, dataSize=%d, constCount=%d]", code.length, headSize, dataSize, constPoolSize));
+        }
     }
 
     public byte[] getCode() {
         return code;
     }
 
-    public static AClass createFromCode(InputStream in) throws IOException, InvalidClassException {
+    public static AClass createFromCode(InputStream in) throws IOException {
         byte[] code = IOUtils.toByteArray(in);
         return new AClass(code);
     }
