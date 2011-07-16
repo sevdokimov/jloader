@@ -83,10 +83,6 @@ public class AClass {
         assert in.read() == -1;
     }
 
-    public void printStatistic() {
-
-    }
-
     public byte[] getCode() {
         return code;
     }
