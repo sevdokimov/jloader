@@ -7,4 +7,10 @@ import java.io.IOException;
  */
 public class InvalidClassException extends IOException {
 
+    public InvalidClassException() {
+    }
+
+    public InvalidClassException(String message) {
+        super(message);
+    }
 }

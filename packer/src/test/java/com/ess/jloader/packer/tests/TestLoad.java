@@ -7,10 +7,6 @@ import org.junit.Test;
 
 import java.io.*;
 import java.lang.reflect.Method;
-import java.util.jar.JarFile;
-import java.util.jar.JarInputStream;
-import java.util.jar.JarOutputStream;
-import java.util.jar.Pack200;
 
 /**
  * @author Sergey Evdokimov
@@ -45,8 +41,12 @@ public class TestLoad {
     @Test
     public void packOpenApi() throws IOException {
         File src = new File("samples/freemarker.jar");
-        File dest = new File("samples/freemarker.pack");
-        JarPacker.pack(src, dest);
+        JarPacker packer = new JarPacker();
+        packer.addJar(src);
+        packer.printStatistic();
+//
+//        File dest = new File("samples/freemarker.pack");
+//        JarPacker.pack(src, dest);
     }
 
 //    @Test

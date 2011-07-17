@@ -4,8 +4,7 @@ import com.ess.jloader.loader.Utils;
 import org.apache.log4j.Logger;
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -18,6 +17,8 @@ public class JarPacker {
     private static final Logger log = Logger.getLogger(JarPacker.class);
 
     private final Map<String, AClass> classMap;
+
+    private final Map<String, ClassDescriptor> allClassesMap = new HashMap<String, ClassDescriptor>();
 
     public JarPacker() {
         classMap = new HashMap<String, AClass>();
@@ -55,7 +56,23 @@ public class JarPacker {
         }
     }
 
+    public void printStatistic() throws IOException {
+        Map<String, Integer> map = PackUtils.extractTypes(classMap.values());
+        TreeMap<String, Integer> treeMap = new TreeMap<String, Integer>(map);
+
+        for (Map.Entry<String, Integer> entry : treeMap.entrySet()) {
+            System.out.println(entry.getKey() + " = " + entry.getValue());
+        }
+    }
+
     public void writeResult(OutputStream output) throws IOException {
+        DataOutputStream out = new DataOutputStream(output);
+        out.writeShort(Utils.MAGIC);
+
+        String[] classNames = classMap.keySet().toArray(new String[classMap.size()]);
+        Arrays.sort(classNames);
+
+
         GZIPOutputStream gzipOutputStream = new GZIPOutputStream(output);
 
         DataOutputStream dataOutputStream = new DataOutputStream(gzipOutputStream);

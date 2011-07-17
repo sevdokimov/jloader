@@ -8,14 +8,14 @@ import java.io.IOException;
  */
 public class ConstClass extends Const {
 
-    private int nameIndex;
+    private int typeIndex;
 
     public ConstClass(DataInput in) throws IOException {
-        nameIndex = in.readUnsignedShort();
+        typeIndex = in.readUnsignedShort();
     }
 
-    public int getNameIndex() {
-        return nameIndex;
+    public int getTypeIndex() {
+        return typeIndex;
     }
 
     @Override

@@ -1,9 +1,12 @@
 package com.ess.jloader.packer;
 
 import com.ess.jloader.packer.consts.Const;
+import com.ess.jloader.packer.consts.ConstClass;
 import com.ess.jloader.packer.consts.ConstFactory;
+import com.ess.jloader.packer.consts.ConstUTF8;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -83,8 +86,24 @@ public class AClass {
         assert in.read() == -1;
     }
 
+    @Nullable
+    public <T extends Const> T getConst(int index, Class<T> constClass) {
+        if (index < 1 || index >= consts.size()) {
+            return null;
+        }
+
+        Const aConst = consts.get(index);
+        if (aConst == null || !constClass.isAssignableFrom(aConst.getClass())) return null;
+
+        return (T) aConst;
+    }
+
     public byte[] getCode() {
         return code;
+    }
+
+    public List<Const> getConsts() {
+        return consts;
     }
 
     public static AClass createFromCode(InputStream in) throws IOException {
@@ -94,5 +113,24 @@ public class AClass {
 
     public void store(OutputStream out) throws IOException {
         out.write(code);
+    }
+
+    @Nullable
+    public String getName() {
+        ConstClass thisClass = getConst(thisClassIndex, ConstClass.class);
+        if (thisClass != null) {
+            ConstUTF8 aConst = getConst(thisClass.getTypeIndex(), ConstUTF8.class);
+            if (aConst != null) {
+                return aConst.getText();
+            }
+        }
+
+        return null;
+    }
+
+    @Override
+    public String toString() {
+        String name = getName();
+        return name == null ? "Undeterminated" : name;
     }
 }
