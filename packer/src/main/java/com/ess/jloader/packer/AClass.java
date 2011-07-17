@@ -87,12 +87,17 @@ public class AClass {
     }
 
     @Nullable
-    public <T extends Const> T getConst(int index, Class<T> constClass) {
+    public Const getConst(int index) {
         if (index < 1 || index >= consts.size()) {
             return null;
         }
 
-        Const aConst = consts.get(index);
+        return consts.get(index);
+    }
+
+    @Nullable
+    public <T extends Const> T getConst(int index, Class<T> constClass) {
+        Const aConst = getConst(index);
         if (aConst == null || !constClass.isAssignableFrom(aConst.getClass())) return null;
 
         return (T) aConst;
@@ -121,7 +126,7 @@ public class AClass {
         if (thisClass != null) {
             ConstUTF8 aConst = getConst(thisClass.getTypeIndex(), ConstUTF8.class);
             if (aConst != null) {
-                return aConst.getText();
+                return aConst.getText().replace('/', '.');
             }
         }
 
