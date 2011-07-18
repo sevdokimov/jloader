@@ -1,7 +1,9 @@
 package com.ess.jloader.packer;
 
+import com.ess.jloader.packer.attribute.AttributeParser;
 import com.ess.jloader.packer.consts.*;
 
+import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.*;
@@ -204,4 +206,26 @@ public class PackUtils {
             writeClasses(out, subPackage);
         }
     }
+
+    public static Map<String, Object> readAttrs(AClass aClass, DataInput in, Map<String, AttributeParser> parsers) throws IOException {
+        int attrCount = in.readUnsignedShort();
+
+        Map<String, Object> res = new HashMap<String, Object>();
+
+        for (int i = 0; i < attrCount; i++) {
+            String name = aClass.createRef(ConstUft.class, in).get().getText();
+
+            int length = in.readInt();
+
+            AttributeParser parser = parsers.get(name);
+            if (parser == null) {
+                throw new InvalidClassException("Uncknown attribute: " + name);
+            }
+
+            res.put(name, parser.parse(aClass, length, in));
+        }
+
+        return res;
+    }
+
 }

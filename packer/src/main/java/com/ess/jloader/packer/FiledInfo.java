@@ -1,11 +1,16 @@
 package com.ess.jloader.packer;
 
+import com.ess.jloader.packer.attribute.AttributeParser;
+import com.ess.jloader.packer.attribute.ByteArrayAttributeParser;
+import com.ess.jloader.packer.attribute.ConstantValueAttrParser;
+import com.ess.jloader.packer.attribute.MarkerAttribute;
 import com.ess.jloader.packer.consts.CRef;
 import com.ess.jloader.packer.consts.ConstUft;
 
 import java.io.DataInput;
 import java.io.IOException;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import static com.ess.jloader.utils.Modifier .*;
 
@@ -18,13 +23,24 @@ public class FiledInfo {
         + TRANSIENT
         + SYNTHETIC + ENUM;
 
+    private static final Map<String, AttributeParser> ATTR_PERSERS = new HashMap<String, AttributeParser>();
+    static {
+        ATTR_PERSERS.put("Synthetic", MarkerAttribute.INSTANCE);
+        ATTR_PERSERS.put("Deprecated", MarkerAttribute.INSTANCE);
+        ATTR_PERSERS.put("ConstantValue", ConstantValueAttrParser.INSTANCE);
+
+        ATTR_PERSERS.put("RuntimeInvisibleAnnotations", ByteArrayAttributeParser.INSTANCE);
+        ATTR_PERSERS.put("RuntimeVisibleAnnotations", ByteArrayAttributeParser.INSTANCE);
+
+        ATTR_PERSERS.put("Signature", ByteArrayAttributeParser.INSTANCE);
+    }
+
     private int accessFlag;
 
     private CRef<ConstUft> name;
     private CRef<ConstUft> descriptor;
 
-    // Attributes: Synthetic, ConstantValue, Deprecated
-    private List<AttrInfo> attrs;
+    public Map<String, Object> attrs;
 
     private final AClass aClass;
 
@@ -35,7 +51,7 @@ public class FiledInfo {
 
         name = aClass.createRef(ConstUft.class, in);
         descriptor = aClass.createRef(ConstUft.class, in);
-        attrs = AttrInfo.readAttrs(aClass, in);
+        attrs = PackUtils.readAttrs(aClass, in, ATTR_PERSERS);
 
         if ((accessFlag & ~MODIFIER_MASK) != 0) throw new InvalidClassException();
         if ((accessFlag & (STATIC | TRANSIENT)) == (STATIC | TRANSIENT)) throw new InvalidClassException();
@@ -57,7 +73,7 @@ public class FiledInfo {
         return aClass;
     }
 
-    public List<AttrInfo> getAttrs() {
+    public Map<String, Object> getAttrs() {
         return attrs;
     }
 }

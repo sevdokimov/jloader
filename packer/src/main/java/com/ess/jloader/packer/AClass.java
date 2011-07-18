@@ -1,5 +1,6 @@
 package com.ess.jloader.packer;
 
+import com.ess.jloader.packer.attribute.*;
 import com.ess.jloader.packer.consts.*;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
@@ -7,10 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @author Sergey Evdokimov
@@ -19,6 +17,21 @@ import java.util.Set;
 public class AClass {
 
     private static final Logger log = Logger.getLogger(AClass.class);
+
+    private static final Map<String, AttributeParser> ATTR_PERSERS = new HashMap<String, AttributeParser>();
+    static {
+        ATTR_PERSERS.put("Synthetic", MarkerAttribute.INSTANCE);
+        ATTR_PERSERS.put("Deprecated", MarkerAttribute.INSTANCE);
+        ATTR_PERSERS.put("SourceFile", new SourceFileParser());
+
+        ATTR_PERSERS.put("InnerClasses", ByteArrayAttributeParser.INSTANCE);
+        ATTR_PERSERS.put("EnclosingMethod", ByteArrayAttributeParser.INSTANCE);
+
+        ATTR_PERSERS.put("RuntimeInvisibleAnnotations", ByteArrayAttributeParser.INSTANCE);
+        ATTR_PERSERS.put("RuntimeVisibleAnnotations", ByteArrayAttributeParser.INSTANCE);
+
+        ATTR_PERSERS.put("Signature", ByteArrayAttributeParser.INSTANCE);
+    }
 
     private final byte[] code;
 
@@ -37,7 +50,7 @@ public class AClass {
     private FiledInfo[] fields;
     private MethodInfo[] methods;
 
-    private List<AttrInfo> attrs;
+    public Map<String, Object> attrs;
 
     private List<CRef<?>> unresolvedRefs = new ArrayList<CRef<?>>();
 
@@ -54,10 +67,10 @@ public class AClass {
 
         while (consts.size() < constPoolSize) {
             Const c = ConstFactory.readConst(this, in);
+            consts.add(c);
             if (c.isGet2ElementsInPool()) {
                 consts.add(null);
             }
-            consts.add(c);
         }
 
         for (CRef<?> ref : unresolvedRefs) {
@@ -92,12 +105,12 @@ public class AClass {
             methods[i] = new MethodInfo(this, in);
         }
 
-        attrs = AttrInfo.readAttrs(this, in);
+        attrs = PackUtils.readAttrs(this, in, ATTR_PERSERS);
 
         assert in.read() == -1;
     }
 
-    public List<AttrInfo> getAttrs() {
+    public Map<String, Object> getAttrs() {
         return attrs;
     }
 
