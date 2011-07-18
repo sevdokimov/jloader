@@ -62,26 +62,26 @@ public class JarPacker {
 
         SortedMap<String, Integer> classCountMap = new TreeMap<String, Integer>(PackUtils.getClassNameUsages(classMap.values()));
 
-        DataOutputStream dataOutputStream = new DataOutputStream(out);
-
-        writeClassNames(out, classCountMap);
-
-//        Map.Entry<String, Integer>[] entries = classCountMap.entrySet().toArray(new Map.Entry[classCountMap.size()]);
+//        DataOutputStream dataOutputStream = new DataOutputStream(out);
 //
-//        Arrays.sort(entries, new Comparator<Map.Entry<String, Integer>>() {
-//            @Override
-//            public int compare(Map.Entry<String, Integer> o1, Map.Entry<String, Integer> o2) {
-//                return o1.getValue() - o2.getValue();
-//            }
-//        });
+//        writeClassNames(out, classCountMap);
+
+        Map.Entry<String, Integer>[] entries = classCountMap.entrySet().toArray(new Map.Entry[classCountMap.size()]);
+
+        Arrays.sort(entries, new Comparator<Map.Entry<String, Integer>>() {
+            @Override
+            public int compare(Map.Entry<String, Integer> o1, Map.Entry<String, Integer> o2) {
+                return o1.getValue() - o2.getValue();
+            }
+        });
 
 //        for (Map.Entry<String, Integer> entry : classCountMap.entrySet()){
 //            System.out.println(entry.getKey() + "=" + entry.getValue());
 //        }
 
-//        for (Map.Entry<String, Integer> entry : entries) {
-//            System.out.println(entry.getKey() + "=" + entry.getValue());
-//        }
+        for (Map.Entry<String, Integer> entry : entries) {
+            System.out.println(entry.getKey() + "=" + entry.getValue());
+        }
 
         System.out.println(out.size());
         System.out.println(classCountMap.size());

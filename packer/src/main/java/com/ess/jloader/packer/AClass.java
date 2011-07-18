@@ -97,6 +97,10 @@ public class AClass {
         assert in.read() == -1;
     }
 
+    public List<AttrInfo> getAttrs() {
+        return attrs;
+    }
+
     public int getJavaVersion() {
         return version;
     }
