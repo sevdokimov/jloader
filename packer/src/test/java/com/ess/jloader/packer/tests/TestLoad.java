@@ -1,6 +1,6 @@
 package com.ess.jloader.packer.tests;
 
-import com.ess.jloader.loader.ArrayUtil;
+import com.ess.jloader.utils.ArrayUtil;
 import com.ess.jloader.loader.PackClassLoader;
 import com.ess.jloader.packer.JarPacker;
 import org.junit.Test;

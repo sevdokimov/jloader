@@ -1,12 +1,13 @@
 package com.ess.jloader.packer;
 
-import com.ess.jloader.loader.Utils;
+import com.ess.jloader.utils.Utils;
 import org.apache.log4j.Logger;
 
 import java.io.*;
 import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
+import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
 
 /**
@@ -21,7 +22,7 @@ public class JarPacker {
     private final Map<String, ClassDescriptor> allClassesMap = new HashMap<String, ClassDescriptor>();
 
     public JarPacker() {
-        classMap = new HashMap<String, AClass>();
+        classMap = new LinkedHashMap<String, AClass>();
     }
 
     private void addClass(String className, InputStream inputStream) throws IOException {
@@ -57,17 +58,47 @@ public class JarPacker {
     }
 
     public void printStatistic() throws IOException {
-        Map<String, Integer> map = PackUtils.extractTypes(classMap.values());
-        TreeMap<String, Integer> treeMap = new TreeMap<String, Integer>(map);
+    }
 
-        for (Map.Entry<String, Integer> entry : treeMap.entrySet()) {
-            System.out.println(entry.getKey() + " = " + entry.getValue());
+    private int getJavaVersion() {
+        if (classMap.isEmpty()) return 50;
+
+        Iterator<AClass> itr = classMap.values().iterator();
+
+        int res = itr.next().getJavaVersion();
+
+        while (itr.hasNext()) {
+            if (res != itr.next().getJavaVersion()) {
+                return -1;
+            }
         }
+
+        return res;
+    }
+
+    private void writeClassNames(OutputStream out, SortedMap<String, Integer> classNameUsages) throws IOException {
+        DeflaterOutputStream defOut = new DeflaterOutputStream(out);
+        DataOutputStream dataOut = new DataOutputStream(defOut);
+        PackUtils.writeClassNames(classNameUsages.keySet(), dataOut);
+        for (Integer integer : classNameUsages.values()) {
+            if (integer > 0xFFFF) throw new InvalidClassException();
+
+            dataOut.writeShort(integer);
+        }
+        defOut.finish();
     }
 
     public void writeResult(OutputStream output) throws IOException {
         DataOutputStream out = new DataOutputStream(output);
         out.writeShort(Utils.MAGIC);
+
+        int javaVersion = getJavaVersion();
+        if (javaVersion == -1) throw new InvalidClassException();
+
+        out.writeInt(javaVersion);
+
+        SortedMap<String, Integer> classCountMap = new TreeMap<String, Integer>(PackUtils.getClassNameUsages(classMap.values()));
+        writeClassNames(out, classCountMap);
 
         String[] classNames = classMap.keySet().toArray(new String[classMap.size()]);
         Arrays.sort(classNames);

@@ -86,6 +86,10 @@ public class AClass {
         assert in.read() == -1;
     }
 
+    public int getJavaVersion() {
+        return version;
+    }
+
     @Nullable
     public Const getConst(int index) {
         if (index < 1 || index >= consts.size()) {

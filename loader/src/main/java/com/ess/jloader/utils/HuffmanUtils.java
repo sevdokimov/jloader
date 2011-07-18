@@ -1,0 +1,66 @@
+package com.ess.jloader.utils;
+
+import java.util.Map;
+import java.util.PriorityQueue;
+
+/**
+ * @author Sergey Evdokimov
+ */
+public class HuffmanUtils {
+
+    public static final Object END_MARKER = new Object();
+
+    public static <T> TreeElement buildHuffmanTree(Map<T, Integer> map) {
+        assert map.size() > 0;
+
+        PriorityQueue<TreeElement> queue = new PriorityQueue<TreeElement>();
+
+        for (Map.Entry<T, Integer> entry : map.entrySet()) {
+            queue.add(new Leaf(entry.getValue(), entry.getKey()));
+        }
+
+        while (queue.size() > 1) {
+            TreeElement e1 = queue.poll();
+            TreeElement e2 = queue.poll();
+
+            queue.add(new Node(e1.weight + e2.weight, e1, e2));
+        }
+
+        return queue.peek();
+    }
+
+    public static class TreeElement implements Comparable<TreeElement> {
+        public final int weight;
+
+        public TreeElement(int weight) {
+            this.weight = weight;
+        }
+
+        @Override
+        public int compareTo(TreeElement o) {
+            return weight - o.weight;
+        }
+    }
+
+    public static class Leaf extends TreeElement {
+
+        public final Object element;
+
+        public Leaf(int weight, Object element) {
+            super(weight);
+            this.element = element;
+        }
+    }
+
+    public static class Node extends TreeElement {
+        public final TreeElement trueNode;
+        public final TreeElement falseNode;
+
+        public Node(int weight, TreeElement trueNode, TreeElement falseNode) {
+            super(weight);
+            this.trueNode = trueNode;
+            this.falseNode = falseNode;
+        }
+    }
+
+}

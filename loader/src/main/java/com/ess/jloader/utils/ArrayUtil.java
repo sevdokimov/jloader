@@ -1,4 +1,4 @@
-package com.ess.jloader.loader;
+package com.ess.jloader.utils;
 
 /**
  * @author Sergey Evdokimov

@@ -13,7 +13,9 @@ import java.util.regex.Pattern;
  */
 public class PackUtils {
 
-    public static final Pattern TYPE_PATTERN = Pattern.compile("(\\[*)(?:([BCDFIJSZ])|L(([\\w_]+)(/[\\w_]+)*);)");
+    public static final Pattern TYPE_PATTERN = Pattern.compile("(\\[*)(?:([BCDFIJSZ])|L(([\\w\\$]+)(/[\\w\\$]+)*);)");
+
+    public static final Pattern CLASS_NAME_PATTERN = Pattern.compile("[\\w\\$]+(/[\\w\\$])*");
 
     private PackUtils() {
 
@@ -25,69 +27,90 @@ public class PackUtils {
         private Map<String, Package> packages = new TreeMap<String, Package>();
     }
 
-    public static Map<String, Integer> extractTypes(Collection<AClass> classes) throws InvalidClassException {
-        Map<String, Integer> res = new HashMap<String, Integer>();
+    public static Map<String, Integer> getTypeUsages(Collection<AClass> classes) throws InvalidClassException {
+        Map<String, Integer> typeUsages = new HashMap<String, Integer>();
 
         for (AClass aClass : classes) {
             List<Const> consts = aClass.getConsts();
 
-            boolean[] f = new boolean[consts.size()];
+            boolean[] types = new boolean[consts.size()];
 
             for (Const c : consts) {
-                if (c instanceof ConstClass) {
-                    f[ ((ConstClass) c).getTypeIndex() ] = true;
-                }
-                else if (c instanceof ConstRef) {
-                    ConstClass constClass = (ConstClass) consts.get(((ConstRef) c).getClassIndex());
-                    f[ constClass.getTypeIndex() ] = true;
+                if (c instanceof ConstRef) {
+                    ConstNameAndType nt = aClass.getConst(((ConstRef) c).getNameAndTypeIndex(), ConstNameAndType.class);
+                    if (nt == null) throw new InvalidClassException();
 
-                    ConstNameAndType nt = (ConstNameAndType) consts.get(((ConstRef) c).getNameAndTypeIndex());
-                    f[nt.getTypeIndex()] = true;
+                    types[nt.getTypeIndex()] = true;
                 }
             }
 
-            for (int i = 0; i < f.length; i++) {
-                if (!f[i]) continue;
+            for (int i = 0; i < types.length; i++) {
+                if (types[i]) {
+                    ConstUTF8 utf = (ConstUTF8) consts.get(i);
+                    String text = utf.getText();
 
-                ConstUTF8 utf = (ConstUTF8) consts.get(i);
-                String text = utf.getText();
+                    if (text.startsWith("(")) {
+                        int closedBracketIndex = text.lastIndexOf(')');
+                        if (closedBracketIndex == -1) throw new InvalidClassException();
 
-                if (text.startsWith("(")) {
-                    int closedBracketIndex = text.lastIndexOf(')');
-                    if (closedBracketIndex == -1) throw new InvalidClassException();
-
-                    String returnType = text.substring(closedBracketIndex + 1);
-                    if (!returnType.equals("V")) {
-                        assertType(returnType);
-                        inc(res, returnType);
-                    }
-
-                    if (closedBracketIndex > 1) {
-                        String params = text.substring(1, closedBracketIndex);
-                        Matcher m = TYPE_PATTERN.matcher(params);
-                        int idx = 0;
-                        while (m.find()) {
-                            if (m.start() != idx) {
-                                throw new InvalidClassException(text);
-                            }
-
-                            inc(res, m.group());
-                            idx = m.end();
+                        String returnType = text.substring(closedBracketIndex + 1);
+                        if (!returnType.equals("V")) {
+                            assertType(returnType);
+                            inc(typeUsages, returnType);
                         }
 
-                        if (idx != params.length()) throw new InvalidClassException(text);
+                        if (closedBracketIndex > 1) {
+                            String params = text.substring(1, closedBracketIndex);
+                            Matcher m = TYPE_PATTERN.matcher(params);
+                            int idx = 0;
+                            while (m.find()) {
+                                if (m.start() != idx) {
+                                    throw new InvalidClassException(text);
+                                }
+
+                                inc(typeUsages, m.group());
+                                idx = m.end();
+                            }
+
+                            if (idx != params.length()) throw new InvalidClassException(text);
+                        }
                     }
-                }
-                else {
-                    assertType(text);
-                    inc(res, text);
+                    else {
+                        assertType(text);
+                        inc(typeUsages, text);
+                    }
                 }
             }
         }
 
-        res.remove("V");
+        return typeUsages;
+    }
+    public static Map<String, Integer> getClassNameUsages(Collection<AClass> classes) throws InvalidClassException {
+        Map<String, Integer> classUsages = new HashMap<String, Integer>();
 
-        return res;
+        for (AClass aClass : classes) {
+            List<Const> consts = aClass.getConsts();
+
+            boolean[] classNames = new boolean[consts.size()];
+
+            for (Const c : consts) {
+                if (c instanceof ConstClass) {
+                    classNames[ ((ConstClass) c).getTypeIndex() ] = true;
+                }
+            }
+
+            for (int i = 0; i < classNames.length; i++) {
+                if (classNames[i]) {
+                    Const cUtf = consts.get(i);
+                    if (!(cUtf instanceof ConstUTF8)) throw new InvalidClassException();
+                    String text = ((ConstUTF8) cUtf).getText();
+
+                    inc(classUsages, text);
+                }
+            }
+        }
+
+        return classUsages;
     }
 
     private static <T> void inc(Map<T, Integer> map, T key) {
@@ -100,6 +123,16 @@ public class PackUtils {
         }
     }
 
+    public static int summ(Map<?, Integer> map) {
+        int res = 0;
+
+        for (Integer integer : map.values()) {
+            res += integer;
+        }
+
+        return res;
+    }
+
     public static void assertType(String s) throws InvalidClassException {
         if (!TYPE_PATTERN.matcher(s).matches()) {
             throw new InvalidClassException();
@@ -107,11 +140,13 @@ public class PackUtils {
     }
 
     public static Map<String, Integer> writeClassNames(Collection<String> classNames, DataOutput out) throws IOException {
-        StringBuilder sb = new StringBuilder();
+        assertSorted(classNames);
 
         Package root = new Package();
 
         for (String className : classNames) {
+            if (!CLASS_NAME_PATTERN.matcher(className).matches()) throw new InvalidClassException();
+
             Package p = root;
 
             for (StringTokenizer st = new StringTokenizer(className, "/"); ; ) {
@@ -133,34 +168,47 @@ public class PackUtils {
             }
         }
 
-        writePackages(sb, root);
-        writeClasses(sb, root);
+        writePackages(out, root);
+        writeClasses(out, root);
 
         return null;
     }
 
-    private static void writePackages(StringBuilder sb, Package p) {
+    private static void writePackages(DataOutput out, Package p) throws IOException {
         for (Map.Entry<String, Package> entry : p.packages.entrySet()) {
-            sb.append(entry.getKey());
-            sb.append(',');
-            writePackages(sb, entry.getValue());
+            out.write(entry.getKey().getBytes());
+            out.write(',');
+            writePackages(out, entry.getValue());
         }
 
-        sb.append(',');
+        out.write(',');
     }
 
-    private static void writeClasses(StringBuilder sb, Package p) {
-        Collections.sort(p.classes);
+    private static <T extends Comparable<T>> void assertSorted(Collection<T> c) {
+        if (c.isEmpty()) return;
+
+        Iterator<T> iterator = c.iterator();
+        T prev = iterator.next();
+
+        while (iterator.hasNext()) {
+            T e = iterator.next();
+            assert prev.compareTo(e) < 0;
+            prev = e;
+        }
+    }
+
+    private static void writeClasses(DataOutput out, Package p) throws IOException {
+        assertSorted(p.classes);
 
         for (String className : p.classes) {
-            sb.append(className);
-            sb.append(',');
+            out.write(className.getBytes());
+            out.write(',');
         }
 
-        sb.append(',');
+        out.write(',');
 
         for (Package subPackage : p.packages.values()) {
-            writeClasses(sb, subPackage);
+            writeClasses(out, subPackage);
         }
     }
 }
