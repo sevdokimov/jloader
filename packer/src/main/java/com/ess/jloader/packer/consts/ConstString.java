@@ -1,5 +1,7 @@
 package com.ess.jloader.packer.consts;
 
+import com.ess.jloader.packer.AClass;
+
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -8,14 +10,14 @@ import java.io.IOException;
  */
 public class ConstString extends Const {
 
-    private int utfIndex;
+    private CRef<ConstUft> utf;
 
-    public ConstString(DataInput in) throws IOException {
-        utfIndex = in.readUnsignedShort();
+    public ConstString(AClass aClass, DataInput in) throws IOException {
+        utf = aClass.createRef(ConstUft.class, in);
     }
 
-    public int getUtfIndex() {
-        return utfIndex;
+    public CRef<ConstUft> getUtf() {
+        return utf;
     }
 
     @Override

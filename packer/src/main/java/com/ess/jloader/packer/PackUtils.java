@@ -30,55 +30,51 @@ public class PackUtils {
     public static Map<String, Integer> getTypeUsages(Collection<AClass> classes) throws InvalidClassException {
         Map<String, Integer> typeUsages = new HashMap<String, Integer>();
 
+        Set<ConstUft> types = new HashSet<ConstUft>();
+
         for (AClass aClass : classes) {
             List<Const> consts = aClass.getConsts();
 
-            boolean[] types = new boolean[consts.size()];
+            types.clear();
 
             for (Const c : consts) {
                 if (c instanceof ConstRef) {
-                    ConstNameAndType nt = aClass.getConst(((ConstRef) c).getNameAndTypeIndex(), ConstNameAndType.class);
-                    if (nt == null) throw new InvalidClassException();
-
-                    types[nt.getTypeIndex()] = true;
+                    types.add(((ConstRef) c).getNameAndType().get().getType().get());
                 }
             }
 
-            for (int i = 0; i < types.length; i++) {
-                if (types[i]) {
-                    ConstUTF8 utf = (ConstUTF8) consts.get(i);
-                    String text = utf.getText();
+            for (ConstUft type : types) {
+                String text = type.getText();
 
-                    if (text.startsWith("(")) {
-                        int closedBracketIndex = text.lastIndexOf(')');
-                        if (closedBracketIndex == -1) throw new InvalidClassException();
+                if (text.startsWith("(")) {
+                    int closedBracketIndex = text.lastIndexOf(')');
+                    if (closedBracketIndex == -1) throw new InvalidClassException();
 
-                        String returnType = text.substring(closedBracketIndex + 1);
-                        if (!returnType.equals("V")) {
-                            assertType(returnType);
-                            inc(typeUsages, returnType);
-                        }
+                    String returnType = text.substring(closedBracketIndex + 1);
+                    if (!returnType.equals("V")) {
+                        assertType(returnType);
+                        inc(typeUsages, returnType);
+                    }
 
-                        if (closedBracketIndex > 1) {
-                            String params = text.substring(1, closedBracketIndex);
-                            Matcher m = TYPE_PATTERN.matcher(params);
-                            int idx = 0;
-                            while (m.find()) {
-                                if (m.start() != idx) {
-                                    throw new InvalidClassException(text);
-                                }
-
-                                inc(typeUsages, m.group());
-                                idx = m.end();
+                    if (closedBracketIndex > 1) {
+                        String params = text.substring(1, closedBracketIndex);
+                        Matcher m = TYPE_PATTERN.matcher(params);
+                        int idx = 0;
+                        while (m.find()) {
+                            if (m.start() != idx) {
+                                throw new InvalidClassException(text);
                             }
 
-                            if (idx != params.length()) throw new InvalidClassException(text);
+                            inc(typeUsages, m.group());
+                            idx = m.end();
                         }
+
+                        if (idx != params.length()) throw new InvalidClassException(text);
                     }
-                    else {
-                        assertType(text);
-                        inc(typeUsages, text);
-                    }
+                }
+                else {
+                    assertType(text);
+                    inc(typeUsages, text);
                 }
             }
         }
@@ -91,22 +87,18 @@ public class PackUtils {
         for (AClass aClass : classes) {
             List<Const> consts = aClass.getConsts();
 
-            boolean[] classNames = new boolean[consts.size()];
+            Set<ConstUft> classNames = new HashSet<ConstUft>();
 
             for (Const c : consts) {
                 if (c instanceof ConstClass) {
-                    classNames[ ((ConstClass) c).getTypeIndex() ] = true;
+                    classNames.add(((ConstClass) c).getName().get());
                 }
             }
 
-            for (int i = 0; i < classNames.length; i++) {
-                if (classNames[i]) {
-                    Const cUtf = consts.get(i);
-                    if (!(cUtf instanceof ConstUTF8)) throw new InvalidClassException();
-                    String text = ((ConstUTF8) cUtf).getText();
-                    if (!text.startsWith("[")) {
-                        inc(classUsages, text);
-                    }
+            for (ConstUft className : classNames) {
+                String text = className.getText();
+                if (!text.startsWith("[")) {
+                    inc(classUsages, text);
                 }
             }
         }

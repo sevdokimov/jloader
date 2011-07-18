@@ -1,5 +1,7 @@
 package com.ess.jloader.packer.consts;
 
+import com.ess.jloader.packer.AClass;
+
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -7,8 +9,8 @@ import java.io.IOException;
  * @author Sergey Evdokimov
  */
 public class ConstMethod extends ConstRef {
-    public ConstMethod(DataInput in) throws IOException {
-        super(in);
+    public ConstMethod(AClass aClass, DataInput in) throws IOException {
+        super(aClass, in);
     }
 
     @Override

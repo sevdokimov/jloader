@@ -1,5 +1,7 @@
 package com.ess.jloader.packer.consts;
 
+import com.ess.jloader.packer.AClass;
+
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -8,20 +10,20 @@ import java.io.IOException;
  */
 public class ConstNameAndType extends Const {
 
-    private int nameIndex;
-    private int typeIndex;
+    private CRef<ConstUft> name;
+    private CRef<ConstUft> type;
 
-    public ConstNameAndType(DataInput in) throws IOException {
-        nameIndex = in.readUnsignedShort();
-        typeIndex = in.readUnsignedShort();
+    public ConstNameAndType(AClass aClass, DataInput in) throws IOException {
+        name = aClass.createRef(ConstUft.class, in);
+        type = aClass.createRef(ConstUft.class, in);
     }
 
-    public int getNameIndex() {
-        return nameIndex;
+    public CRef<ConstUft> getName() {
+        return name;
     }
 
-    public int getTypeIndex() {
-        return typeIndex;
+    public CRef<ConstUft> getType() {
+        return type;
     }
 
     @Override

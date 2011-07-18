@@ -1,20 +1,21 @@
 package com.ess.jloader.packer;
 
-import com.ess.jloader.packer.consts.Const;
-import com.ess.jloader.packer.consts.ConstClass;
-import com.ess.jloader.packer.consts.ConstFactory;
-import com.ess.jloader.packer.consts.ConstUTF8;
+import com.ess.jloader.packer.consts.*;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author Sergey Evdokimov
  */
+@SuppressWarnings({"unchecked"})
 public class AClass {
 
     private static final Logger log = Logger.getLogger(AClass.class);
@@ -25,18 +26,20 @@ public class AClass {
 
     private int accessFlags;
 
-    private int thisClassIndex;
+    private CRef<ConstClass> thisClass;
 
-    private int superClassIndex;
+    private CRef<ConstClass> superClass;
 
     private final List<Const> consts = new ArrayList<Const>();
 
-    private final int[] interfaces;
+    private final CRef<ConstClass>[] interfaces;
 
     private FiledInfo[] fields;
     private MethodInfo[] methods;
 
     private List<AttrInfo> attrs;
+
+    private List<CRef<?>> unresolvedRefs = new ArrayList<CRef<?>>();
 
     public AClass(byte[] code) throws IOException {
         this.code = code;
@@ -50,38 +53,46 @@ public class AClass {
         consts.add(null);
 
         while (consts.size() < constPoolSize) {
-            Const c = ConstFactory.readConst(in);
+            Const c = ConstFactory.readConst(this, in);
             if (c.isGet2ElementsInPool()) {
                 consts.add(null);
             }
             consts.add(c);
         }
 
+        for (CRef<?> ref : unresolvedRefs) {
+            ref.resolve(this);
+        }
+        unresolvedRefs = null;
+
         accessFlags = in.readUnsignedShort();
 
-        thisClassIndex = in.readUnsignedShort();
-        superClassIndex = in.readUnsignedShort();
+        thisClass = createRef(ConstClass.class, in);
+        int superClassIndex = in.readUnsignedShort();
+        if (superClassIndex != 0) {
+            superClass = createRef(ConstClass.class, superClassIndex);
+        }
 
         int interfaceCount = in.readUnsignedShort();
 
-        interfaces = new int[interfaceCount];
+        interfaces = new CRef[interfaceCount];
         for (int i = 0; i < interfaceCount; i++) {
-            interfaces[i] = in.readUnsignedShort();
+            interfaces[i] = createRef(ConstClass.class, in);
         }
 
         int fieldCount = in.readUnsignedShort();
         fields = new FiledInfo[fieldCount];
         for (int i = 0; i < fieldCount; i++) {
-            fields[i] = new FiledInfo(in);
+            fields[i] = new FiledInfo(this, in);
         }
 
         int methodCount = in.readUnsignedShort();
         methods = new MethodInfo[methodCount];
         for (int i = 0; i < methodCount; i++) {
-            methods[i] = new MethodInfo(in);
+            methods[i] = new MethodInfo(this, in);
         }
 
-        attrs = AttrInfo.readAttrs(in);
+        attrs = AttrInfo.readAttrs(this, in);
 
         assert in.read() == -1;
     }
@@ -126,15 +137,31 @@ public class AClass {
 
     @Nullable
     public String getName() {
-        ConstClass thisClass = getConst(thisClassIndex, ConstClass.class);
-        if (thisClass != null) {
-            ConstUTF8 aConst = getConst(thisClass.getTypeIndex(), ConstUTF8.class);
-            if (aConst != null) {
-                return aConst.getText().replace('/', '.');
-            }
+        if (unresolvedRefs != null) {
+            return null;
         }
 
-        return null;
+        return thisClass.get().getName().get().getText().replace('/', '.');
+    }
+
+    @NotNull
+    public <T extends Const> CRef<T> createRef(Class<T> constClazz, int index) throws InvalidClassException {
+        CRef<T> ref = new CRef<T>(constClazz, index);
+
+        if (unresolvedRefs != null) {
+            unresolvedRefs.add(ref);
+        }
+        else {
+            ref.resolve(this);
+        }
+
+        return ref;
+    }
+
+    @NotNull
+    public <T extends Const> CRef<T> createRef(Class<T> constClazz, DataInput in) throws IOException {
+        int index = in.readUnsignedShort();
+        return createRef(constClazz, index);
     }
 
     @Override

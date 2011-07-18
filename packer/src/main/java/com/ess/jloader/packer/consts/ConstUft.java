@@ -1,16 +1,18 @@
 package com.ess.jloader.packer.consts;
 
+import com.ess.jloader.packer.AClass;
+
 import java.io.DataInput;
 import java.io.IOException;
 
 /**
  * @author Sergey Evdokimov
  */
-public class ConstUTF8 extends Const {
+public class ConstUft extends Const {
 
     private String text;
 
-    public ConstUTF8(DataInput in) throws IOException {
+    public ConstUft(AClass aClass, DataInput in) throws IOException {
         text = in.readUTF();
     }
 

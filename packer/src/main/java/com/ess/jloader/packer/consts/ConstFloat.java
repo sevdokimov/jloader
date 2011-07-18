@@ -1,5 +1,7 @@
 package com.ess.jloader.packer.consts;
 
+import com.ess.jloader.packer.AClass;
+
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -10,7 +12,7 @@ public class ConstFloat extends Const {
 
     private float value;
 
-    public ConstFloat(DataInput in) throws IOException {
+    public ConstFloat(AClass aClass, DataInput in) throws IOException {
         value = in.readFloat();
     }
 

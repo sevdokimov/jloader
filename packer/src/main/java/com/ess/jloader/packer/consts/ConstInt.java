@@ -1,5 +1,7 @@
 package com.ess.jloader.packer.consts;
 
+import com.ess.jloader.packer.AClass;
+
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -10,7 +12,7 @@ public class ConstInt extends Const {
 
     private int value;
 
-    public ConstInt(DataInput in) throws IOException {
+    public ConstInt(AClass aClass, DataInput in) throws IOException {
         value = in.readInt();
     }
 

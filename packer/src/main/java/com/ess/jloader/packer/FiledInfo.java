@@ -1,37 +1,54 @@
 package com.ess.jloader.packer;
 
+import com.ess.jloader.packer.consts.CRef;
+import com.ess.jloader.packer.consts.ConstUft;
+
 import java.io.DataInput;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
+
+import static java.lang.reflect.Modifier.*;
 
 /**
  * @author Sergey Evdokimov
  */
 public class FiledInfo {
 
+    public static final int MODIFIER_MASK = PUBLIC + PRIVATE + PROTECTED + STATIC + FINAL + VOLATILE + TRANSIENT;
+
     private int accessFlag;
-    private int nameIndex;
-    private int descriptorIndex;
+
+    private CRef<ConstUft> name;
+    private CRef<ConstUft> descriptor;
     private List<AttrInfo> attrs;
 
-    public FiledInfo(DataInput in) throws IOException {
+    private final AClass aClass;
+
+    public FiledInfo(AClass aClass, DataInput in) throws IOException {
+        this.aClass = aClass;
+
         accessFlag = in.readUnsignedShort();
-        nameIndex = in.readUnsignedShort();
-        descriptorIndex = in.readUnsignedShort();
-        attrs = AttrInfo.readAttrs(in);
+        if ((accessFlag & MODIFIER_MASK) != 0) throw new InvalidClassException();
+
+        name = aClass.createRef(ConstUft.class, in);
+        descriptor = aClass.createRef(ConstUft.class, in);
+        attrs = AttrInfo.readAttrs(aClass, in);
     }
 
     public int getAccessFlag() {
         return accessFlag;
     }
 
-    public int getNameIndex() {
-        return nameIndex;
+    public CRef<ConstUft> getName() {
+        return name;
     }
 
-    public int getDescriptorIndex() {
-        return descriptorIndex;
+    public CRef<ConstUft> getDescriptor() {
+        return descriptor;
+    }
+
+    public AClass getaClass() {
+        return aClass;
     }
 
     public List<AttrInfo> getAttrs() {
