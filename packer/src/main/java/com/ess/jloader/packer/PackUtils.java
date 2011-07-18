@@ -15,7 +15,7 @@ public class PackUtils {
 
     public static final Pattern TYPE_PATTERN = Pattern.compile("(\\[*)(?:([BCDFIJSZ])|L(([\\w\\$]+)(/[\\w\\$]+)*);)");
 
-    public static final Pattern CLASS_NAME_PATTERN = Pattern.compile("[\\w\\$]+(/[\\w\\$])*");
+    public static final Pattern CLASS_NAME_PATTERN = Pattern.compile("[\\w\\$]+(/[\\w\\$]+)*");
 
     private PackUtils() {
 
@@ -104,8 +104,9 @@ public class PackUtils {
                     Const cUtf = consts.get(i);
                     if (!(cUtf instanceof ConstUTF8)) throw new InvalidClassException();
                     String text = ((ConstUTF8) cUtf).getText();
-
-                    inc(classUsages, text);
+                    if (!text.startsWith("[")) {
+                        inc(classUsages, text);
+                    }
                 }
             }
         }
@@ -145,7 +146,7 @@ public class PackUtils {
         Package root = new Package();
 
         for (String className : classNames) {
-            if (!CLASS_NAME_PATTERN.matcher(className).matches()) throw new InvalidClassException();
+            if (!CLASS_NAME_PATTERN.matcher(className).matches()) throw new InvalidClassException(className);
 
             Package p = root;
 

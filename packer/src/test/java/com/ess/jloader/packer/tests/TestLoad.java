@@ -43,6 +43,7 @@ public class TestLoad {
         File src = new File("samples/freemarker.jar");
         JarPacker packer = new JarPacker();
         packer.addJar(src);
+        packer.addJar(new File("/home/sergey/EAP/idea-IU-107.52/lib/idea.jar"));
         packer.printStatistic();
 //
 //        File dest = new File("samples/freemarker.pack");
