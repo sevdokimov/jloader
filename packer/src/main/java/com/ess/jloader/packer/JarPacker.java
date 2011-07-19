@@ -14,12 +14,13 @@ import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.zip.DeflaterOutputStream;
-import java.util.zip.GZIPOutputStream;
 
 /**
  * @author Sergey Evdokimov
  */
 public class JarPacker {
+
+    private static final int PACKER_VERSION = 1;
 
     private static final Logger log = Logger.getLogger(JarPacker.class);
 
@@ -36,7 +37,7 @@ public class JarPacker {
             log.debug("Add class: " + className);
         }
 
-        classMap.put(className, AClass.createFromCode(inputStream));
+        classMap.put(className.replace('.', '/'), AClass.createFromCode(inputStream));
     }
 
     public void addJar(File jarFile) throws IOException {
@@ -116,11 +117,14 @@ public class JarPacker {
         // Write MAGIC (2)
         dataOut.writeShort(Utils.MAGIC);
 
-        int javaVersion = getJavaVersion();
-        if (javaVersion == -1) throw new InvalidClassException();
+        // Write packer version;
+        dataOut.writeShort(PACKER_VERSION);
 
-        // Write version (4)
-        dataOut.writeInt(javaVersion);
+//        int javaVersion = getJavaVersion();
+//        if (javaVersion == -1) throw new InvalidClassException();
+//
+//        // Write version (4)
+//        dataOut.writeInt(javaVersion);
 
         SortedMap<String, Integer> classCountMap = new TreeMap<String, Integer>(PackUtils.getClassNameUsages(classMap.values()));
 
@@ -139,22 +143,30 @@ public class JarPacker {
             dataDefOut.write(classMap.containsKey(className) ? 1 : 0);
         }
 
-        defOut.finish();
-
         HuffmanUtils.TreeElement tree = HuffmanUtils.buildHuffmanTree(classCountMap);
+        HuffmanOutputStream hOut = new HuffmanOutputStream(tree);
+
         List<ByteArrayOutputStream> packedClasses = new ArrayList<ByteArrayOutputStream>();
 
         for (String className : classCountMap.keySet()) {
             AClass aClass = classMap.get(className);
             if (aClass != null) {
-                ByteArrayOutputStream packedClass = packClass(className, aClass, tree);
+                ByteArrayOutputStream packedClass = packClass(className, aClass, hOut);
                 packedClasses.add(packedClass);
 
-                if (packedClass.size() > 0xFFFF) throw new InvalidClassException();
+//                System.out.println(className + "=" + packedClass.size() + " / " + aClass.getCode().length);
 
-                dataDefOut.writeShort(packedClass.size());
+                if (packedClass.size() < 0xFFFF) {
+                    dataDefOut.writeShort(packedClass.size());
+                }
+                else {
+                    dataDefOut.writeShort(0xFFFF);
+                    dataDefOut.writeInt(packedClass.size() - 0xFFFF);
+                }
             }
         }
+
+        defOut.finish();
 
         if (packedClasses.size() != classMap.size()) throw new InvalidClassException();
 
@@ -163,12 +175,8 @@ public class JarPacker {
         }
     }
 
-    private static ByteArrayOutputStream packClass(String name, AClass aClass, HuffmanUtils.TreeElement tree) {
+    private static ByteArrayOutputStream packClass(String name, AClass aClass, HuffmanOutputStream hOut) {
         try {
-            ByteArrayOutputStream res = new ByteArrayOutputStream();
-            DeflaterOutputStream defOut = new DeflaterOutputStream(res);
-            DataOutputStream dataOut = new DataOutputStream(defOut);
-
             Set<ConstUtf> classNames = new HashSet<ConstUtf>();
 
             for (Const aConst : aClass.getConsts()) {
@@ -180,8 +188,17 @@ public class JarPacker {
                 }
             }
 
+            ByteArrayOutputStream data = new ByteArrayOutputStream();
+
+            new DataOutputStream(data).writeInt(aClass.getJavaVersion());
+
+            DeflaterOutputStream defOut = new DeflaterOutputStream(data);
+            DataOutputStream dataOut = new DataOutputStream(defOut);
+
             ByteArrayOutputStream hByteOut = new ByteArrayOutputStream();
-            HuffmanOutputStream hOut = new HuffmanOutputStream(hByteOut, tree);
+            hOut.reset(hByteOut);
+
+            System.out.println(aClass.getName() + "=" + aClass.getConsts().size());
 
             for (Const aConst : aClass.getConsts()) {
                 if (aConst == null) continue;
@@ -200,7 +217,13 @@ public class JarPacker {
 
             dataOut.write(21);
 
+            defOut.write(aClass.getCode(), aClass.getConstTableEnd(), aClass.getCode().length - aClass.getConstTableEnd());
+            defOut.close();
 
+            ByteArrayOutputStream res = new ByteArrayOutputStream(4 + data.size() + hByteOut.size());
+            new DataOutputStream(res).writeInt(data.size());
+            data.writeTo(res);
+            hByteOut.writeTo(res);
 
             return res;
         } catch (IOException e) {

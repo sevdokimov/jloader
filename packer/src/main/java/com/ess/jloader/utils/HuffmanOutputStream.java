@@ -12,16 +12,20 @@ public class HuffmanOutputStream {
 
     private final Map<Object, boolean[]> pathMap;
 
-    private final OutputStream out;
+    private OutputStream out;
 
     private int bits;
     private int bitCount;
 
-    public HuffmanOutputStream(OutputStream out, HuffmanUtils.TreeElement root) {
+    public HuffmanOutputStream(HuffmanUtils.TreeElement root) {
         Map<Object, boolean[]> pathMap = new HashMap<Object, boolean[]>();
         buildHuffmanMap(pathMap, new ArrayList<Boolean>(), root);
         this.pathMap = pathMap;
+    }
+
+    public void reset(OutputStream out) {
         this.out = out;
+        bitCount = 0;
     }
 
     public void write(Object t) throws IOException {
@@ -41,15 +45,14 @@ public class HuffmanOutputStream {
     }
 
     public void finish() throws IOException {
-        write(HuffmanUtils.END_MARKER);
         if (bitCount > 0) {
             out.write(bits);
         }
     }
 
-    public static HuffmanOutputStream create(OutputStream out, SortedMap<? extends Object, Integer> map) {
+    public static HuffmanOutputStream create(SortedMap<? extends Object, Integer> map) {
         HuffmanUtils.TreeElement root = HuffmanUtils.buildHuffmanTree(map);
-        return new HuffmanOutputStream(out, root);
+        return new HuffmanOutputStream(root);
     }
 
     private static <T> void buildHuffmanMap(Map<T, boolean[]> res, List<Boolean> path, HuffmanUtils.TreeElement element) {

@@ -41,11 +41,11 @@ public class TestLoad {
     @Test
     public void packOpenApi() throws IOException {
         JarPacker packer = new JarPacker();
-        packer.addJar(new File("/media/SSD/EAP/idea-IU-107.322/lib/idea.jar"));
-        packer.printStatistic();
+//        packer.addJar(new File("samples/freemarker.jar"));
+        packer.addJar(new File("/home/sergey/EAP/idea-IU-107.52/lib/idea.jar"));
 //
-//        File dest = new File("samples/freemarker.pack");
-//        JarPacker.pack(src, dest);
+        packer.writeResult(new File("samples/idea.jp"));
+
     }
 
 //    @Test

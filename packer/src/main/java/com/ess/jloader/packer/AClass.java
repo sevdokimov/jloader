@@ -54,6 +54,8 @@ public class AClass {
 
     private List<CRef<?>> unresolvedRefs = new ArrayList<CRef<?>>();
 
+    private int constTableEnd;
+
     public AClass(byte[] code) throws IOException {
         this.code = code;
 
@@ -72,6 +74,8 @@ public class AClass {
                 consts.add(null);
             }
         }
+
+        constTableEnd = code.length - in.available();
 
         for (CRef<?> ref : unresolvedRefs) {
             ref.resolve(this);
@@ -116,6 +120,10 @@ public class AClass {
 
     public int getJavaVersion() {
         return version;
+    }
+
+    public int getConstTableEnd() {
+        return constTableEnd;
     }
 
     @Nullable
