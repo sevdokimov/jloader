@@ -1,6 +1,7 @@
 package com.ess.jloader.packer.consts;
 
 import com.ess.jloader.packer.AClass;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.DataInput;
 import java.io.IOException;
@@ -16,6 +17,7 @@ public class ConstUft extends Const {
         text = in.readUTF();
     }
 
+    @NotNull
     public String getText() {
         return text;
     }
@@ -23,5 +25,10 @@ public class ConstUft extends Const {
     @Override
     public byte getCode() {
         return 1;
+    }
+
+    @Override
+    public String toString() {
+        return text;
     }
 }

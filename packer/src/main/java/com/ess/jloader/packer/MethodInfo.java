@@ -30,6 +30,7 @@ public class MethodInfo {
         ATTR_PERSERS.put("RuntimeInvisibleParameterAnnotations", ByteArrayAttributeParser.INSTANCE);
 
         ATTR_PERSERS.put("RuntimeVisibleAnnotations", new AnnotationsAttrParser());
+        ATTR_PERSERS.put("AnnotationDefault", ByteArrayAttributeParser.INSTANCE);
 
         ATTR_PERSERS.put("Signature", ByteArrayAttributeParser.INSTANCE);
     }
