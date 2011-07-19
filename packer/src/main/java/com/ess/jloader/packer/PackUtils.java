@@ -35,7 +35,7 @@ public class PackUtils {
         Set<ConstUtf> types = new HashSet<ConstUtf>();
 
         for (AClass aClass : classes) {
-            List<Const> consts = aClass.getConsts();
+            List<? extends Const> consts = aClass.getConsts();
 
             types.clear();
 
@@ -87,7 +87,7 @@ public class PackUtils {
         Map<String, Integer> classUsages = new HashMap<String, Integer>();
 
         for (AClass aClass : classes) {
-            List<Const> consts = aClass.getConsts();
+            List<? extends Const> consts = aClass.getConsts();
 
             Set<ConstUtf> classNames = new HashSet<ConstUtf>();
 

@@ -2,10 +2,7 @@ package com.ess.jloader.utils;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author Sergey Evdokimov
@@ -50,7 +47,7 @@ public class HuffmanOutputStream {
         }
     }
 
-    public static HuffmanOutputStream create(OutputStream out, Map<? extends Object, Integer> map) {
+    public static HuffmanOutputStream create(OutputStream out, SortedMap<? extends Object, Integer> map) {
         HuffmanUtils.TreeElement root = HuffmanUtils.buildHuffmanTree(map);
         return new HuffmanOutputStream(out, root);
     }
