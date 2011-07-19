@@ -2,6 +2,7 @@ package com.ess.jloader.utils;
 
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.SortedMap;
 
 /**
  * @author Sergey Evdokimov
@@ -10,7 +11,7 @@ public class HuffmanUtils {
 
     public static final Object END_MARKER = new Object();
 
-    public static <T> TreeElement buildHuffmanTree(Map<T, Integer> map) {
+    public static <T> TreeElement buildHuffmanTree(SortedMap<T, Integer> map) {
         assert map.size() > 0;
 
         PriorityQueue<TreeElement> queue = new PriorityQueue<TreeElement>();

@@ -17,7 +17,7 @@ public class ConstFactory {
     // See http://java.sun.com/docs/books/jvms/second_edition/html/ClassFile.doc.html#1348
     private static final Class<? extends Const>[] CLASS_MAP = new Class[]{
         null,
-        ConstUft.class,             // 1
+        ConstUtf.class,             // 1
         null,
         ConstInt.class,              // 3
         ConstFloat.class,            // 4

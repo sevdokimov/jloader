@@ -1,6 +1,7 @@
 package com.ess.jloader.packer.consts;
 
 import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 
 /**
@@ -13,5 +14,7 @@ public abstract class Const {
     }
 
     public abstract byte getCode();
+
+    public abstract void writeTo(DataOutput out) throws IOException;
 
 }

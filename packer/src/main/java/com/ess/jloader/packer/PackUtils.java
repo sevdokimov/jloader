@@ -32,7 +32,7 @@ public class PackUtils {
     public static Map<String, Integer> getTypeUsages(Collection<AClass> classes) throws InvalidClassException {
         Map<String, Integer> typeUsages = new HashMap<String, Integer>();
 
-        Set<ConstUft> types = new HashSet<ConstUft>();
+        Set<ConstUtf> types = new HashSet<ConstUtf>();
 
         for (AClass aClass : classes) {
             List<Const> consts = aClass.getConsts();
@@ -45,7 +45,7 @@ public class PackUtils {
                 }
             }
 
-            for (ConstUft type : types) {
+            for (ConstUtf type : types) {
                 String text = type.getText();
 
                 if (text.startsWith("(")) {
@@ -89,7 +89,7 @@ public class PackUtils {
         for (AClass aClass : classes) {
             List<Const> consts = aClass.getConsts();
 
-            Set<ConstUft> classNames = new HashSet<ConstUft>();
+            Set<ConstUtf> classNames = new HashSet<ConstUtf>();
 
             for (Const c : consts) {
                 if (c instanceof ConstClass) {
@@ -97,7 +97,7 @@ public class PackUtils {
                 }
             }
 
-            for (ConstUft className : classNames) {
+            for (ConstUtf className : classNames) {
                 String text = className.getText();
                 if (!text.startsWith("[")) {
                     inc(classUsages, text);
@@ -213,7 +213,7 @@ public class PackUtils {
         Map<String, Object> res = new HashMap<String, Object>();
 
         for (int i = 0; i < attrCount; i++) {
-            String name = aClass.createRef(ConstUft.class, in).get().getText();
+            String name = aClass.createRef(ConstUtf.class, in).get().getText();
 
             int length = in.readInt();
 

@@ -4,16 +4,17 @@ import com.ess.jloader.packer.AClass;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 
 /**
  * @author Sergey Evdokimov
  */
-public class ConstUft extends Const {
+public class ConstUtf extends Const {
 
     private String text;
 
-    public ConstUft(AClass aClass, DataInput in) throws IOException {
+    public ConstUtf(AClass aClass, DataInput in) throws IOException {
         text = in.readUTF();
     }
 
@@ -25,6 +26,11 @@ public class ConstUft extends Const {
     @Override
     public byte getCode() {
         return 1;
+    }
+
+    @Override
+    public void writeTo(DataOutput out) throws IOException {
+        out.writeUTF(text);
     }
 
     @Override

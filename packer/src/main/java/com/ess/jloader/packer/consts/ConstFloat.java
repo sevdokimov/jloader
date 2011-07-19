@@ -3,6 +3,7 @@ package com.ess.jloader.packer.consts;
 import com.ess.jloader.packer.AClass;
 
 import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 
 /**
@@ -23,5 +24,10 @@ public class ConstFloat extends Const {
     @Override
     public byte getCode() {
         return 4;
+    }
+
+    @Override
+    public void writeTo(DataOutput out) throws IOException {
+        out.writeFloat(value);
     }
 }

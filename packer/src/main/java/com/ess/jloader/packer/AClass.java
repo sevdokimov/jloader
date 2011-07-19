@@ -139,7 +139,7 @@ public class AClass {
         return code;
     }
 
-    public List<Const> getConsts() {
+    public List<? extends Const> getConsts() {
         return consts;
     }
 

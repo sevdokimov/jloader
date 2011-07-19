@@ -1,6 +1,12 @@
 package com.ess.jloader.packer;
 
+import com.ess.jloader.packer.consts.Const;
+import com.ess.jloader.packer.consts.ConstClass;
+import com.ess.jloader.packer.consts.ConstUtf;
+import com.ess.jloader.utils.HuffmanOutputStream;
+import com.ess.jloader.utils.HuffmanUtils;
 import com.ess.jloader.utils.Utils;
+import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
 import org.apache.log4j.Logger;
 
 import java.io.*;
@@ -79,9 +85,9 @@ public class JarPacker {
 //            System.out.println(entry.getKey() + "=" + entry.getValue());
 //        }
 
-        for (Map.Entry<String, Integer> entry : entries) {
-            System.out.println(entry.getKey() + "=" + entry.getValue());
-        }
+//        for (Map.Entry<String, Integer> entry : entries) {
+//            System.out.println(entry.getKey() + "=" + entry.getValue());
+//        }
 
         System.out.println(out.size());
         System.out.println(classCountMap.size());
@@ -104,48 +110,102 @@ public class JarPacker {
         return res;
     }
 
-    private void writeClassNames(OutputStream out, SortedMap<String, Integer> classNameUsages) throws IOException {
-        DeflaterOutputStream defOut = new DeflaterOutputStream(out);
-        DataOutputStream dataOut = new DataOutputStream(defOut);
-        PackUtils.writeClassNames(classNameUsages.keySet(), dataOut);
-        for (Integer integer : classNameUsages.values()) {
-            if (integer > 0xFFFF) throw new InvalidClassException();
-
-            dataOut.writeShort(integer);
-        }
-        defOut.finish();
-    }
-
     public void writeResult(OutputStream output) throws IOException {
-        DataOutputStream out = new DataOutputStream(output);
-        out.writeShort(Utils.MAGIC);
+        DataOutputStream dataOut = new DataOutputStream(output);
+
+        // Write MAGIC (2)
+        dataOut.writeShort(Utils.MAGIC);
 
         int javaVersion = getJavaVersion();
         if (javaVersion == -1) throw new InvalidClassException();
 
-        out.writeInt(javaVersion);
+        // Write version (4)
+        dataOut.writeInt(javaVersion);
 
         SortedMap<String, Integer> classCountMap = new TreeMap<String, Integer>(PackUtils.getClassNameUsages(classMap.values()));
-        writeClassNames(out, classCountMap);
 
-        String[] classNames = classMap.keySet().toArray(new String[classMap.size()]);
-        Arrays.sort(classNames);
+        // Write classes and usage counts.
+        DeflaterOutputStream defOut = new DeflaterOutputStream(dataOut);
+        DataOutputStream dataDefOut = new DataOutputStream(defOut);
+        PackUtils.writeClassNames(classCountMap.keySet(), dataDefOut);
+        for (Integer integer : classCountMap.values()) {
+            if (integer > 0xFFFF) throw new InvalidClassException();
 
-
-        GZIPOutputStream gzipOutputStream = new GZIPOutputStream(output);
-
-        DataOutputStream dataOutputStream = new DataOutputStream(gzipOutputStream);
-
-        for (Map.Entry<String, AClass> entry : classMap.entrySet()) {
-            AClass aClass = entry.getValue();
-            dataOutputStream.writeInt(aClass.getCode().length);
-            dataOutputStream.writeUTF(entry.getKey());
-            aClass.store(dataOutputStream);
+            dataDefOut.writeShort(integer);
         }
 
-        dataOutputStream.writeInt(-1);
+        // Write is provided flags (1)
+        for (String className : classCountMap.keySet()) {
+            dataDefOut.write(classMap.containsKey(className) ? 1 : 0);
+        }
 
-        gzipOutputStream.finish();
+        defOut.finish();
+
+        HuffmanUtils.TreeElement tree = HuffmanUtils.buildHuffmanTree(classCountMap);
+        List<ByteArrayOutputStream> packedClasses = new ArrayList<ByteArrayOutputStream>();
+
+        for (String className : classCountMap.keySet()) {
+            AClass aClass = classMap.get(className);
+            if (aClass != null) {
+                ByteArrayOutputStream packedClass = packClass(className, aClass, tree);
+                packedClasses.add(packedClass);
+
+                if (packedClass.size() > 0xFFFF) throw new InvalidClassException();
+
+                dataDefOut.writeShort(packedClass.size());
+            }
+        }
+
+        if (packedClasses.size() != classMap.size()) throw new InvalidClassException();
+
+        for (ByteArrayOutputStream packedClass : packedClasses) {
+            packedClass.writeTo(output);
+        }
+    }
+
+    private static ByteArrayOutputStream packClass(String name, AClass aClass, HuffmanUtils.TreeElement tree) {
+        try {
+            ByteArrayOutputStream res = new ByteArrayOutputStream();
+            DeflaterOutputStream defOut = new DeflaterOutputStream(res);
+            DataOutputStream dataOut = new DataOutputStream(defOut);
+
+            Set<ConstUtf> classNames = new HashSet<ConstUtf>();
+
+            for (Const aConst : aClass.getConsts()) {
+                if (aConst instanceof ConstClass) {
+                    ConstUtf nameConst = ((ConstClass) aConst).getName().get();
+                    if (!nameConst.getText().startsWith("[")) {
+                        classNames.add(nameConst);
+                    }
+                }
+            }
+
+            ByteArrayOutputStream hByteOut = new ByteArrayOutputStream();
+            HuffmanOutputStream hOut = new HuffmanOutputStream(hByteOut, tree);
+
+            for (Const aConst : aClass.getConsts()) {
+                if (aConst == null) continue;
+
+                if (classNames.contains(aConst)) {
+                    dataOut.write(20);
+                    hOut.write(((ConstUtf)aConst).getText());
+                }
+                else {
+                    dataOut.write(aConst.getCode());
+                    aConst.writeTo(dataOut);
+                }
+            }
+
+            hOut.finish();
+
+            dataOut.write(21);
+
+
+
+            return res;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public void writeResult(File file) throws IOException {

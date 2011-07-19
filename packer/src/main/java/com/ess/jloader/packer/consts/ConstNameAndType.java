@@ -3,6 +3,7 @@ package com.ess.jloader.packer.consts;
 import com.ess.jloader.packer.AClass;
 
 import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 
 /**
@@ -10,24 +11,30 @@ import java.io.IOException;
  */
 public class ConstNameAndType extends Const {
 
-    private CRef<ConstUft> name;
-    private CRef<ConstUft> type;
+    private CRef<ConstUtf> name;
+    private CRef<ConstUtf> type;
 
     public ConstNameAndType(AClass aClass, DataInput in) throws IOException {
-        name = aClass.createRef(ConstUft.class, in);
-        type = aClass.createRef(ConstUft.class, in);
+        name = aClass.createRef(ConstUtf.class, in);
+        type = aClass.createRef(ConstUtf.class, in);
     }
 
-    public CRef<ConstUft> getName() {
+    public CRef<ConstUtf> getName() {
         return name;
     }
 
-    public CRef<ConstUft> getType() {
+    public CRef<ConstUtf> getType() {
         return type;
     }
 
     @Override
     public byte getCode() {
         return 12;
+    }
+
+    @Override
+    public void writeTo(DataOutput out) throws IOException {
+        name.writeTo(out);
+        type.writeTo(out);
     }
 }

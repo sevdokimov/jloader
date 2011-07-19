@@ -20,7 +20,7 @@ public class HuffmanOutputStream {
     private int bits;
     private int bitCount;
 
-    private HuffmanOutputStream(OutputStream out, HuffmanUtils.TreeElement root) {
+    public HuffmanOutputStream(OutputStream out, HuffmanUtils.TreeElement root) {
         Map<Object, boolean[]> pathMap = new HashMap<Object, boolean[]>();
         buildHuffmanMap(pathMap, new ArrayList<Boolean>(), root);
         this.pathMap = pathMap;

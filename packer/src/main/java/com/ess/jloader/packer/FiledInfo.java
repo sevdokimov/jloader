@@ -5,7 +5,7 @@ import com.ess.jloader.packer.attribute.ByteArrayAttributeParser;
 import com.ess.jloader.packer.attribute.ConstantValueAttrParser;
 import com.ess.jloader.packer.attribute.MarkerAttribute;
 import com.ess.jloader.packer.consts.CRef;
-import com.ess.jloader.packer.consts.ConstUft;
+import com.ess.jloader.packer.consts.ConstUtf;
 
 import java.io.DataInput;
 import java.io.IOException;
@@ -37,8 +37,8 @@ public class FiledInfo {
 
     private int accessFlag;
 
-    private CRef<ConstUft> name;
-    private CRef<ConstUft> descriptor;
+    private CRef<ConstUtf> name;
+    private CRef<ConstUtf> descriptor;
 
     public Map<String, Object> attrs;
 
@@ -49,8 +49,8 @@ public class FiledInfo {
 
         accessFlag = in.readUnsignedShort();
 
-        name = aClass.createRef(ConstUft.class, in);
-        descriptor = aClass.createRef(ConstUft.class, in);
+        name = aClass.createRef(ConstUtf.class, in);
+        descriptor = aClass.createRef(ConstUtf.class, in);
         attrs = PackUtils.readAttrs(aClass, in, ATTR_PERSERS);
 
         if ((accessFlag & ~MODIFIER_MASK) != 0) throw new InvalidClassException();
@@ -61,11 +61,11 @@ public class FiledInfo {
         return accessFlag;
     }
 
-    public CRef<ConstUft> getName() {
+    public CRef<ConstUtf> getName() {
         return name;
     }
 
-    public CRef<ConstUft> getDescriptor() {
+    public CRef<ConstUtf> getDescriptor() {
         return descriptor;
     }
 

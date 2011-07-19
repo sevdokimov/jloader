@@ -3,6 +3,7 @@ package com.ess.jloader.packer.consts;
 import com.ess.jloader.packer.AClass;
 
 import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 
 /**
@@ -24,5 +25,11 @@ public abstract class ConstRef extends Const {
 
     public CRef<ConstNameAndType> getNameAndType() {
         return nameAndType;
+    }
+
+    @Override
+    public void writeTo(DataOutput out) throws IOException {
+        containingClass.writeTo(out);
+        nameAndType.writeTo(out);
     }
 }

@@ -5,6 +5,7 @@ import com.ess.jloader.packer.InvalidClassException;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 
 /**
@@ -34,6 +35,10 @@ public class CRef<T extends Const> {
         }
 
         index = -1;
+    }
+
+    public void writeTo(DataOutput out) throws IOException {
+        out.writeShort(index);
     }
 
     @NotNull

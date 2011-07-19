@@ -3,6 +3,7 @@ package com.ess.jloader.packer.consts;
 import com.ess.jloader.packer.AClass;
 
 import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 
 /**
@@ -23,6 +24,11 @@ public class ConstLong extends Const {
     @Override
     public byte getCode() {
         return 5;
+    }
+
+    @Override
+    public void writeTo(DataOutput out) throws IOException {
+        out.writeLong(value);
     }
 
     @Override
