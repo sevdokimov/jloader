@@ -198,8 +198,6 @@ public class JarPacker {
             ByteArrayOutputStream hByteOut = new ByteArrayOutputStream();
             hOut.reset(hByteOut);
 
-            System.out.println(aClass.getName() + "=" + aClass.getConsts().size());
-
             for (Const aConst : aClass.getConsts()) {
                 if (aConst == null) continue;
 
