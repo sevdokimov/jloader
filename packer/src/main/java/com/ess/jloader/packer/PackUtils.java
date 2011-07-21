@@ -2,6 +2,7 @@ package com.ess.jloader.packer;
 
 import com.ess.jloader.packer.attribute.AttributeParser;
 import com.ess.jloader.packer.consts.*;
+import org.objectweb.asm.commons.EmptyVisitor;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -14,6 +15,8 @@ import java.util.regex.Pattern;
  * @author Sergey Evdokimov
  */
 public class PackUtils {
+
+    public static final EmptyVisitor EMPTY_VISITOR = new EmptyVisitor();
 
     public static final Pattern TYPE_PATTERN = Pattern.compile("(\\[*)(?:([BCDFIJSZ])|L(([\\w\\$]+)(/[\\w\\$]+)*);)");
 

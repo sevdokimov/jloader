@@ -1,5 +1,6 @@
 package com.ess.jloader.packer.tests;
 
+import com.ess.jloader.packer.Config;
 import com.ess.jloader.utils.ArrayUtil;
 import com.ess.jloader.loader.PackClassLoader;
 import com.ess.jloader.packer.JarPacker;
@@ -40,11 +41,12 @@ public class TestLoad {
 
     @Test
     public void packOpenApi() throws IOException {
-        JarPacker packer = new JarPacker();
-//        packer.addJar(new File("samples/freemarker.jar"));
+        JarPacker packer = new JarPacker(new Config());
         packer.addJar(new File("/home/sergey/EAP/idea-IU-107.52/lib/idea.jar"));
+        packer.printStatistic();
 //
-        packer.writeResult(new File("samples/idea.jp"));
+
+//        packer.writeResult(new File("samples/idea.jp"));
 
     }
 
