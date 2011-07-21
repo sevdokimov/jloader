@@ -6,7 +6,6 @@ import com.ess.jloader.packer.consts.ConstUtf;
 import com.ess.jloader.utils.HuffmanOutputStream;
 import com.ess.jloader.utils.HuffmanUtils;
 import com.ess.jloader.utils.Utils;
-import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
 import org.apache.log4j.Logger;
 
 import java.io.*;
@@ -25,8 +24,6 @@ public class JarPacker {
     private static final Logger log = Logger.getLogger(JarPacker.class);
 
     private final Map<String, AClass> classMap;
-
-    private final Map<String, ClassDescriptor> allClassesMap = new HashMap<String, ClassDescriptor>();
 
     public JarPacker() {
         classMap = new LinkedHashMap<String, AClass>();
@@ -65,33 +62,36 @@ public class JarPacker {
     }
 
     public void printStatistic() throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-        SortedMap<String, Integer> classCountMap = new TreeMap<String, Integer>(PackUtils.getClassNameUsages(classMap.values()));
+        SortedMap<String, Integer> classCountMap = new TreeMap<String, Integer>(PackUtils.getTypeUsages(classMap.values()));
+        PackUtils.getClassNameUsages(classMap.values());
 
 //        DataOutputStream dataOutputStream = new DataOutputStream(out);
 //
 //        writeClassNames(out, classCountMap);
 
-        Map.Entry<String, Integer>[] entries = classCountMap.entrySet().toArray(new Map.Entry[classCountMap.size()]);
+//        Map.Entry<String, Integer>[] entries = classCountMap.entrySet().toArray(new Map.Entry[classCountMap.size()]);
 
-        Arrays.sort(entries, new Comparator<Map.Entry<String, Integer>>() {
-            @Override
-            public int compare(Map.Entry<String, Integer> o1, Map.Entry<String, Integer> o2) {
-                return o1.getValue() - o2.getValue();
-            }
-        });
+        System.out.println(PackUtils.sizeTypes);
+        System.out.println(PackUtils.sizeClasses);
+
+//        Arrays.sort(entries, new Comparator<Map.Entry<String, Integer>>() {
+//            @Override
+//            public int compare(Map.Entry<String, Integer> o1, Map.Entry<String, Integer> o2) {
+//                return o1.getValue() - o2.getValue();
+//            }
+//        });
 
 //        for (Map.Entry<String, Integer> entry : classCountMap.entrySet()){
-//            System.out.println(entry.getKey() + "=" + entry.getValue());
+//            out.println(entry.getKey() + "=" + entry.getValue());
 //        }
 
 //        for (Map.Entry<String, Integer> entry : entries) {
 //            System.out.println(entry.getKey() + "=" + entry.getValue());
 //        }
 
-        System.out.println(out.size());
-        System.out.println(classCountMap.size());
+//        System.out.println(out.size());
+//        System.out.println(classCountMap.size());
 
     }
 
