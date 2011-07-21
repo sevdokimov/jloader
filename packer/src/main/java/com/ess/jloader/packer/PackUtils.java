@@ -29,6 +29,9 @@ public class PackUtils {
         private Map<String, Package> packages = new TreeMap<String, Package>();
     }
 
+    public static int sizeTypes = 0;
+    public static int sizeClasses = 0;
+
     public static Map<String, Integer> getTypeUsages(Collection<AClass> classes) throws InvalidClassException {
         Map<String, Integer> typeUsages = new HashMap<String, Integer>();
 
@@ -47,6 +50,7 @@ public class PackUtils {
 
             for (ConstUtf type : types) {
                 String text = type.getText();
+                sizeTypes += text.length();
 
                 if (text.startsWith("(")) {
                     int closedBracketIndex = text.lastIndexOf(')');
@@ -99,6 +103,8 @@ public class PackUtils {
 
             for (ConstUtf className : classNames) {
                 String text = className.getText();
+                sizeClasses += text.length();
+
                 if (!text.startsWith("[")) {
                     inc(classUsages, text);
                 }
