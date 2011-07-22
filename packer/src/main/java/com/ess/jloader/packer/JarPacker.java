@@ -69,38 +69,8 @@ public class JarPacker {
         }
     }
 
-    public void printStatistic() throws IOException {
-
-//        SortedMap<String, Integer> classCountMap = new TreeMap<String, Integer>(PackUtils.getTypeUsages(classMap.values()));
-//        PackUtils.getClassNameUsages(classMap.values());
-
-//        DataOutputStream dataOutputStream = new DataOutputStream(out);
-//
-//        writeClassNames(out, classCountMap);
-
-//        Map.Entry<String, Integer>[] entries = classCountMap.entrySet().toArray(new Map.Entry[classCountMap.size()]);
-
-        System.out.println(PackUtils.sizeTypes);
-        System.out.println(PackUtils.sizeClasses);
-
-//        Arrays.sort(entries, new Comparator<Map.Entry<String, Integer>>() {
-//            @Override
-//            public int compare(Map.Entry<String, Integer> o1, Map.Entry<String, Integer> o2) {
-//                return o1.getValue() - o2.getValue();
-//            }
-//        });
-
-//        for (Map.Entry<String, Integer> entry : classCountMap.entrySet()){
-//            out.println(entry.getKey() + "=" + entry.getValue());
-//        }
-
-//        for (Map.Entry<String, Integer> entry : entries) {
-//            System.out.println(entry.getKey() + "=" + entry.getValue());
-//        }
-
-//        System.out.println(out.size());
-//        System.out.println(classCountMap.size());
-
+    public Map<String, ClassNode> getClassMap() {
+        return classMap;
     }
 
     public void writeResult(OutputStream output) throws IOException {
