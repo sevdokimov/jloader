@@ -2,7 +2,10 @@ package com.ess.jloader.packer;
 
 import com.ess.jloader.packer.attribute.AttributeParser;
 import com.ess.jloader.packer.consts.*;
+import org.jetbrains.annotations.NotNull;
+import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.commons.EmptyVisitor;
+import org.objectweb.asm.tree.ClassNode;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -26,6 +29,9 @@ public class PackUtils {
 
     }
 
+    public static void getTable(@NotNull ClassNode classNode) {
+    }
+
     private static class Package {
         private List<String> classes = new ArrayList<String>();
 
@@ -35,86 +41,35 @@ public class PackUtils {
     public static int sizeTypes = 0;
     public static int sizeClasses = 0;
 
-    public static Map<String, Integer> getTypeUsages(Collection<AClass> classes) throws InvalidClassException {
-        Map<String, Integer> typeUsages = new HashMap<String, Integer>();
+    public static List<String> extractTypes(String methodSign) throws InvalidClassException {
+        int closedBracketIndex = methodSign.lastIndexOf(')');
+        if (closedBracketIndex == -1) throw new InvalidClassException();
 
-        Set<ConstUtf> types = new HashSet<ConstUtf>();
+        List<String> res = new ArrayList<String>();
 
-        for (AClass aClass : classes) {
-            List<? extends Const> consts = aClass.getConsts();
-
-            types.clear();
-
-            for (Const c : consts) {
-                if (c instanceof ConstRef) {
-                    types.add(((ConstRef) c).getNameAndType().get().getType().get());
-                }
-            }
-
-            for (ConstUtf type : types) {
-                String text = type.getText();
-                sizeTypes += text.length();
-
-                if (text.startsWith("(")) {
-                    int closedBracketIndex = text.lastIndexOf(')');
-                    if (closedBracketIndex == -1) throw new InvalidClassException();
-
-                    String returnType = text.substring(closedBracketIndex + 1);
-                    if (!returnType.equals("V")) {
-                        assertType(returnType);
-                        inc(typeUsages, returnType);
-                    }
-
-                    if (closedBracketIndex > 1) {
-                        String params = text.substring(1, closedBracketIndex);
-                        Matcher m = TYPE_PATTERN.matcher(params);
-                        int idx = 0;
-                        while (m.find()) {
-                            if (m.start() != idx) {
-                                throw new InvalidClassException(text);
-                            }
-
-                            inc(typeUsages, m.group());
-                            idx = m.end();
-                        }
-
-                        if (idx != params.length()) throw new InvalidClassException(text);
-                    }
-                }
-                else {
-                    assertType(text);
-                    inc(typeUsages, text);
-                }
-            }
+        String returnType = methodSign.substring(closedBracketIndex + 1);
+        if (!returnType.equals("V")) {
+            assertType(returnType);
+            res.add(returnType);
         }
 
-        return typeUsages;
-    }
-    public static Map<String, Integer> getClassNameUsages(Collection<AClass> classes) throws InvalidClassException {
-        Map<String, Integer> classUsages = new HashMap<String, Integer>();
-
-        for (AClass aClass : classes) {
-            List<? extends Const> consts = aClass.getConsts();
-
-            Set<ConstUtf> classNames = new HashSet<ConstUtf>();
-
-            for (Const c : consts) {
-                if (c instanceof ConstClass) {
-                    classNames.add(((ConstClass) c).getName().get());
+        if (closedBracketIndex > 1) {
+            String params = methodSign.substring(1, closedBracketIndex);
+            Matcher m = TYPE_PATTERN.matcher(params);
+            int idx = 0;
+            while (m.find()) {
+                if (m.start() != idx) {
+                    throw new InvalidClassException(methodSign);
                 }
+
+                res.add(m.group());
+                idx = m.end();
             }
 
-            for (ConstUtf className : classNames) {
-                String text = className.getText();
-                sizeClasses += text.length();
-
-                if (!text.startsWith("[")) {
-                    inc(classUsages, text);
-                }
-            }
+            if (idx != params.length()) throw new InvalidClassException(methodSign);
         }
 
-        return classUsages;
+        return res;
     }
 
     private static <T> void inc(Map<T, Integer> map, T key) {
@@ -214,27 +169,6 @@ public class PackUtils {
         for (Package subPackage : p.packages.values()) {
             writeClasses(out, subPackage);
         }
-    }
-
-    public static Map<String, Object> readAttrs(AClass aClass, DataInput in, Map<String, AttributeParser> parsers) throws IOException {
-        int attrCount = in.readUnsignedShort();
-
-        Map<String, Object> res = new HashMap<String, Object>();
-
-        for (int i = 0; i < attrCount; i++) {
-            String name = aClass.createRef(ConstUtf.class, in).get().getText();
-
-            int length = in.readInt();
-
-            AttributeParser parser = parsers.get(name);
-            if (parser == null) {
-                throw new InvalidClassException("Uncknown attribute: " + name);
-            }
-
-            res.put(name, parser.parse(aClass, length, in));
-        }
-
-        return res;
     }
 
 }

@@ -4,10 +4,10 @@ import com.ess.jloader.packer.consts.Const;
 import com.ess.jloader.packer.consts.ConstClass;
 import com.ess.jloader.packer.consts.ConstUtf;
 import com.ess.jloader.utils.HuffmanOutputStream;
-import com.ess.jloader.utils.HuffmanUtils;
 import com.ess.jloader.utils.Utils;
 import org.apache.log4j.Logger;
 import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.ClassNode;
 
 import java.io.*;
@@ -137,58 +137,10 @@ public class JarPacker {
 //        }
     }
 
-    private static ByteArrayOutputStream packClass(String name, AClass aClass, HuffmanOutputStream hOut) {
-        try {
-            Set<ConstUtf> classNames = new HashSet<ConstUtf>();
-
-            for (Const aConst : aClass.getConsts()) {
-                if (aConst instanceof ConstClass) {
-                    ConstUtf nameConst = ((ConstClass) aConst).getName().get();
-                    if (!nameConst.getText().startsWith("[")) {
-                        classNames.add(nameConst);
-                    }
-                }
-            }
-
-            ByteArrayOutputStream data = new ByteArrayOutputStream();
-
-            new DataOutputStream(data).writeInt(aClass.getJavaVersion());
-
-            DeflaterOutputStream defOut = new DeflaterOutputStream(data);
-            DataOutputStream dataOut = new DataOutputStream(defOut);
-
-            ByteArrayOutputStream hByteOut = new ByteArrayOutputStream();
-            hOut.reset(hByteOut);
-
-            for (Const aConst : aClass.getConsts()) {
-                if (aConst == null) continue;
-
-                if (classNames.contains(aConst)) {
-                    dataOut.write(20);
-                    hOut.write(((ConstUtf)aConst).getText());
-                }
-                else {
-                    dataOut.write(aConst.getCode());
-                    aConst.writeTo(dataOut);
-                }
-            }
-
-            hOut.finish();
-
-            dataOut.write(21);
-
-            defOut.write(aClass.getCode(), aClass.getConstTableEnd(), aClass.getCode().length - aClass.getConstTableEnd());
-            defOut.close();
-
-            ByteArrayOutputStream res = new ByteArrayOutputStream(4 + data.size() + hByteOut.size());
-            new DataOutputStream(res).writeInt(data.size());
-            data.writeTo(res);
-            hByteOut.writeTo(res);
-
-            return res;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+    private static byte[] packClass(String name, ClassNode aClass, HuffmanOutputStream hOut) {
+        ClassWriter writer = new ClassWriter(0);
+        aClass.accept(writer);
+        return writer.toByteArray();
     }
 
     public void writeResult(File file) throws IOException {
