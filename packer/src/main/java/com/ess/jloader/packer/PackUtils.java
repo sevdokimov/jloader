@@ -1,13 +1,9 @@
 package com.ess.jloader.packer;
 
-import com.ess.jloader.packer.attribute.AttributeParser;
-import com.ess.jloader.packer.consts.*;
 import org.jetbrains.annotations.NotNull;
-import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.commons.EmptyVisitor;
 import org.objectweb.asm.tree.ClassNode;
 
-import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.*;

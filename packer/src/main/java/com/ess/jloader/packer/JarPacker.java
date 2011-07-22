@@ -1,8 +1,5 @@
 package com.ess.jloader.packer;
 
-import com.ess.jloader.packer.consts.Const;
-import com.ess.jloader.packer.consts.ConstClass;
-import com.ess.jloader.packer.consts.ConstUtf;
 import com.ess.jloader.utils.HuffmanOutputStream;
 import com.ess.jloader.utils.Utils;
 import org.apache.log4j.Logger;
@@ -11,10 +8,10 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.ClassNode;
 
 import java.io.*;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
-import java.util.zip.DeflaterOutputStream;
 
 /**
  * @author Sergey Evdokimov
