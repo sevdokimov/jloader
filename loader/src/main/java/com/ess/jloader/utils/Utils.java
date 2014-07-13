@@ -8,7 +8,7 @@ public class Utils {
     public static final short MAGIC = ('J' << 8) + 'A';
 
     public static String fileNameToClassName(String fileName) {
-        assert fileName.endsWith(".class");
+        assert fileName.endsWith(".class") : fileName;
         return fileName.substring(0, fileName.length() - ".class".length()).replace('/', '.');
     }
 

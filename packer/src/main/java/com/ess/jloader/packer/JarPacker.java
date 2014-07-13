@@ -1,7 +1,7 @@
 package com.ess.jloader.packer;
 
-import com.ess.jloader.utils.HuffmanOutputStream;
 import com.ess.jloader.utils.Utils;
+import com.google.common.io.ByteStreams;
 import org.apache.log4j.Logger;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -12,6 +12,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 
 /**
  * @author Sergey Evdokimov
@@ -23,6 +25,12 @@ public class JarPacker {
     private static final Logger log = Logger.getLogger(JarPacker.class);
 
     private final Map<String, ClassNode> classMap = new LinkedHashMap<String, ClassNode>();
+
+    private final Map<String, byte[]> resourceMap = new LinkedHashMap<String, byte[]>();
+
+    private final Map<String, JarEntry> resourceEntries = new LinkedHashMap<String, JarEntry>();
+
+    private Manifest manifest;
 
     private final Config cfg;
 
@@ -39,11 +47,16 @@ public class JarPacker {
         ClassReader classReader = new ClassReader(inputStream);
         classReader.accept(new ClassElementFilter(classNode, cfg), 0);
 
-        classMap.put(className.replace('.', '/'), classNode);
+        classMap.put(className, classNode);
     }
 
     public void addJar(File jarFile) throws IOException {
         JarInputStream jarInputStream = new JarInputStream(new FileInputStream(jarFile));
+
+        if (manifest == null) {
+            manifest = jarInputStream.getManifest();
+        }
+
         try {
             addJar(jarInputStream);
         } finally {
@@ -60,84 +73,56 @@ public class JarPacker {
                     String className = Utils.fileNameToClassName(entry.getName());
                     addClass(className, jarInputStream);
                 }
+                else {
+                    resourceMap.put(entry.getName(), ByteStreams.toByteArray(jarInputStream));
+                }
             }
+
+            resourceEntries.put(entry.getName(), entry);
 
             entry = jarInputStream.getNextJarEntry();
         }
     }
 
-    public Map<String, ClassNode> getClassMap() {
-        return classMap;
-    }
-
     public void writeResult(OutputStream output) throws IOException {
-        DataOutputStream dataOut = new DataOutputStream(output);
+        JarOutputStream zipOutputStream;
 
-        // Write MAGIC (2)
-        dataOut.writeShort(Utils.MAGIC);
+        if (manifest != null) {
+            zipOutputStream = new JarOutputStream(output, manifest);
+        }
+        else {
+            zipOutputStream = new JarOutputStream(output);
+        }
 
-        // Write packer version;
-        dataOut.writeShort(PACKER_VERSION);
+        try {
+            for (Map.Entry<String, JarEntry> entry : resourceEntries.entrySet()) {
+                JarEntry jarEntry = entry.getValue();
 
-//        int javaVersion = getJavaVersion();
-//        if (javaVersion == -1) throw new InvalidClassException();
-//
-//        // Write version (4)
-//        dataOut.writeInt(javaVersion);
+                jarEntry.setCompressedSize(-1);
 
-//        SortedMap<String, Integer> classCountMap = new TreeMap<String, Integer>(PackUtils.getClassNameUsages(classMap.values()));
+                zipOutputStream.putNextEntry(jarEntry);
 
-        // Write classes and usage counts.
-//        DeflaterOutputStream defOut = new DeflaterOutputStream(dataOut);
-//        DataOutputStream dataDefOut = new DataOutputStream(defOut);
-//        PackUtils.writeClassNames(classCountMap.keySet(), dataDefOut);
-//        for (Integer integer : classCountMap.values()) {
-//            if (integer > 0xFFFF) throw new InvalidClassException();
-//
-//            dataDefOut.writeShort(integer);
-//        }
-//
-//        // Write is provided flags (1)
-//        for (String className : classCountMap.keySet()) {
-//            dataDefOut.write(classMap.containsKey(className) ? 1 : 0);
-//        }
-//
-//        HuffmanUtils.TreeElement tree = HuffmanUtils.buildHuffmanTree(classCountMap);
-//        HuffmanOutputStream hOut = new HuffmanOutputStream(tree);
-//
-//        List<ByteArrayOutputStream> packedClasses = new ArrayList<ByteArrayOutputStream>();
-//
-//        for (String className : classCountMap.keySet()) {
-//            AClass aClass = classMap.get(className);
-//            if (aClass != null) {
-//                ByteArrayOutputStream packedClass = packClass(className, aClass, hOut);
-//                packedClasses.add(packedClass);
-//
-////                System.out.println(className + "=" + packedClass.size() + " / " + aClass.getCode().length);
-//
-//                if (packedClass.size() < 0xFFFF) {
-//                    dataDefOut.writeShort(packedClass.size());
-//                }
-//                else {
-//                    dataDefOut.writeShort(0xFFFF);
-//                    dataDefOut.writeInt(packedClass.size() - 0xFFFF);
-//                }
-//            }
-//        }
-//
-//        defOut.finish();
-//
-//        if (packedClasses.size() != classMap.size()) throw new InvalidClassException();
-//
-//        for (ByteArrayOutputStream packedClass : packedClasses) {
-//            packedClass.writeTo(output);
-//        }
-    }
+                if (!jarEntry.isDirectory()) {
+                    byte[] resourceContent = resourceMap.get(jarEntry.getName());
+                    if (resourceContent != null) {
+                        zipOutputStream.write(resourceContent);
+                    }
+                    else {
+                        String className = Utils.fileNameToClassName(jarEntry.getName());
+                        ClassNode classNode = classMap.get(className);
 
-    private static byte[] packClass(String name, ClassNode aClass, HuffmanOutputStream hOut) {
-        ClassWriter writer = new ClassWriter(0);
-        aClass.accept(writer);
-        return writer.toByteArray();
+                        ClassWriter classWriter = new ClassWriter(0);
+                        classNode.accept(classWriter);
+
+                        zipOutputStream.write(classWriter.toByteArray());
+                    }
+                }
+
+                zipOutputStream.closeEntry();
+            }
+        } finally {
+            zipOutputStream.close();
+        }
     }
 
     public void writeResult(File file) throws IOException {

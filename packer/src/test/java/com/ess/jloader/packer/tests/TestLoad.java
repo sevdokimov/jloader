@@ -1,12 +1,10 @@
 package com.ess.jloader.packer.tests;
 
-import com.ess.jloader.packer.Config;
-import com.ess.jloader.utils.ArrayUtil;
 import com.ess.jloader.loader.PackClassLoader;
 import com.ess.jloader.packer.JarPacker;
 import org.junit.Test;
 
-import java.io.*;
+import java.io.File;
 import java.lang.reflect.Method;
 
 /**
@@ -14,29 +12,42 @@ import java.lang.reflect.Method;
  */
 public class TestLoad {
 
-    private static final File src = new File("/media/A2B89412B893E2D9/w/jloader/samples/TestProject/target/TestProject-1.0.jar");
-
     @Test
-    public void testXxx() throws Exception {
-        File tempFile = File.createTempFile("packTest", ".pack");
+    public void testProject1() throws Exception {
+        testProject("project1.marker.txt");
+    }
 
-        try {
-            JarPacker.pack(src, tempFile);
+    private File getJarByMarker(String marker) {
+        String path = Thread.currentThread().getContextClassLoader().getResource(marker).getPath();
+        int idx = path.lastIndexOf("!/");
+        assert idx > 0;
 
-            ClassLoader l = new PackClassLoader(tempFile);
-            Class s = l.loadClass("Zzz");
-            checkClass(s);
-
-            System.out.println("jar: " + src.length() + ", pack: " + tempFile.length());
-        } finally {
-            tempFile.delete();
+        path = path.substring(0, idx);
+        if (path.startsWith("file:")) {
+            path = path.substring("file:".length());
         }
+
+        return new File(path);
+    }
+
+    private void testProject(String marker) throws Exception {
+        File src = getJarByMarker(marker);
+
+        File tempFile = new File(System.getProperty("java.io.tmpdir") + "/packed-" + marker.substring(0, marker.indexOf('.')) + ".j");
+
+        JarPacker.pack(src, tempFile);
+
+        ClassLoader l = new PackClassLoader(tempFile);
+        Class s = l.loadClass("Main");
+        checkClass(s);
+
+        System.out.println("jar: " + src.length() + ", pack: " + tempFile.length());
     }
 
     private void checkClass(Class aClass) throws Exception {
-        Method hello = aClass.getMethod("hello", ArrayUtil.EMPTY_CLASS_ARRAY);
-        Object res = hello.invoke(null);
-        assert "XXX".equals(res);
+        Method main = aClass.getMethod("main", new Class[]{String[].class});
+
+        main.invoke(null, (Object)new String[0]);
     }
 
 

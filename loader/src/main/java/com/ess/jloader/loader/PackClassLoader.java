@@ -1,82 +1,41 @@
 package com.ess.jloader.loader;
 
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.StringTokenizer;
-import java.util.zip.GZIPInputStream;
+import java.io.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 /**
  * @author Sergey Evdokimov
  */
-public class PackClassLoader extends ClassLoader {
+public class PackClassLoader extends ClassLoader implements Closeable {
 
-    private File[] files;
+    private ZipFile zip;
 
-    public PackClassLoader(File ... files) {
-        this.files = files;
-    }
-
-    public PackClassLoader(ClassLoader parent) {
-        super(parent);
-        String property = System.getProperty("jloader.cp");
-        if (property == null) throw new RuntimeException("jloader.cp not defined");
-
-        List<File> res = new ArrayList<File>();
-
-        for (StringTokenizer st = new StringTokenizer(property, ";"); st.hasMoreTokens(); ) {
-            String path = st.nextToken();
-            File file = new File(path);
-            if (!file.isFile()) throw new RuntimeException("File not found: " + file + " (jloader.cp=" + property + ')');
-
-            res.add(file);
-        }
-
-        load(res);
-    }
-
-    private void load(Collection<File> files) {
-        this.files = files.toArray(new File[files.size()]);
+    public PackClassLoader(File packFile) throws IOException {
+        zip = new ZipFile(packFile);
     }
 
     @Override
     protected Class<?> findClass(String name) throws ClassNotFoundException {
 //        System.out.println("Loading class \"" + name + "\"...");
+        String classFileName = name.replace('.', '/').concat(".class");
+
         try {
-            for (File file : files) {
-                DataInputStream inputStream = new DataInputStream(new GZIPInputStream(new FileInputStream(file)));
-                try {
-                    do {
-                        int size = inputStream.readInt();
-                        if (size == -1) {
-                            break;
-                        }
+            ZipEntry entry = zip.getEntry(classFileName);
+            if (entry == null) throw new ClassNotFoundException();
 
-                        String string = inputStream.readUTF();
-                        if (name.equals(string)) {
-                            byte[] aClassData = new byte[size];
-                            inputStream.readFully(aClassData);
+            byte[] data = new byte[zip.size()];
+            InputStream inputStream = zip.getInputStream(entry);
 
-                            Class<?> res = defineClass(name, aClassData, 0, aClassData.length);
-//                            System.out.println("Class \"" + name + "\" loaded!");
-                            return res;
-                        }
+            new DataInputStream(inputStream).readFully(data);
 
-                        inputStream.skipBytes(size);
-                    } while (true);
-                }
-                finally {
-                    inputStream.close();
-                }
-            }
+            return defineClass(name, data, 0, data.length);
         } catch (IOException e) {
             throw new ClassNotFoundException("", e);
         }
+    }
 
-        throw new ClassNotFoundException();
+    public void close() throws IOException {
+        zip.close();
     }
 }
