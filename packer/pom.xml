@@ -31,9 +31,9 @@
         </dependency>
 
         <dependency>
-            <groupId>asm</groupId>
+            <groupId>org.ow2.asm</groupId>
             <artifactId>asm-all</artifactId>
-            <version>3.3.1</version>
+            <version>5.0.3</version>
         </dependency>
 
         <dependency>
@@ -61,6 +61,13 @@
             <groupId>com.ess.jloader.testProjects</groupId>
             <artifactId>TestProject-1</artifactId>
             <version>1.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>freemarker</groupId>
+            <artifactId>freemarker</artifactId>
+            <version>2.3.8</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
