@@ -45,7 +45,7 @@ public class JarPacker {
 
         ClassNode classNode = new ClassNode();
         ClassReader classReader = new ClassReader(inputStream);
-        classReader.accept(new ClassElementFilter(classNode, cfg), 0);
+        classReader.accept(classNode, 0);
 
         classMap.put(className, classNode);
     }
