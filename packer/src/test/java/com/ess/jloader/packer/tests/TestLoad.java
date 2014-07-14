@@ -17,23 +17,10 @@ public class TestLoad {
         testProject("project1.marker.txt");
     }
 
-    private File getJarByMarker(String marker) {
-        String path = Thread.currentThread().getContextClassLoader().getResource(marker).getPath();
-        int idx = path.lastIndexOf("!/");
-        assert idx > 0;
-
-        path = path.substring(0, idx);
-        if (path.startsWith("file:")) {
-            path = path.substring("file:".length());
-        }
-
-        return new File(path);
-    }
-
     private void testProject(String marker) throws Exception {
-        File src = getJarByMarker(marker);
+        File src = TestUtils.getJarByMarker(marker);
 
-        File tempFile = new File(System.getProperty("java.io.tmpdir") + "/packed-" + marker.substring(0, marker.indexOf('.')) + ".j");
+        File tempFile = TestUtils.createTmpPAckFile("packed-" + marker.substring(0, marker.indexOf('.')));
 
         JarPacker.pack(src, tempFile);
 
