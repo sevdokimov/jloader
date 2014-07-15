@@ -175,7 +175,7 @@ public class PackUtils {
         try {
             return new DataInputStream(new ByteArrayInputStream(buffer, offset, buffer.length)).readUTF();
         } catch (IOException e) {
-            throw new InvalidClassException();
+            throw new InvalidClassException(e);
         }
     }
 }

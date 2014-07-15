@@ -108,6 +108,13 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
                 buffer.position(buffer.position() + out.size());
 
+                skipConstTableTail(buffer, in, constCount - 1 - packedStrCount - 2);
+
+                int accessFlags = in.readShort();
+                buffer.putShort((short) accessFlags);
+
+                buffer.putShort((short) 2);
+
                 in.readFully(array, buffer.position(), size - buffer.position());
 
                 return defineClass(name, array, 0, size);
@@ -116,6 +123,48 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             }
         } catch (IOException e) {
             throw new ClassNotFoundException("", e);
+        }
+    }
+
+    private void skipConstTableTail(ByteBuffer buffer, DataInputStream in, int constCount) throws IOException {
+        for (int i = 0; i < constCount; i++) {
+            int tag = in.read();
+            buffer.put((byte) tag);
+
+            int size;
+            switch (tag) {
+                case 9: // ClassWriter.FIELD:
+                case 10: // ClassWriter.METH:
+                case 11: // ClassWriter.IMETH:
+                case 3: // ClassWriter.INT:
+                case 4: // ClassWriter.FLOAT:
+                case 12: // ClassWriter.NAME_TYPE:
+                case 18: // ClassWriter.INDY:
+                    size = 4;
+                    break;
+                case 5:// ClassWriter.LONG:
+                case 6: // ClassWriter.DOUBLE:
+                    size = 8;
+                    ++i;
+                    break;
+                case 1: // ClassWriter.UTF8:
+                    size = in.readUnsignedShort();
+                    buffer.putShort((short) size);
+                    break;
+
+                case 15: // ClassWriter.HANDLE:
+                    size = 3;
+                    break;
+                // case ClassWriter.CLASS:
+                // case ClassWriter.STR:
+                // case ClassWriter.MTYPE
+                default:
+                    size = 2;
+                    break;
+            }
+
+            in.readFully(buffer.array(), buffer.position(), size);
+            buffer.position(buffer.position() + size);
         }
     }
 

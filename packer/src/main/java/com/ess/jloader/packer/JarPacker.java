@@ -158,6 +158,14 @@ public class JarPacker {
             skipUtfConst(buffer, s);
         }
 
+        copyConstTableTail(buffer, constCount - 1 - packedStr.size() - 2, out);
+
+        int accessFlags = buffer.getShort();
+        out.writeShort(accessFlags);
+
+        int thisClassIndex = buffer.getShort();
+        if (thisClassIndex != 2) throw new RuntimeException(String.valueOf(thisClassIndex));
+
         out.write(classBytes, buffer.position(), classBytes.length - buffer.position());
     }
 
@@ -172,6 +180,48 @@ public class JarPacker {
         buffer.position(buffer.position() + strSize);
     }
 
+    private void copyConstTableTail(ByteBuffer buffer, int constCount, DataOutputStream out) throws IOException {
+        int oldPosition = buffer.position();
+
+        for (int i = 0; i < constCount; i++) {
+            int tag = buffer.get();
+
+            int size;
+            switch (tag) {
+                case 9: // ClassWriter.FIELD:
+                case 10: // ClassWriter.METH:
+                case 11: // ClassWriter.IMETH:
+                case 3: // ClassWriter.INT:
+                case 4: // ClassWriter.FLOAT:
+                case 12: // ClassWriter.NAME_TYPE:
+                case 18: // ClassWriter.INDY:
+                    size = 4;
+                    break;
+                case 5:// ClassWriter.LONG:
+                case 6: // ClassWriter.DOUBLE:
+                    size = 8;
+                    ++i;
+                    break;
+                case 1: // ClassWriter.UTF8:
+                    size = buffer.getShort() & 0xFFFF;
+                    break;
+
+                case 15: // ClassWriter.HANDLE:
+                    size = 3;
+                    break;
+                // case ClassWriter.CLASS:
+                // case ClassWriter.STR:
+                // case ClassWriter.MTYPE
+                default:
+                    size = 2;
+                    break;
+            }
+
+            buffer.position(buffer.position() + size);
+        }
+
+        out.write(buffer.array(), oldPosition, buffer.position() - oldPosition);
+    }
 
     private void truncClassExtension(JarEntry entry) {
         String oldName = entry.getName();
