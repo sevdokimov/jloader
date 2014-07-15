@@ -5,7 +5,6 @@ import com.google.common.io.ByteStreams;
 import org.apache.log4j.Logger;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.tree.ClassNode;
 
 import java.io.*;
 import java.util.LinkedHashMap;
@@ -24,7 +23,7 @@ public class JarPacker {
 
     private static final Logger log = Logger.getLogger(JarPacker.class);
 
-    private final Map<String, ClassNode> classMap = new LinkedHashMap<String, ClassNode>();
+    private final Map<String, ClassReader> classMap = new LinkedHashMap<String, ClassReader>();
 
     private final Map<String, byte[]> resourceMap = new LinkedHashMap<String, byte[]>();
 
@@ -43,11 +42,9 @@ public class JarPacker {
             log.debug("Add class: " + className);
         }
 
-        ClassNode classNode = new ClassNode();
         ClassReader classReader = new ClassReader(inputStream);
-        classReader.accept(classNode, 0);
 
-        classMap.put(className, classNode);
+        classMap.put(className, classReader);
     }
 
     public void addJar(File jarFile) throws IOException {
@@ -84,7 +81,7 @@ public class JarPacker {
         }
     }
 
-    public void writeResult(OutputStream output) throws IOException {
+    public void pack(OutputStream output) throws IOException {
         JarOutputStream zipOutputStream;
 
         if (manifest != null) {
@@ -109,10 +106,11 @@ public class JarPacker {
                     }
                     else {
                         String className = Utils.fileNameToClassName(jarEntry.getName());
-                        ClassNode classNode = classMap.get(className);
 
-                        ClassWriter classWriter = new ClassWriter(0);
-                        classNode.accept(classWriter);
+                        ClassReader classReader = classMap.get(className);
+
+                        ClassWriter classWriter = new ClassWriter(classReader, 0);
+                        classReader.accept(classWriter, 0);
 
                         zipOutputStream.write(classWriter.toByteArray());
                     }
@@ -128,7 +126,7 @@ public class JarPacker {
     public void writeResult(File file) throws IOException {
         OutputStream fileOut = new FileOutputStream(file);
         try {
-            writeResult(fileOut);
+            pack(fileOut);
         } finally {
             fileOut.close();
         }
@@ -141,4 +139,7 @@ public class JarPacker {
         packer.writeResult(dest);
     }
 
+    public Map<String, ClassReader> getClassMap() {
+        return classMap;
+    }
 }
