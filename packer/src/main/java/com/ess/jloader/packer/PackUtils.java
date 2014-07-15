@@ -1,8 +1,11 @@
 package com.ess.jloader.packer;
 
 import org.jetbrains.annotations.NotNull;
+import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.*;
@@ -164,4 +167,15 @@ public class PackUtils {
         }
     }
 
+    public static String readUtf(ClassReader classReader, int offset) {
+        return readUtf(classReader.b, offset);
+    }
+
+    public static String readUtf(byte[] buffer, int offset) {
+        try {
+            return new DataInputStream(new ByteArrayInputStream(buffer, offset, buffer.length)).readUTF();
+        } catch (IOException e) {
+            throw new InvalidClassException();
+        }
+    }
 }

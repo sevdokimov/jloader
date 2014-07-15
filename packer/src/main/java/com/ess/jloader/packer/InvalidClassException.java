@@ -13,4 +13,12 @@ public class InvalidClassException extends RuntimeException {
     public InvalidClassException(String message) {
         super(message);
     }
+
+    public InvalidClassException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public InvalidClassException(Throwable cause) {
+        super(cause);
+    }
 }

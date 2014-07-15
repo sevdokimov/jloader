@@ -11,9 +11,7 @@ import org.objectweb.asm.ClassWriter;
 import java.io.*;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.jar.JarOutputStream;
@@ -24,8 +22,6 @@ import java.util.zip.ZipEntry;
  * @author Sergey Evdokimov
  */
 public class JarPacker {
-
-    private static final int PACKER_VERSION = 1;
 
     private static final Logger log = Logger.getLogger(JarPacker.class);
 
@@ -94,7 +90,31 @@ public class JarPacker {
     }
 
     private void pack(ClassReader classReader, OutputStream output) throws IOException {
-        ClassWriter classWriter = new ClassWriter(classReader, 0);
+        Set<String> packedStr = new LinkedHashSet<String>();
+        List<Integer> strIndexes = new ArrayList<Integer>();
+
+        for (int i = 1; i < classReader.getItemCount(); i++) {
+            int pos = classReader.getItem(i);
+            if (pos == 0) continue;
+
+            if (classReader.b[pos - 1] == 1) {
+                String s = PackUtils.readUtf(classReader.b, pos);
+
+                Integer strIndex = metaData.getStringIndex(s);
+                if (strIndex != null) {
+                    packedStr.add(s);
+                    strIndexes.add(strIndex);
+                }
+            }
+
+            if (packedStr.size() == 0xFFFF) break;
+        }
+
+        ClassWriter classWriter = new ClassWriter(0);
+
+        for (String s : packedStr) {
+            classWriter.newUTF8(s);
+        }
         classReader.accept(classWriter, 0);
 
         byte[] classBytes = classWriter.toByteArray();
@@ -117,7 +137,30 @@ public class JarPacker {
             out.writeShort(classBytes.length);
         }
 
-        out.write(classBytes, 4, classBytes.length - 4);
+        buffer.position(4);
+
+        int version = buffer.getInt();
+        out.writeInt(version);
+
+        int constCount = buffer.getShort() & 0xFFFF;
+        out.writeShort(constCount);
+
+        out.writeShort(packedStr.size());
+        for (Integer strIndex : strIndexes) {
+            out.writeInt(strIndex);
+        }
+
+        for (String s : packedStr) {
+            int tag = buffer.get();
+            if (tag != 1) throw new RuntimeException("" + tag);
+
+            if (!s.equals(PackUtils.readUtf(classBytes, buffer.position()))) throw new RuntimeException();
+
+            int strSize = buffer.getShort();
+            buffer.position(buffer.position() + strSize);
+        }
+
+        out.write(classBytes, buffer.position(), classBytes.length - buffer.position());
     }
 
     private void truncClassExtension(JarEntry entry) {

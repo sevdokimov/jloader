@@ -1,9 +1,13 @@
 package com.ess.jloader.loader;
 
+import com.ess.jloader.utils.OpenByteOutputStream;
 import com.ess.jloader.utils.Utils;
 
 import java.io.*;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetEncoder;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -15,6 +19,8 @@ public class PackClassLoader extends ClassLoader implements Closeable {
     public static final String METADATA_ENTRY_NAME = "META-INF/literals.data";
 
     private ZipFile zip;
+
+    private String[] packedStrings;
 
     public PackClassLoader(ClassLoader parent, File packFile) throws IOException {
         super(parent);
@@ -28,6 +34,12 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             if (inputStream.readByte() != Utils.MAGIC) throw new RuntimeException();
 
             if (inputStream.readByte() != Utils.PACKER_VERSION) throw new RuntimeException();
+
+            int packedStringsCount = inputStream.readInt();
+            packedStrings = new String[packedStringsCount];
+            for (int i = 0; i < packedStringsCount; i++) {
+                packedStrings[i] = inputStream.readUTF();
+            }
         }
         finally {
             inputStream.close();
@@ -64,9 +76,30 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 ByteBuffer buffer = ByteBuffer.allocate(size);
                 byte[] array = buffer.array();
 
+                // Magic
                 buffer.putInt(0xCAFEBABE);
 
-                in.readFully(array, 4, size - 4);
+                // Version
+                buffer.putInt(in.readInt());
+
+                // Const count
+                int constCount = in.readUnsignedShort();
+                buffer.putShort((short) constCount);
+
+                // Packed String Constants
+                int packedStrCount = in.readUnsignedShort();
+                DataOutputStream out = new DataOutputStream(OpenByteOutputStream.wrap(array, buffer.position()));
+
+                for (int i = 0; i < packedStrCount; i++) {
+                    int strIndex = in.readInt();
+
+                    out.write(1);
+                    out.writeUTF(packedStrings[strIndex]);
+                }
+
+                buffer.position(buffer.position() + out.size());
+
+                in.readFully(array, buffer.position(), size - buffer.position());
 
                 return defineClass(name, array, 0, size);
             } finally {
