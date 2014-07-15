@@ -11,8 +11,13 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
     private ZipFile zip;
 
-    public PackClassLoader(File packFile) throws IOException {
+    public PackClassLoader(ClassLoader parent, File packFile) throws IOException {
+        super(parent);
         zip = new ZipFile(packFile);
+    }
+
+    public PackClassLoader(File packFile) throws IOException {
+        this(getSystemClassLoader(), packFile);
     }
 
     @Override
@@ -28,6 +33,11 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             InputStream inputStream = zip.getInputStream(entry);
 
             new DataInputStream(inputStream).readFully(data);
+
+            data[0] = (byte) 0xCA;
+            data[1] = (byte) 0xFE;
+            data[2] = (byte) 0xBA;
+            data[3] = (byte) 0xBE;
 
             return defineClass(name, data, 0, data.length);
         } catch (IOException e) {

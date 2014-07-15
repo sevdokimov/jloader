@@ -7,6 +7,7 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 
 import java.io.*;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.jar.JarEntry;
@@ -81,6 +82,16 @@ public class JarPacker {
         }
     }
 
+    private void pack(ClassReader classReader, OutputStream output) throws IOException {
+        ClassWriter classWriter = new ClassWriter(classReader, 0);
+        classReader.accept(classWriter, 0);
+
+        byte[] classBytes = classWriter.toByteArray();
+        Arrays.fill(classBytes, 0, 4, (byte) 0);
+
+        output.write(classBytes);
+    }
+
     public void pack(OutputStream output) throws IOException {
         JarOutputStream zipOutputStream;
 
@@ -108,11 +119,7 @@ public class JarPacker {
                         String className = Utils.fileNameToClassName(jarEntry.getName());
 
                         ClassReader classReader = classMap.get(className);
-
-                        ClassWriter classWriter = new ClassWriter(classReader, 0);
-                        classReader.accept(classWriter, 0);
-
-                        zipOutputStream.write(classWriter.toByteArray());
+                        pack(classReader, zipOutputStream);
                     }
                 }
 
