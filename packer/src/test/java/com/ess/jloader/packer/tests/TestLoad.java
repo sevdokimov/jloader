@@ -24,7 +24,7 @@ public class TestLoad {
 
         JarPacker.pack(src, tempFile);
 
-        ClassLoader l = new PackClassLoader(tempFile);
+        ClassLoader l = new PackClassLoader(null, tempFile);
         Class s = l.loadClass("Main");
         checkClass(s);
 

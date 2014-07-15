@@ -5,7 +5,7 @@ import java.io.IOException;
 /**
  * @author Sergey Evdokimov
  */
-public class InvalidClassException extends IOException {
+public class InvalidClassException extends RuntimeException {
 
     public InvalidClassException() {
     }
