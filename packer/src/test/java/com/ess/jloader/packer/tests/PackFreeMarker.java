@@ -1,6 +1,7 @@
 package com.ess.jloader.packer.tests;
 
 import com.ess.jloader.packer.Config;
+import com.ess.jloader.packer.JarMetaData;
 import com.ess.jloader.packer.JarPacker;
 import com.google.common.util.concurrent.AtomicLongMap;
 import org.junit.Test;
@@ -15,7 +16,11 @@ import java.util.zip.GZIPOutputStream;
  */
 public class PackFreeMarker {
 
-    private void printStats(Collection<ClassReader> classes) throws IOException {
+    private void printStats(JarPacker packer) throws IOException {
+        Collection<ClassReader> classes = packer.getClassMap().values();
+
+        System.out.println("Strings in Metadata: " + new JarMetaData(packer.getClassMap()).getStringsMap().size());
+
         AtomicLongMap<String> map = AtomicLongMap.create();
 
         long totalSize = 0;
@@ -96,7 +101,7 @@ public class PackFreeMarker {
         JarPacker packer = new JarPacker(new Config());
         packer.addJar(freeMarkerJar);
 
-        printStats(packer.getClassMap().values());
+        printStats(packer);
     }
 
     @Test
@@ -106,7 +111,7 @@ public class PackFreeMarker {
         JarPacker packer = new JarPacker(new Config());
         packer.addJar(freeMarkerJar);
 
-        printStats(packer.getClassMap().values());
+        printStats(packer);
     }
 
 //    @Test

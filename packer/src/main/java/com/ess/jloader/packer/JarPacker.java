@@ -90,8 +90,9 @@ public class JarPacker {
     }
 
     private void pack(ClassReader classReader, OutputStream output) throws IOException {
+        String className = classReader.getClassName();
+
         Set<String> packedStr = new LinkedHashSet<String>();
-        List<Integer> strIndexes = new ArrayList<Integer>();
 
         for (int i = 1; i < classReader.getItemCount(); i++) {
             int pos = classReader.getItem(i);
@@ -100,10 +101,8 @@ public class JarPacker {
             if (classReader.b[pos - 1] == 1) {
                 String s = PackUtils.readUtf(classReader.b, pos);
 
-                Integer strIndex = metaData.getStringIndex(s);
-                if (strIndex != null) {
+                if (!s.equals(className) && metaData.getStringIndex(s) != null) {
                     packedStr.add(s);
-                    strIndexes.add(strIndex);
                 }
             }
 
@@ -111,7 +110,7 @@ public class JarPacker {
         }
 
         ClassWriter classWriter = new ClassWriter(0);
-
+        classWriter.newClass(className);
         for (String s : packedStr) {
             classWriter.newUTF8(s);
         }
@@ -146,22 +145,33 @@ public class JarPacker {
         out.writeShort(constCount);
 
         out.writeShort(packedStr.size());
-        for (Integer strIndex : strIndexes) {
-            out.writeInt(strIndex);
+        for (String s : packedStr) {
+            out.writeInt(metaData.getStringIndex(s));
         }
 
+        // First const is class name
+        skipUtfConst(buffer, className);
+        if (buffer.get() != 7) throw new RuntimeException();
+        if (buffer.getShort() != 1) throw new RuntimeException();
+
         for (String s : packedStr) {
-            int tag = buffer.get();
-            if (tag != 1) throw new RuntimeException("" + tag);
-
-            if (!s.equals(PackUtils.readUtf(classBytes, buffer.position()))) throw new RuntimeException();
-
-            int strSize = buffer.getShort();
-            buffer.position(buffer.position() + strSize);
+            skipUtfConst(buffer, s);
         }
 
         out.write(classBytes, buffer.position(), classBytes.length - buffer.position());
     }
+
+    private void skipUtfConst(ByteBuffer buffer, String value) {
+        int tag = buffer.get();
+        if (tag != 1) throw new RuntimeException("" + tag);
+        if (!value.equals(PackUtils.readUtf(buffer.array(), buffer.position()))) {
+            throw new RuntimeException();
+        }
+
+        int strSize = buffer.getShort();
+        buffer.position(buffer.position() + strSize);
+    }
+
 
     private void truncClassExtension(JarEntry entry) {
         String oldName = entry.getName();

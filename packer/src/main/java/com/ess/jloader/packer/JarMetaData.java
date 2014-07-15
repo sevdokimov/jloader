@@ -27,9 +27,9 @@ public class JarMetaData {
                 if (pos > 0 && classReader.b[pos - 1] == 1) {
                     String s = PackUtils.readUtf(classReader, pos);
 
-                    stringsCountMap.incrementAndGet(s);
-//                    if (!s.equals(classReader.getClassName())) {
-//                    }
+                    if (!s.equals(classReader.getClassName())) {
+                        stringsCountMap.incrementAndGet(s);
+                    }
                 }
             }
         }
@@ -47,6 +47,10 @@ public class JarMetaData {
     @Nullable
     public Integer getStringIndex(String s) {
         return stringsMap.get(s);
+    }
+
+    public Map<String, Integer> getStringsMap() {
+        return stringsMap;
     }
 
     public void writeTo(OutputStream out) throws IOException {

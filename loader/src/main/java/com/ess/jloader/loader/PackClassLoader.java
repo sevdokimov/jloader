@@ -52,7 +52,8 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
     @Override
     protected Class<?> findClass(String name) throws ClassNotFoundException {
-        String classFileName = name.replace('.', '/').concat(".c");
+        String jvmClassName = name.replace('.', '/');
+        String classFileName = jvmClassName.concat(".c");
 
         try {
             ZipEntry entry = zip.getEntry(classFileName);
@@ -86,9 +87,17 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 int constCount = in.readUnsignedShort();
                 buffer.putShort((short) constCount);
 
-                // Packed String Constants
+                // Const table
                 int packedStrCount = in.readUnsignedShort();
                 DataOutputStream out = new DataOutputStream(OpenByteOutputStream.wrap(array, buffer.position()));
+
+                // Class name
+                out.write(1);
+                out.writeUTF(jvmClassName);
+                out.write(7);
+                out.writeShort(1);
+
+                // Packed String Constants
 
                 for (int i = 0; i < packedStrCount; i++) {
                     int strIndex = in.readInt();
