@@ -6,10 +6,7 @@ import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassReader;
 
 import java.io.*;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author Sergey Evdokimov
@@ -37,9 +34,12 @@ public class JarMetaData {
             }
         }
 
-        for (Map.Entry<String, Long> entry : stringsCountMap.asMap().entrySet()) {
-            if (entry.getValue() > 1) {
-                stringsMap.put(entry.getKey(), stringsMap.size());
+        List<String> keys = new ArrayList<String>(stringsCountMap.asMap().keySet());
+        Collections.sort(keys);
+
+        for (String s : keys) {
+            if (stringsCountMap.get(s) > 1) {
+                stringsMap.put(s, stringsMap.size());
             }
         }
     }
