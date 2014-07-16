@@ -94,6 +94,8 @@ public class JarPacker {
 
         Set<String> packedStr = new LinkedHashSet<String>();
 
+        List<String> utfInConstPool = new ArrayList<String>();
+
         for (int i = 1; i < classReader.getItemCount(); i++) {
             int pos = classReader.getItem(i);
             if (pos == 0) continue;
@@ -101,8 +103,13 @@ public class JarPacker {
             if (classReader.b[pos - 1] == 1) {
                 String s = PackUtils.readUtf(classReader.b, pos);
 
-                if (!s.equals(className) && metaData.getStringIndex(s) != null) {
+                if (s.equals(className)) continue; // skip name of current class
+
+                if (metaData.getStringIndex(s) != null) {
                     packedStr.add(s);
+                }
+                else {
+                    utfInConstPool.add(s);
                 }
             }
 
@@ -114,6 +121,12 @@ public class JarPacker {
         for (String s : packedStr) {
             classWriter.newUTF8(s);
         }
+
+        Collections.sort(utfInConstPool);
+        for (String s : utfInConstPool) {
+            classWriter.newUTF8(s);
+        }
+
         classReader.accept(classWriter, 0);
 
         byte[] classBytes = classWriter.toByteArray();
