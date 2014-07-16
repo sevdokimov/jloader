@@ -1,6 +1,7 @@
 package com.ess.jloader.packer;
 
 import com.ess.jloader.loader.PackClassLoader;
+import com.ess.jloader.utils.HuffmanOutputStream;
 import com.ess.jloader.utils.Utils;
 import com.google.common.base.Throwables;
 import com.google.common.io.ByteStreams;
@@ -105,7 +106,7 @@ public class JarPacker {
 
                 if (s.equals(className)) continue; // skip name of current class
 
-                if (metaData.getStringIndex(s) != null) {
+                if (metaData.getHasString(s)) {
                     packedStr.add(s);
                 }
                 else {
@@ -158,9 +159,12 @@ public class JarPacker {
         out.writeShort(constCount);
 
         out.writeShort(packedStr.size());
+        HuffmanOutputStream h = metaData.createHuffmanOutput();
+        h.reset(out);
         for (String s : packedStr) {
-            out.writeInt(metaData.getStringIndex(s));
+            h.write(s);
         }
+        h.finish();
 
         // First const is class name
         skipUtfConst(buffer, className);

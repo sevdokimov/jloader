@@ -1,13 +1,18 @@
 package com.ess.jloader.packer;
 
+import com.ess.jloader.utils.HuffmanOutputStream;
+import com.ess.jloader.utils.HuffmanUtils;
 import com.ess.jloader.utils.Utils;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.AtomicLongMap;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.TestOnly;
 import org.objectweb.asm.ClassReader;
 
-import java.io.*;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.*;
 import java.util.regex.Matcher;
 
@@ -17,6 +22,8 @@ import java.util.regex.Matcher;
 public class JarMetaData {
 
     private final Map<String, Integer> stringsMap = new LinkedHashMap<String, Integer>();
+
+    private final HuffmanUtils.TreeElement huffmanTreeRoot;
 
     public JarMetaData(Map<String, ClassReader> classMap) throws InvalidClassException {
         AtomicLongMap<String> stringsCountMap = AtomicLongMap.create();
@@ -51,10 +58,13 @@ public class JarMetaData {
         });
 
         for (String s : keys) {
-            if (stringsCountMap.get(s) > 1) {
-                stringsMap.put(s, stringsMap.size());
+            long count = stringsCountMap.get(s);
+            if (count > 1) {
+                stringsMap.put(s, (int) count);
             }
         }
+
+        huffmanTreeRoot = HuffmanUtils.buildHuffmanTree(stringsMap);
     }
 
     @Nullable
@@ -71,13 +81,17 @@ public class JarMetaData {
         return null;
     }
 
-    @Nullable
-    public Integer getStringIndex(String s) {
-        return stringsMap.get(s);
+    public boolean getHasString(String s) {
+        return stringsMap.containsKey(s);
     }
 
+    @TestOnly
     public Map<String, Integer> getStringsMap() {
         return stringsMap;
+    }
+
+    public HuffmanOutputStream createHuffmanOutput() {
+        return new HuffmanOutputStream(huffmanTreeRoot);
     }
 
     public void writeTo(OutputStream out) throws IOException {
@@ -92,7 +106,11 @@ public class JarMetaData {
         }
 
         for (Integer integer : stringsMap.values()) {
+            if (integer > 0xFFFF) {
+                throw new InvalidClassException();
+            }
 
+            o.writeShort(integer);
         }
     }
 }

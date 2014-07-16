@@ -1,13 +1,13 @@
 package com.ess.jloader.loader;
 
+import com.ess.jloader.utils.HuffmanInputStream;
+import com.ess.jloader.utils.HuffmanUtils;
 import com.ess.jloader.utils.OpenByteOutputStream;
 import com.ess.jloader.utils.Utils;
 
 import java.io.*;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetEncoder;
+import java.util.PriorityQueue;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -20,7 +20,9 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
     private ZipFile zip;
 
-    private String[] packedStrings;
+    private final String[] packedStrings;
+
+    private final HuffmanUtils.TreeElement packedStrHuffmanTree;
 
     public PackClassLoader(ClassLoader parent, File packFile) throws IOException {
         super(parent);
@@ -40,6 +42,14 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             for (int i = 0; i < packedStringsCount; i++) {
                 packedStrings[i] = inputStream.readUTF();
             }
+
+            // Build Huffman tree
+            PriorityQueue<HuffmanUtils.TreeElement> queue = new PriorityQueue<HuffmanUtils.TreeElement>();
+            for (int i = 0; i < packedStringsCount; i++) {
+                int count = inputStream.readUnsignedShort();
+                queue.add(new HuffmanUtils.Leaf(count, packedStrings[i]));
+            }
+            packedStrHuffmanTree = HuffmanUtils.buildHuffmanTree(queue);
         }
         finally {
             inputStream.close();
@@ -98,12 +108,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 out.writeShort(1);
 
                 // Packed String Constants
-
+                HuffmanInputStream<String> huffmanInputStream = new HuffmanInputStream<String>(inputStream, packedStrHuffmanTree);
                 for (int i = 0; i < packedStrCount; i++) {
-                    int strIndex = in.readInt();
-
                     out.write(1);
-                    out.writeUTF(packedStrings[strIndex]);
+                    out.writeUTF(huffmanInputStream.read());
                 }
 
                 buffer.position(buffer.position() + out.size());
