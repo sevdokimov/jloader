@@ -90,5 +90,9 @@ public class JarMetaData {
         for (String s : stringsMap.keySet()) {
             o.writeUTF(s);
         }
+
+        for (Integer integer : stringsMap.values()) {
+
+        }
     }
 }

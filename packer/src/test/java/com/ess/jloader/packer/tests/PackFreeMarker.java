@@ -114,6 +114,16 @@ public class PackFreeMarker {
         printStats(packer);
     }
 
+    @Test
+    public void packIdea() throws IOException {
+        File srcJar = new File("/home/user/EAP/idea-IU-138.777/lib/idea.jar");
+
+        File resultJar = TestUtils.createTmpPAckFile("packedIdea");
+        JarPacker.pack(srcJar, resultJar);
+
+        System.out.printf("Src: %d, Result: %d,  (%d%%)", srcJar.length(), resultJar.length(), resultJar.length() * 100 / srcJar.length());
+    }
+
 //    @Test
 //    public void packFreeMarker() throws IOException {
 //        File freeMarkerJar = TestUtils.getJarByMarker("freemarker/core/Assignment.class");

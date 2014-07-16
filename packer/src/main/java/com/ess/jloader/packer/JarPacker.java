@@ -263,38 +263,37 @@ public class JarPacker {
             zipOutputStream = new JarOutputStream(output);
         }
 
-        try {
-            zipOutputStream.putNextEntry(new ZipEntry(PackClassLoader.METADATA_ENTRY_NAME));
-            metaData.writeTo(zipOutputStream);
-            zipOutputStream.closeEntry();
+        zipOutputStream.putNextEntry(new ZipEntry(PackClassLoader.METADATA_ENTRY_NAME));
+        metaData.writeTo(zipOutputStream);
+        zipOutputStream.closeEntry();
 
-            for (Map.Entry<String, JarEntry> entry : resourceEntries.entrySet()) {
-                JarEntry jarEntry = entry.getValue();
+        for (Map.Entry<String, JarEntry> entry : resourceEntries.entrySet()) {
+            JarEntry jarEntry = entry.getValue();
 
-                jarEntry.setCompressedSize(-1);
+            jarEntry.setMethod(ZipEntry.DEFLATED);
+            jarEntry.setCompressedSize(-1);
 
-                truncClassExtension(jarEntry);
+            truncClassExtension(jarEntry);
 
-                zipOutputStream.putNextEntry(jarEntry);
+            zipOutputStream.putNextEntry(jarEntry);
 
-                if (!jarEntry.isDirectory()) {
-                    byte[] resourceContent = resourceMap.get(jarEntry.getName());
-                    if (resourceContent != null) {
-                        zipOutputStream.write(resourceContent);
-                    }
-                    else {
-                        String className = Utils.fileNameToClassName(entry.getKey());
-
-                        ClassReader classReader = classMap.get(className);
-                        pack(classReader, zipOutputStream);
-                    }
+            if (!jarEntry.isDirectory()) {
+                byte[] resourceContent = resourceMap.get(jarEntry.getName());
+                if (resourceContent != null) {
+                    zipOutputStream.write(resourceContent);
                 }
+                else {
+                    String className = Utils.fileNameToClassName(entry.getKey());
 
-                zipOutputStream.closeEntry();
+                    ClassReader classReader = classMap.get(className);
+                    pack(classReader, zipOutputStream);
+                }
             }
-        } finally {
-            zipOutputStream.close();
+
+            zipOutputStream.closeEntry();
         }
+
+        zipOutputStream.close();
     }
 
     public void writeResult(File file) throws IOException {
