@@ -1,12 +1,15 @@
 package com.ess.jloader.packer;
 
 import com.ess.jloader.utils.Utils;
+import com.google.common.collect.ComparisonChain;
+import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.AtomicLongMap;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassReader;
 
 import java.io.*;
 import java.util.*;
+import java.util.regex.Matcher;
 
 /**
  * @author Sergey Evdokimov
@@ -35,13 +38,37 @@ public class JarMetaData {
         }
 
         List<String> keys = new ArrayList<String>(stringsCountMap.asMap().keySet());
-        Collections.sort(keys);
+        Collections.sort(keys, new Comparator<String>() {
+            @Override
+            public int compare(String o1, String o2) {
+                return ComparisonChain.start()
+                        .compareTrueFirst(PackUtils.CLASS_QNAME_PATTERN.matcher(o1).matches(), PackUtils.CLASS_QNAME_PATTERN.matcher(o2).matches())
+                        .compare(extractClassName(o1), extractClassName(o2), Ordering.natural().nullsLast())
+                        .compareTrueFirst(PackUtils.METHOD_DESCR_PATTERN.matcher(o1).matches(), PackUtils.METHOD_DESCR_PATTERN.matcher(o2).matches())
+                        .compare(o1, o2)
+                        .result();
+            }
+        });
 
         for (String s : keys) {
             if (stringsCountMap.get(s) > 1) {
                 stringsMap.put(s, stringsMap.size());
             }
         }
+    }
+
+    @Nullable
+    private static String extractClassName(String s) {
+        if (PackUtils.CLASS_JVM_QNAME_PATTERN.matcher(s).matches()) {
+            return s;
+        }
+
+        Matcher matcher = PackUtils.CLASS_TYPE_PATTERN.matcher(s);
+        if (matcher.matches()) {
+            return matcher.group(1);
+        }
+
+        return null;
     }
 
     @Nullable
