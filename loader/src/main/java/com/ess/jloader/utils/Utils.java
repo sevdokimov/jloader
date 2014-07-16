@@ -11,12 +11,12 @@ public class Utils {
 
     /*
      * Flag bits:
-     * 0 - F_LONG_CLASS
-     *
+     * 0, 1, 2 - class version index.
+     * 3 - F_LONG_CLASS
      */
 
 
-    public static final int F_LONG_CLASS = 1;
+    public static final int F_LONG_CLASS = 1 << 3;
 
 
     public static String fileNameToClassName(String fileName) {

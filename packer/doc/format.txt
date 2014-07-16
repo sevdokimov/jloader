@@ -1,8 +1,11 @@
-File format:
-2                MAGIC
-2                PACKER_VERSION
-1                version_count ( <= 8)
-4[version_count] versions
+Literals File format:
+1                MAGIC (0xAA)
+1                PACKER_VERSION
+4[8]             versions
+4                strings_count
+utf8[strings_count] Strings in UTF8 format
+2[strings_count] number of occurences
+
 
 ------
  CLASS NAMES

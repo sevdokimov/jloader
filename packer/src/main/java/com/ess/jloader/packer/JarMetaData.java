@@ -25,11 +25,21 @@ public class JarMetaData {
 
     private final HuffmanUtils.TreeElement huffmanTreeRoot;
 
-    public JarMetaData(Map<String, ClassReader> classMap) throws InvalidClassException {
+    private final List<Integer> versions = new ArrayList<Integer>(8);
+
+    public JarMetaData(Map<String, ClassReader> classMap) throws InvalidJarException {
         AtomicLongMap<String> stringsCountMap = AtomicLongMap.create();
 
         for (Map.Entry<String, ClassReader> entry : classMap.entrySet()) {
             ClassReader classReader = entry.getValue();
+
+            Integer version = classReader.readInt(4);
+            if (!versions.contains(version)) {
+                if (versions.size() == 8) {
+                    throw new InvalidJarException();
+                }
+                versions.add(version);
+            }
 
             for (int i = 0; i < classReader.getItemCount() - 1; i++) {
                 int pos = classReader.getItem(i + 1);
@@ -94,11 +104,25 @@ public class JarMetaData {
         return new HuffmanOutputStream(huffmanTreeRoot);
     }
 
+    public int getVersionIndex(int version) {
+        int res = versions.indexOf(version);
+        assert res >= 0 : version;
+        return res;
+    }
+
     public void writeTo(OutputStream out) throws IOException {
         DataOutputStream o = new DataOutputStream(out);
 
         o.write(Utils.MAGIC); // Magic
         o.write(Utils.PACKER_VERSION);
+
+        for (int i = 0; i < 8; i++) {
+            int x = 0;
+            if (i < versions.size()) {
+                x = versions.get(i);
+            }
+            o.writeInt(x);
+        }
 
         o.writeInt(stringsMap.size());
         for (String s : stringsMap.keySet()) {
@@ -107,7 +131,7 @@ public class JarMetaData {
 
         for (Integer integer : stringsMap.values()) {
             if (integer > 0xFFFF) {
-                throw new InvalidClassException();
+                throw new InvalidJarException();
             }
 
             o.writeShort(integer);

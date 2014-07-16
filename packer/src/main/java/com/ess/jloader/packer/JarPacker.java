@@ -135,6 +135,9 @@ public class JarPacker {
 
         int flags = 0;
 
+        int version = buffer.getInt(4);
+        flags |= metaData.getVersionIndex(version);
+
         DataOutputStream out = new DataOutputStream(output);
 
         if (classBytes.length > 0xFFFF) {
@@ -152,8 +155,7 @@ public class JarPacker {
 
         buffer.position(4);
 
-        int version = buffer.getInt();
-        out.writeInt(version);
+        buffer.getInt(); // skip version
 
         int constCount = buffer.getShort() & 0xFFFF;
         out.writeShort(constCount);

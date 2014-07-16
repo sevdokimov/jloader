@@ -44,9 +44,9 @@ public class PackUtils {
     public static int sizeTypes = 0;
     public static int sizeClasses = 0;
 
-    public static List<String> extractTypes(String methodSign) throws InvalidClassException {
+    public static List<String> extractTypes(String methodSign) throws InvalidJarException {
         int closedBracketIndex = methodSign.lastIndexOf(')');
-        if (closedBracketIndex == -1) throw new InvalidClassException();
+        if (closedBracketIndex == -1) throw new InvalidJarException();
 
         List<String> res = new ArrayList<String>();
 
@@ -62,14 +62,14 @@ public class PackUtils {
             int idx = 0;
             while (m.find()) {
                 if (m.start() != idx) {
-                    throw new InvalidClassException(methodSign);
+                    throw new InvalidJarException(methodSign);
                 }
 
                 res.add(m.group());
                 idx = m.end();
             }
 
-            if (idx != params.length()) throw new InvalidClassException(methodSign);
+            if (idx != params.length()) throw new InvalidJarException(methodSign);
         }
 
         return res;
@@ -95,9 +95,9 @@ public class PackUtils {
         return res;
     }
 
-    public static void assertType(String s) throws InvalidClassException {
+    public static void assertType(String s) throws InvalidJarException {
         if (!TYPE_PATTERN.matcher(s).matches()) {
-            throw new InvalidClassException();
+            throw new InvalidJarException();
         }
     }
 
@@ -107,7 +107,7 @@ public class PackUtils {
         Package root = new Package();
 
         for (String className : classNames) {
-            if (!CLASS_NAME_PATTERN.matcher(className).matches()) throw new InvalidClassException(className);
+            if (!CLASS_NAME_PATTERN.matcher(className).matches()) throw new InvalidJarException(className);
 
             Package p = root;
 
@@ -182,7 +182,7 @@ public class PackUtils {
         try {
             return new DataInputStream(new ByteArrayInputStream(buffer, offset, buffer.length)).readUTF();
         } catch (IOException e) {
-            throw new InvalidClassException(e);
+            throw new InvalidJarException(e);
         }
     }
 }

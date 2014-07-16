@@ -24,6 +24,8 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
     private final HuffmanUtils.TreeElement packedStrHuffmanTree;
 
+    private final int[] versions = new int[8];
+
     public PackClassLoader(ClassLoader parent, File packFile) throws IOException {
         super(parent);
         zip = new ZipFile(packFile);
@@ -36,6 +38,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             if (inputStream.readByte() != Utils.MAGIC) throw new RuntimeException();
 
             if (inputStream.readByte() != Utils.PACKER_VERSION) throw new RuntimeException();
+
+            for (int i = 0; i < 8; i++) {
+                versions[i] = inputStream.readInt();
+            }
 
             int packedStringsCount = inputStream.readInt();
             packedStrings = new String[packedStringsCount];
@@ -91,7 +97,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 buffer.putInt(0xCAFEBABE);
 
                 // Version
-                buffer.putInt(in.readInt());
+                buffer.putInt(versions[flags & 7]);
 
                 // Const count
                 int constCount = in.readUnsignedShort();
