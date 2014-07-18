@@ -21,7 +21,7 @@ public class Utils {
 
     public static String fileNameToClassName(String fileName) {
         assert fileName.endsWith(".class") : fileName;
-        return fileName.substring(0, fileName.length() - ".class".length()).replace('/', '.');
+        return fileName.substring(0, fileName.length() - ".class".length());
     }
 
 }

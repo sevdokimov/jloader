@@ -1,4 +1,4 @@
-Literals File format:
+---=== Literals File format: ===---
 1                MAGIC (0xAA)
 1                PACKER_VERSION
 4[8]             versions
@@ -6,13 +6,16 @@ Literals File format:
 utf8[strings_count] Strings in UTF8 format
 2[strings_count] number of occurences
 
+---=== Class format ===---
+Uncompressed data:
+4       flags
+2/4     unpackedClassSize
+2       constCount
 
-------
- CLASS NAMES
-ls [class_count] usage count
-------
+2       packedStrCount
+[*]     string literals packed by huffman
 
-
-Class format:
-2     MY_ATTR    0x000? - version | 0x0010 - has <init> | 0x0010 - has <cinit>
-2     ATTRS      ACC_PUBLIC (0x0001) | ACC_FINAL (0x0010) | ACC_SUPER (0x0020) | ACC_INTERFACE (0x0200) | ACC_ABSTRACT (0x0400)
+Compressed data:
+[*]     constTable tail
+2       access flags
+[*]     class tail

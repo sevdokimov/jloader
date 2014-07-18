@@ -2,8 +2,10 @@ package com.ess.jloader.packer;
 
 import com.ess.jloader.loader.PackClassLoader;
 import com.ess.jloader.utils.HuffmanOutputStream;
+import com.ess.jloader.utils.OpenByteOutputStream;
 import com.ess.jloader.utils.Utils;
 import com.google.common.base.Throwables;
+import com.google.common.hash.Hashing;
 import com.google.common.io.ByteStreams;
 import org.apache.log4j.Logger;
 import org.objectweb.asm.ClassReader;
@@ -17,6 +19,8 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
+import java.util.zip.Deflater;
+import java.util.zip.DeflaterOutputStream;
 import java.util.zip.ZipEntry;
 
 /**
@@ -42,16 +46,6 @@ public class JarPacker {
         this.cfg = cfg;
     }
 
-    private void addClass(String className, InputStream inputStream) throws IOException {
-        if (log.isDebugEnabled()) {
-            log.debug("Add class: " + className);
-        }
-
-        ClassReader classReader = new ClassReader(inputStream);
-
-        classMap.put(className, classReader);
-    }
-
     public void addJar(File jarFile) throws IOException {
         assert metaData == null;
 
@@ -73,24 +67,43 @@ public class JarPacker {
 
         JarEntry entry = jarInputStream.getNextJarEntry();
         while (entry != null) {
+            String fileName = entry.getName();
+
             if (!entry.isDirectory()) {
-                String name = entry.getName();
-                if (name.endsWith(".class")) {
-                    String className = Utils.fileNameToClassName(entry.getName());
-                    addClass(className, jarInputStream);
+                if (fileName.endsWith(".class")) {
+                    String className = Utils.fileNameToClassName(fileName);
+                    ClassReader classReader = new ClassReader(jarInputStream);
+                    if (!classReader.getClassName().equals(className)) throw new InvalidJarException();
+
+                    classMap.put(className, classReader);
                 }
                 else {
-                    resourceMap.put(entry.getName(), ByteStreams.toByteArray(jarInputStream));
+                    resourceMap.put(fileName, ByteStreams.toByteArray(jarInputStream));
                 }
             }
 
-            resourceEntries.put(entry.getName(), entry);
+            resourceEntries.put(fileName, entry);
 
             entry = jarInputStream.getNextJarEntry();
         }
     }
 
-    private void pack(ClassReader classReader, OutputStream output) throws IOException {
+    private void pack(ClassReader classReader, OutputStream out) throws IOException {
+        ByteArrayOutputStream plainDataArray = new ByteArrayOutputStream();
+        DataOutputStream plainData = new DataOutputStream(plainDataArray);
+        OpenByteOutputStream compressedDataArray = new OpenByteOutputStream();
+        DataOutputStream compressedData = new DataOutputStream(compressedDataArray);
+
+        pack(classReader, plainData, compressedData);
+
+        plainDataArray.writeTo(out);
+
+        DeflaterOutputStream defOut = new DeflaterOutputStream(out, new Deflater(Deflater.DEFAULT_COMPRESSION, true));
+        compressedDataArray.writeTo(defOut);
+        defOut.close();
+    }
+
+    private void pack(ClassReader classReader, DataOutputStream plainData, DataOutputStream compressed) throws IOException {
         String className = classReader.getClassName();
 
         Set<String> packedStr = new LinkedHashSet<String>();
@@ -138,31 +151,30 @@ public class JarPacker {
         int version = buffer.getInt(4);
         flags |= metaData.getVersionIndex(version);
 
-        DataOutputStream out = new DataOutputStream(output);
-
         if (classBytes.length > 0xFFFF) {
             flags |= Utils.F_LONG_CLASS;
         }
 
-        out.writeInt(flags);
-
-        if (classBytes.length > 0xFFFF) {
-            out.writeInt(classBytes.length);
-        }
-        else {
-            out.writeShort(classBytes.length);
-        }
-
-        buffer.position(4);
+        buffer.position(4); // skip 0xCAFEBABE
 
         buffer.getInt(); // skip version
 
         int constCount = buffer.getShort() & 0xFFFF;
-        out.writeShort(constCount);
 
-        out.writeShort(packedStr.size());
+        plainData.writeInt(flags);
+
+        if (classBytes.length > 0xFFFF) {
+            plainData.writeInt(classBytes.length);
+        }
+        else {
+            plainData.writeShort(classBytes.length);
+        }
+
+        plainData.writeShort(constCount);
+
+        plainData.writeShort(packedStr.size());
         HuffmanOutputStream h = metaData.createHuffmanOutput();
-        h.reset(out);
+        h.reset(plainData);
         for (String s : packedStr) {
             h.write(s);
         }
@@ -177,15 +189,15 @@ public class JarPacker {
             skipUtfConst(buffer, s);
         }
 
-        copyConstTableTail(buffer, constCount - 1 - packedStr.size() - 2, out);
+        copyConstTableTail(buffer, constCount - 1 - packedStr.size() - 2, compressed);
 
         int accessFlags = buffer.getShort();
-        out.writeShort(accessFlags);
+        compressed.writeShort(accessFlags);
 
         int thisClassIndex = buffer.getShort();
         if (thisClassIndex != 2) throw new RuntimeException(String.valueOf(thisClassIndex));
 
-        out.write(classBytes, buffer.position(), classBytes.length - buffer.position());
+        compressed.write(classBytes, buffer.position(), classBytes.length - buffer.position());
     }
 
     private void skipUtfConst(ByteBuffer buffer, String value) {
@@ -276,27 +288,39 @@ public class JarPacker {
         for (Map.Entry<String, JarEntry> entry : resourceEntries.entrySet()) {
             JarEntry jarEntry = entry.getValue();
 
-            jarEntry.setMethod(ZipEntry.DEFLATED);
             jarEntry.setCompressedSize(-1);
 
             truncClassExtension(jarEntry);
 
-            zipOutputStream.putNextEntry(jarEntry);
-
             if (!jarEntry.isDirectory()) {
                 byte[] resourceContent = resourceMap.get(jarEntry.getName());
                 if (resourceContent != null) {
+                    zipOutputStream.putNextEntry(jarEntry);
                     zipOutputStream.write(resourceContent);
+                    zipOutputStream.closeEntry();
                 }
                 else {
+
                     String className = Utils.fileNameToClassName(entry.getKey());
 
                     ClassReader classReader = classMap.get(className);
-                    pack(classReader, zipOutputStream);
+                    ByteArrayOutputStream o = new ByteArrayOutputStream();
+                    pack(classReader, o);
+
+                    jarEntry.setMethod(ZipEntry.STORED);
+                    jarEntry.setSize(o.size());
+                    jarEntry.setCompressedSize(o.size());
+                    jarEntry.setCrc(Hashing.crc32().hashBytes(o.toByteArray()).asInt() & 0xFFFFFFFFL);
+
+                    zipOutputStream.putNextEntry(jarEntry);
+                    o.writeTo(zipOutputStream);
+                    zipOutputStream.closeEntry();
                 }
             }
-
-            zipOutputStream.closeEntry();
+            else {
+                zipOutputStream.putNextEntry(jarEntry);
+                zipOutputStream.closeEntry();
+            }
         }
 
         zipOutputStream.close();

@@ -8,8 +8,7 @@ import com.ess.jloader.utils.Utils;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.PriorityQueue;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
+import java.util.zip.*;
 
 /**
  * @author Sergey Evdokimov
@@ -122,14 +121,18 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
                 buffer.position(buffer.position() + out.size());
 
-                skipConstTableTail(buffer, in, constCount - 1 - packedStrCount - 2);
+                // Compressed data
+                InflaterInputStream defIn = new InflaterInputStream(inputStream, new Inflater(true));
+                DataInputStream defDataIn = new DataInputStream(defIn);
 
-                int accessFlags = in.readShort();
+                skipConstTableTail(buffer, defDataIn, constCount - 1 - packedStrCount - 2);
+
+                int accessFlags = defDataIn.readShort();
                 buffer.putShort((short) accessFlags);
 
                 buffer.putShort((short) 2);
 
-                in.readFully(array, buffer.position(), size - buffer.position());
+                defDataIn.readFully(array, buffer.position(), size - buffer.position());
 
                 return defineClass(name, array, 0, size);
             } finally {
