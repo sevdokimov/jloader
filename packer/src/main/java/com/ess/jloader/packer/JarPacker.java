@@ -48,9 +48,6 @@ public class JarPacker {
 
     private Manifest manifest;
 
-    private LiteralsCache literalsCache;
-    private VersionCache versionCache;
-
     private final Config cfg;
 
     public JarPacker(Config cfg) {
@@ -58,8 +55,6 @@ public class JarPacker {
     }
 
     public void addJar(File jarFile) throws IOException {
-        assert literalsCache == null;
-
         JarInputStream jarInputStream = new JarInputStream(new FileInputStream(jarFile));
 
         if (manifest == null) {
@@ -74,8 +69,6 @@ public class JarPacker {
     }
 
     public void addJar(JarInputStream jarInputStream) throws IOException {
-        assert literalsCache == null;
-
         JarEntry entry = jarInputStream.getNextJarEntry();
         while (entry != null) {
             String fileName = entry.getName();
@@ -99,174 +92,6 @@ public class JarPacker {
         }
     }
 
-    private void pack(ClassReader classReader, OutputStream out) throws IOException {
-        ByteArrayOutputStream plainDataArray = new ByteArrayOutputStream();
-        DataOutputStream plainData = new DataOutputStream(plainDataArray);
-        OpenByteOutputStream compressedDataArray = new OpenByteOutputStream();
-        DataOutputStream compressedData = new DataOutputStream(compressedDataArray);
-
-        pack(classReader, plainData, compressedData);
-
-        plainDataArray.writeTo(out);
-
-        Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION, true);
-
-        DeflaterOutputStream defOut = new DeflaterOutputStream(out, deflater);
-        compressedDataArray.writeTo(defOut);
-        defOut.close();
-    }
-
-    private void pack(ClassReader classReader, DataOutputStream plainData, DataOutputStream compressed) throws IOException {
-        String className = classReader.getClassName();
-
-        Set<String> packedStr = new LinkedHashSet<String>();
-
-        List<String> utfInConstPool = new ArrayList<String>();
-
-        for (int i = 1; i < classReader.getItemCount(); i++) {
-            int pos = classReader.getItem(i);
-            if (pos == 0) continue;
-
-            if (classReader.b[pos - 1] == 1) {
-                String s = PackUtils.readUtf(classReader.b, pos);
-
-                if (s.equals(className)) continue; // skip name of current class
-
-                if (literalsCache.getHasString(s)) {
-                    packedStr.add(s);
-                }
-                else {
-                    utfInConstPool.add(s);
-                }
-            }
-
-            if (packedStr.size() == 0xFFFF) break;
-        }
-
-        ClassWriter classWriter = new ClassWriter(0);
-        classWriter.newClass(className);
-        for (String s : packedStr) {
-            classWriter.newUTF8(s);
-        }
-
-        Collections.sort(utfInConstPool);
-        for (String s : utfInConstPool) {
-            classWriter.newUTF8(s);
-        }
-
-        classReader.accept(classWriter, 0);
-
-        byte[] classBytes = classWriter.toByteArray();
-        ByteBuffer buffer = ByteBuffer.wrap(classBytes);
-
-        int flags = 0;
-
-        int version = buffer.getInt(4);
-        flags |= versionCache.getVersionIndex(version);
-
-        if (classBytes.length > 0xFFFF) {
-            flags |= Utils.F_LONG_CLASS;
-        }
-
-        buffer.position(4); // skip 0xCAFEBABE
-
-        buffer.getInt(); // skip version
-
-        int constCount = buffer.getShort() & 0xFFFF;
-
-        plainData.writeInt(flags);
-
-        if (classBytes.length > 0xFFFF) {
-            plainData.writeInt(classBytes.length);
-        }
-        else {
-            plainData.writeShort(classBytes.length);
-        }
-
-        plainData.writeShort(constCount);
-
-        plainData.writeShort(packedStr.size());
-        HuffmanOutputStream h = literalsCache.createHuffmanOutput();
-        h.reset(plainData);
-        for (String s : packedStr) {
-            h.write(s);
-        }
-        h.finish();
-
-        // First const is class name
-        skipUtfConst(buffer, className);
-        if (buffer.get() != 7) throw new RuntimeException();
-        if (buffer.getShort() != 1) throw new RuntimeException();
-
-        for (String s : packedStr) {
-            skipUtfConst(buffer, s);
-        }
-
-        copyConstTableTail(buffer, constCount - 1 - packedStr.size() - 2, compressed);
-
-        int accessFlags = buffer.getShort();
-        compressed.writeShort(accessFlags);
-
-        int thisClassIndex = buffer.getShort();
-        if (thisClassIndex != 2) throw new RuntimeException(String.valueOf(thisClassIndex));
-
-        compressed.write(classBytes, buffer.position(), classBytes.length - buffer.position());
-    }
-
-    private void skipUtfConst(ByteBuffer buffer, String value) {
-        int tag = buffer.get();
-        if (tag != 1) throw new RuntimeException("" + tag);
-        if (!value.equals(PackUtils.readUtf(buffer.array(), buffer.position()))) {
-            throw new RuntimeException();
-        }
-
-        int strSize = buffer.getShort();
-        buffer.position(buffer.position() + strSize);
-    }
-
-    private void copyConstTableTail(ByteBuffer buffer, int constCount, DataOutputStream out) throws IOException {
-        int oldPosition = buffer.position();
-
-        for (int i = 0; i < constCount; i++) {
-            int tag = buffer.get();
-
-            int size;
-            switch (tag) {
-                case 9: // ClassWriter.FIELD:
-                case 10: // ClassWriter.METH:
-                case 11: // ClassWriter.IMETH:
-                case 3: // ClassWriter.INT:
-                case 4: // ClassWriter.FLOAT:
-                case 12: // ClassWriter.NAME_TYPE:
-                case 18: // ClassWriter.INDY:
-                    size = 4;
-                    break;
-                case 5:// ClassWriter.LONG:
-                case 6: // ClassWriter.DOUBLE:
-                    size = 8;
-                    ++i;
-                    break;
-                case 1: // ClassWriter.UTF8:
-                    size = buffer.getShort() & 0xFFFF;
-                    break;
-
-                case 15: // ClassWriter.HANDLE:
-                    size = 3;
-                    break;
-                // case ClassWriter.CLASS:
-                // case ClassWriter.STR:
-                // case ClassWriter.MTYPE
-                default:
-                    size = 2;
-                    break;
-            }
-
-            buffer.position(buffer.position() + size);
-        }
-
-        out.write(buffer.array(), oldPosition, buffer.position() - oldPosition);
-    }
-
     private void truncClassExtension(JarEntry entry) {
         String oldName = entry.getName();
         if (oldName.endsWith(".class")) {
@@ -280,7 +105,7 @@ public class JarPacker {
         }
     }
 
-    private void writeMetadata(ZipOutputStream zipOut) throws IOException {
+    private void writeMetadata(ZipOutputStream zipOut, CompressionContext ctx) throws IOException {
         DataOutputStream zipDataOutput = new DataOutputStream(zipOut);
 
         zipOut.putNextEntry(new ZipEntry(PackClassLoader.METADATA_ENTRY_NAME));
@@ -288,17 +113,18 @@ public class JarPacker {
         zipDataOutput.write(Utils.MAGIC); // Magic
         zipDataOutput.write(Utils.PACKER_VERSION);
 
-        versionCache.writeTo(zipDataOutput);
-        literalsCache.writeTo(zipDataOutput);
+        ctx.getVersionCache().writeTo(zipDataOutput);
+        ctx.getLiteralsCache().writeTo(zipDataOutput);
 
         zipOut.closeEntry();
     }
 
     public void pack(OutputStream output) throws IOException {
-        assert literalsCache == null;
+        CompressionContext ctx = new CompressionContext(classReaders);
 
-        literalsCache = new LiteralsCache(classReaders);
-        versionCache = new VersionCache(classReaders);
+        for (ClassDescriptor classDescriptor : classMap.values()) {
+            classDescriptor.pack(ctx);
+        }
 
         JarOutputStream zipOutputStream;
 
@@ -309,7 +135,9 @@ public class JarPacker {
             zipOutputStream = new JarOutputStream(output);
         }
 
-        writeMetadata(zipOutputStream);
+        writeMetadata(zipOutputStream, ctx);
+
+        OpenByteOutputStream buff = new OpenByteOutputStream();
 
         for (Map.Entry<String, JarEntry> entry : resourceEntries.entrySet()) {
             JarEntry jarEntry = entry.getValue();
@@ -329,17 +157,17 @@ public class JarPacker {
 
                     String className = Utils.fileNameToClassName(entry.getKey());
 
-                    ClassReader classReader = classMap.get(className).classReader;
-                    ByteArrayOutputStream o = new ByteArrayOutputStream();
-                    pack(classReader, o);
+                    ClassDescriptor classDescriptor = classMap.get(className);
+                    buff.reset();
+                    classDescriptor.writeTo(buff);
 
                     jarEntry.setMethod(ZipEntry.STORED);
-                    jarEntry.setSize(o.size());
-                    jarEntry.setCompressedSize(o.size());
-                    jarEntry.setCrc(Hashing.crc32().hashBytes(o.toByteArray()).asInt() & 0xFFFFFFFFL);
+                    jarEntry.setSize(buff.size());
+                    jarEntry.setCompressedSize(buff.size());
+                    jarEntry.setCrc(Hashing.crc32().hashBytes(buff.getBuffer(), 0, buff.size()).asInt() & 0xFFFFFFFFL);
 
                     zipOutputStream.putNextEntry(jarEntry);
-                    o.writeTo(zipOutputStream);
+                    buff.writeTo(zipOutputStream);
                     zipOutputStream.closeEntry();
                 }
             }
@@ -372,11 +200,181 @@ public class JarPacker {
         return classReaders;
     }
 
-    private class ClassDescriptor {
+    private static class ClassDescriptor {
         public final ClassReader classReader;
+
+        public OpenByteOutputStream plainDataArray;
+        public OpenByteOutputStream forCompressionDataArray;
 
         public ClassDescriptor(ClassReader classReader) {
             this.classReader = classReader;
+        }
+
+        private void pack(CompressionContext ctx) throws IOException {
+            plainDataArray = new OpenByteOutputStream();
+            forCompressionDataArray = new OpenByteOutputStream();
+
+            DataOutputStream plainData = new DataOutputStream(plainDataArray);
+            DataOutputStream compressed = new DataOutputStream(forCompressionDataArray);
+
+            String className = classReader.getClassName();
+
+            Set<String> packedStr = new LinkedHashSet<String>();
+
+            List<String> utfInConstPool = new ArrayList<String>();
+
+            for (int i = 1; i < classReader.getItemCount(); i++) {
+                int pos = classReader.getItem(i);
+                if (pos == 0) continue;
+
+                if (classReader.b[pos - 1] == 1) {
+                    String s = PackUtils.readUtf(classReader.b, pos);
+
+                    if (s.equals(className)) continue; // skip name of current class
+
+                    if (ctx.getLiteralsCache().getHasString(s)) {
+                        packedStr.add(s);
+                    }
+                    else {
+                        utfInConstPool.add(s);
+                    }
+                }
+
+                if (packedStr.size() == 0xFFFF) break;
+            }
+
+            ClassWriter classWriter = new ClassWriter(0);
+            classWriter.newClass(className);
+            for (String s : packedStr) {
+                classWriter.newUTF8(s);
+            }
+
+            Collections.sort(utfInConstPool);
+            for (String s : utfInConstPool) {
+                classWriter.newUTF8(s);
+            }
+
+            classReader.accept(classWriter, 0);
+
+            byte[] classBytes = classWriter.toByteArray();
+            ByteBuffer buffer = ByteBuffer.wrap(classBytes);
+
+            int flags = 0;
+
+            int version = buffer.getInt(4);
+            flags |= ctx.getVersionCache().getVersionIndex(version);
+
+            if (classBytes.length > 0xFFFF) {
+                flags |= Utils.F_LONG_CLASS;
+            }
+
+            buffer.position(4); // skip 0xCAFEBABE
+
+            buffer.getInt(); // skip version
+
+            int constCount = buffer.getShort() & 0xFFFF;
+
+            plainData.writeInt(flags);
+
+            if (classBytes.length > 0xFFFF) {
+                plainData.writeInt(classBytes.length);
+            }
+            else {
+                plainData.writeShort(classBytes.length);
+            }
+
+            plainData.writeShort(constCount);
+
+            plainData.writeShort(packedStr.size());
+            HuffmanOutputStream h = ctx.getLiteralsCache().createHuffmanOutput();
+            h.reset(plainData);
+            for (String s : packedStr) {
+                h.write(s);
+            }
+            h.finish();
+
+            // First const is class name
+            skipUtfConst(buffer, className);
+            if (buffer.get() != 7) throw new RuntimeException();
+            if (buffer.getShort() != 1) throw new RuntimeException();
+
+            for (String s : packedStr) {
+                skipUtfConst(buffer, s);
+            }
+
+            copyConstTableTail(buffer, constCount - 1 - packedStr.size() - 2, compressed);
+
+            int accessFlags = buffer.getShort();
+            compressed.writeShort(accessFlags);
+
+            int thisClassIndex = buffer.getShort();
+            if (thisClassIndex != 2) throw new RuntimeException(String.valueOf(thisClassIndex));
+
+            compressed.write(classBytes, buffer.position(), classBytes.length - buffer.position());
+        }
+
+        public void writeTo(OutputStream out) throws IOException {
+            plainDataArray.writeTo(out);
+
+            Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION, true);
+
+            DeflaterOutputStream defOut = new DeflaterOutputStream(out, deflater);
+            forCompressionDataArray.writeTo(defOut);
+            defOut.close();
+        }
+
+        private void skipUtfConst(ByteBuffer buffer, String value) {
+            int tag = buffer.get();
+            if (tag != 1) throw new RuntimeException("" + tag);
+            if (!value.equals(PackUtils.readUtf(buffer.array(), buffer.position()))) {
+                throw new RuntimeException();
+            }
+
+            int strSize = buffer.getShort();
+            buffer.position(buffer.position() + strSize);
+        }
+
+        private void copyConstTableTail(ByteBuffer buffer, int constCount, DataOutputStream out) throws IOException {
+            int oldPosition = buffer.position();
+
+            for (int i = 0; i < constCount; i++) {
+                int tag = buffer.get();
+
+                int size;
+                switch (tag) {
+                    case 9: // ClassWriter.FIELD:
+                    case 10: // ClassWriter.METH:
+                    case 11: // ClassWriter.IMETH:
+                    case 3: // ClassWriter.INT:
+                    case 4: // ClassWriter.FLOAT:
+                    case 12: // ClassWriter.NAME_TYPE:
+                    case 18: // ClassWriter.INDY:
+                        size = 4;
+                        break;
+                    case 5:// ClassWriter.LONG:
+                    case 6: // ClassWriter.DOUBLE:
+                        size = 8;
+                        ++i;
+                        break;
+                    case 1: // ClassWriter.UTF8:
+                        size = buffer.getShort() & 0xFFFF;
+                        break;
+
+                    case 15: // ClassWriter.HANDLE:
+                        size = 3;
+                        break;
+                    // case ClassWriter.CLASS:
+                    // case ClassWriter.STR:
+                    // case ClassWriter.MTYPE
+                    default:
+                        size = 2;
+                        break;
+                }
+
+                buffer.position(buffer.position() + size);
+            }
+
+            out.write(buffer.array(), oldPosition, buffer.position() - oldPosition);
         }
     }
 }
