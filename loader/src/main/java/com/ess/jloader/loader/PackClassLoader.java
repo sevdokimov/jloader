@@ -25,6 +25,8 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
     private final int[] versions = new int[8];
 
+    private final byte[] dictionary;
+
     public PackClassLoader(ClassLoader parent, File packFile) throws IOException {
         super(parent);
         zip = new ZipFile(packFile);
@@ -55,6 +57,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 queue.add(new HuffmanUtils.Leaf(count, packedStrings[i]));
             }
             packedStrHuffmanTree = HuffmanUtils.buildHuffmanTree(queue);
+
+            int dictionarySize = inputStream.readUnsignedShort();
+            dictionary = new byte[dictionarySize];
+            inputStream.readFully(dictionary);
         }
         finally {
             inputStream.close();
@@ -122,7 +128,9 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 buffer.position(buffer.position() + out.size());
 
                 // Compressed data
-                InflaterInputStream defIn = new InflaterInputStream(inputStream, new Inflater(true));
+                Inflater inflater = new Inflater(true);
+                inflater.setDictionary(dictionary);
+                InflaterInputStream defIn = new InflaterInputStream(inputStream, inflater);
                 DataInputStream defDataIn = new DataInputStream(defIn);
 
                 skipConstTableTail(buffer, defDataIn, constCount - 1 - packedStrCount - 2);

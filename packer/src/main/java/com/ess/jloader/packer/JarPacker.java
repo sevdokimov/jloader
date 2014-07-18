@@ -105,7 +105,7 @@ public class JarPacker {
         }
     }
 
-    private void writeMetadata(ZipOutputStream zipOut, CompressionContext ctx) throws IOException {
+    private void writeMetadata(ZipOutputStream zipOut, CompressionContext ctx, byte[] dictionary) throws IOException {
         DataOutputStream zipDataOutput = new DataOutputStream(zipOut);
 
         zipOut.putNextEntry(new ZipEntry(PackClassLoader.METADATA_ENTRY_NAME));
@@ -115,6 +115,9 @@ public class JarPacker {
 
         ctx.getVersionCache().writeTo(zipDataOutput);
         ctx.getLiteralsCache().writeTo(zipDataOutput);
+
+        zipDataOutput.writeShort(dictionary.length);
+        zipDataOutput.write(dictionary);
 
         zipOut.closeEntry();
     }
@@ -126,6 +129,14 @@ public class JarPacker {
             classDescriptor.pack(ctx);
         }
 
+        Collection<OpenByteOutputStream> packedItems = Collections2.transform(classMap.values(), new Function<ClassDescriptor, OpenByteOutputStream>() {
+            @Override
+            public OpenByteOutputStream apply(ClassDescriptor classDescriptor) {
+                return classDescriptor.forCompressionDataArray;
+            }
+        });
+        byte[] dictionary = PackUtils.buildDictionary(packedItems);
+
         JarOutputStream zipOutputStream;
 
         if (manifest != null) {
@@ -135,7 +146,7 @@ public class JarPacker {
             zipOutputStream = new JarOutputStream(output);
         }
 
-        writeMetadata(zipOutputStream, ctx);
+        writeMetadata(zipOutputStream, ctx, dictionary);
 
         OpenByteOutputStream buff = new OpenByteOutputStream();
 
@@ -159,7 +170,7 @@ public class JarPacker {
 
                     ClassDescriptor classDescriptor = classMap.get(className);
                     buff.reset();
-                    classDescriptor.writeTo(buff);
+                    classDescriptor.writeTo(buff, dictionary);
 
                     jarEntry.setMethod(ZipEntry.STORED);
                     jarEntry.setSize(buff.size());
@@ -313,10 +324,11 @@ public class JarPacker {
             compressed.write(classBytes, buffer.position(), classBytes.length - buffer.position());
         }
 
-        public void writeTo(OutputStream out) throws IOException {
+        public void writeTo(OutputStream out, byte[] dictionary) throws IOException {
             plainDataArray.writeTo(out);
 
             Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION, true);
+            deflater.setDictionary(dictionary);
 
             DeflaterOutputStream defOut = new DeflaterOutputStream(out, deflater);
             forCompressionDataArray.writeTo(defOut);
