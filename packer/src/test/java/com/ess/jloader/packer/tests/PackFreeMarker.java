@@ -1,7 +1,7 @@
 package com.ess.jloader.packer.tests;
 
 import com.ess.jloader.packer.Config;
-import com.ess.jloader.packer.JarMetaData;
+import com.ess.jloader.packer.LiteralsCache;
 import com.ess.jloader.packer.JarPacker;
 import com.google.common.util.concurrent.AtomicLongMap;
 import org.junit.Test;
@@ -17,9 +17,9 @@ import java.util.zip.GZIPOutputStream;
 public class PackFreeMarker {
 
     private void printStats(JarPacker packer) throws IOException {
-        Collection<ClassReader> classes = packer.getClassMap().values();
+        Collection<ClassReader> classes = packer.getClassReaders();
 
-        System.out.println("Strings in Metadata: " + new JarMetaData(packer.getClassMap()).getStringsMap().size());
+        System.out.println("Strings in literal cache: " + new LiteralsCache(packer.getClassReaders()).getStringsMap().size());
 
         AtomicLongMap<String> map = AtomicLongMap.create();
 

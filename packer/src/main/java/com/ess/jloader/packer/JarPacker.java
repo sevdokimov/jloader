@@ -4,7 +4,9 @@ import com.ess.jloader.loader.PackClassLoader;
 import com.ess.jloader.utils.HuffmanOutputStream;
 import com.ess.jloader.utils.OpenByteOutputStream;
 import com.ess.jloader.utils.Utils;
+import com.google.common.base.Function;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Collections2;
 import com.google.common.hash.Hashing;
 import com.google.common.io.ByteStreams;
 import org.apache.log4j.Logger;
@@ -22,6 +24,7 @@ import java.util.jar.Manifest;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 /**
  * @author Sergey Evdokimov
@@ -30,7 +33,14 @@ public class JarPacker {
 
     private static final Logger log = Logger.getLogger(JarPacker.class);
 
-    private final Map<String, ClassReader> classMap = new LinkedHashMap<String, ClassReader>();
+    private final Map<String, ClassDescriptor> classMap = new LinkedHashMap<String, ClassDescriptor>();
+
+    private final Collection<ClassReader> classReaders = Collections2.transform(classMap.values(), new Function<ClassDescriptor, ClassReader>() {
+        @Override
+        public ClassReader apply(ClassDescriptor classDescriptor) {
+            return classDescriptor.classReader;
+        }
+    });
 
     private final Map<String, byte[]> resourceMap = new LinkedHashMap<String, byte[]>();
 
@@ -38,7 +48,8 @@ public class JarPacker {
 
     private Manifest manifest;
 
-    private JarMetaData metaData;
+    private LiteralsCache literalsCache;
+    private VersionCache versionCache;
 
     private final Config cfg;
 
@@ -47,7 +58,7 @@ public class JarPacker {
     }
 
     public void addJar(File jarFile) throws IOException {
-        assert metaData == null;
+        assert literalsCache == null;
 
         JarInputStream jarInputStream = new JarInputStream(new FileInputStream(jarFile));
 
@@ -63,7 +74,7 @@ public class JarPacker {
     }
 
     public void addJar(JarInputStream jarInputStream) throws IOException {
-        assert metaData == null;
+        assert literalsCache == null;
 
         JarEntry entry = jarInputStream.getNextJarEntry();
         while (entry != null) {
@@ -75,7 +86,7 @@ public class JarPacker {
                     ClassReader classReader = new ClassReader(jarInputStream);
                     if (!classReader.getClassName().equals(className)) throw new InvalidJarException();
 
-                    classMap.put(className, classReader);
+                    classMap.put(className, new ClassDescriptor(classReader));
                 }
                 else {
                     resourceMap.put(fileName, ByteStreams.toByteArray(jarInputStream));
@@ -98,7 +109,9 @@ public class JarPacker {
 
         plainDataArray.writeTo(out);
 
-        DeflaterOutputStream defOut = new DeflaterOutputStream(out, new Deflater(Deflater.DEFAULT_COMPRESSION, true));
+        Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION, true);
+
+        DeflaterOutputStream defOut = new DeflaterOutputStream(out, deflater);
         compressedDataArray.writeTo(defOut);
         defOut.close();
     }
@@ -119,7 +132,7 @@ public class JarPacker {
 
                 if (s.equals(className)) continue; // skip name of current class
 
-                if (metaData.getHasString(s)) {
+                if (literalsCache.getHasString(s)) {
                     packedStr.add(s);
                 }
                 else {
@@ -149,7 +162,7 @@ public class JarPacker {
         int flags = 0;
 
         int version = buffer.getInt(4);
-        flags |= metaData.getVersionIndex(version);
+        flags |= versionCache.getVersionIndex(version);
 
         if (classBytes.length > 0xFFFF) {
             flags |= Utils.F_LONG_CLASS;
@@ -173,7 +186,7 @@ public class JarPacker {
         plainData.writeShort(constCount);
 
         plainData.writeShort(packedStr.size());
-        HuffmanOutputStream h = metaData.createHuffmanOutput();
+        HuffmanOutputStream h = literalsCache.createHuffmanOutput();
         h.reset(plainData);
         for (String s : packedStr) {
             h.write(s);
@@ -267,10 +280,25 @@ public class JarPacker {
         }
     }
 
-    public void pack(OutputStream output) throws IOException {
-        assert metaData == null;
+    private void writeMetadata(ZipOutputStream zipOut) throws IOException {
+        DataOutputStream zipDataOutput = new DataOutputStream(zipOut);
 
-        metaData = new JarMetaData(classMap);
+        zipOut.putNextEntry(new ZipEntry(PackClassLoader.METADATA_ENTRY_NAME));
+
+        zipDataOutput.write(Utils.MAGIC); // Magic
+        zipDataOutput.write(Utils.PACKER_VERSION);
+
+        versionCache.writeTo(zipDataOutput);
+        literalsCache.writeTo(zipDataOutput);
+
+        zipOut.closeEntry();
+    }
+
+    public void pack(OutputStream output) throws IOException {
+        assert literalsCache == null;
+
+        literalsCache = new LiteralsCache(classReaders);
+        versionCache = new VersionCache(classReaders);
 
         JarOutputStream zipOutputStream;
 
@@ -281,9 +309,7 @@ public class JarPacker {
             zipOutputStream = new JarOutputStream(output);
         }
 
-        zipOutputStream.putNextEntry(new ZipEntry(PackClassLoader.METADATA_ENTRY_NAME));
-        metaData.writeTo(zipOutputStream);
-        zipOutputStream.closeEntry();
+        writeMetadata(zipOutputStream);
 
         for (Map.Entry<String, JarEntry> entry : resourceEntries.entrySet()) {
             JarEntry jarEntry = entry.getValue();
@@ -303,7 +329,7 @@ public class JarPacker {
 
                     String className = Utils.fileNameToClassName(entry.getKey());
 
-                    ClassReader classReader = classMap.get(className);
+                    ClassReader classReader = classMap.get(className).classReader;
                     ByteArrayOutputStream o = new ByteArrayOutputStream();
                     pack(classReader, o);
 
@@ -342,7 +368,15 @@ public class JarPacker {
         packer.writeResult(dest);
     }
 
-    public Map<String, ClassReader> getClassMap() {
-        return classMap;
+    public Collection<ClassReader> getClassReaders() {
+        return classReaders;
+    }
+
+    private class ClassDescriptor {
+        public final ClassReader classReader;
+
+        public ClassDescriptor(ClassReader classReader) {
+            this.classReader = classReader;
+        }
     }
 }
