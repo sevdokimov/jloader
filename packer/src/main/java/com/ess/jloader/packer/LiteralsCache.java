@@ -3,7 +3,6 @@ package com.ess.jloader.packer;
 import com.ess.jloader.utils.HuffmanOutputStream;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
-import com.google.common.util.concurrent.AtomicLongMap;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.TestOnly;
 import org.objectweb.asm.ClassReader;
@@ -23,7 +22,7 @@ public class LiteralsCache {
     private final Map<String, boolean[]> huffmanPathMap;
 
     public LiteralsCache(Collection<ClassReader> classes) throws InvalidJarException {
-        AtomicLongMap<String> stringsCountMap = AtomicLongMap.create();
+        CountMap<String> stringsCountMap = new CountMap<String>();
 
         for (ClassReader classReader : classes) {
             for (int i = 0; i < classReader.getItemCount() - 1; i++) {
@@ -39,7 +38,7 @@ public class LiteralsCache {
             }
         }
 
-        String[] keys = stringsCountMap.asMap().keySet().toArray(new String[stringsCountMap.size()]);
+        String[] keys = stringsCountMap.keySet().toArray(new String[stringsCountMap.size()]);
 
         Arrays.sort(keys, new Comparator<String>() {
             @Override

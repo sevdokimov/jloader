@@ -4,7 +4,6 @@ import com.ess.jloader.utils.ByteArrayString;
 import com.ess.jloader.utils.OpenByteOutputStream;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
-import com.google.common.util.concurrent.AtomicLongMap;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -23,7 +22,7 @@ public class DictionaryCalculator {
 
     private int windowPos = 0;
 
-    private AtomicLongMap<ByteArrayString> countMap = AtomicLongMap.create();
+    private CountMap<ByteArrayString> countMap = new CountMap<ByteArrayString>();
 
     private DictionaryCalculator() {
     }
@@ -82,7 +81,7 @@ public class DictionaryCalculator {
 //                }
 //            });
 
-        ByteArrayString[] strings = countMap.asMap().keySet().toArray(new ByteArrayString[countMap.size()]);
+        ByteArrayString[] strings = countMap.keySet().toArray(new ByteArrayString[countMap.size()]);
         Arrays.sort(strings, Ordering.from(new Comparator<ByteArrayString>() {
             @Override
             public int compare(ByteArrayString o1, ByteArrayString o2) {
