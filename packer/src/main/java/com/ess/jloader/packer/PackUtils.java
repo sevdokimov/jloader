@@ -201,27 +201,47 @@ public class PackUtils {
         private AtomicLongMap<ByteArrayString> countMap = AtomicLongMap.create();
 
         public void write(byte[] data, int pos, int end) {
+            byte[] window = this.window;
+            int windowPos = this.windowPos;
+
             while (pos < end) {
                 byte firstB = data[pos];
 
                 int maxLength = 0;
                 int maxWinPos = 0;
 
-                for (int i = ((windowPos - 1) & (W_SIZE - 1)); i != windowPos ; i = (i-1) & (W_SIZE - 1)) {
+                for (int i = windowPos; i < W_SIZE; i++) {
                     if (firstB == window[i]) {
-                        int p1 = pos;
-                        int p2 = i;
+                        int dataI = pos;
+                        int winI = i;
 
                         do {
-                            p1++;
-                            p2 = (p2 + 1) & (W_SIZE - 1);
-                        } while (p1 < end && p2 != windowPos && window[p2] == data[p1]);
+                            dataI++;
+                            winI = (winI + 1) & (W_SIZE - 1);
+                        } while (dataI < end && winI != windowPos && window[winI] == data[dataI]);
 
-                        int len = p1 - pos;
+                        int len = dataI - pos;
                         if (len > maxLength) {
                             maxLength = len;
                             maxWinPos = i;
+                        }
+                    }
+                }
 
+                for (int i = 0; i != windowPos; i++) {
+                    if (firstB == window[i]) {
+                        int dataI = pos;
+                        int winI = i;
+
+                        do {
+                            dataI++;
+                            winI++;
+                        } while (dataI < end && winI != windowPos && window[winI] == data[dataI]);
+
+                        int len = dataI - pos;
+                        if (len > maxLength) {
+                            maxLength = len;
+                            maxWinPos = i;
                         }
                     }
                 }
@@ -247,6 +267,8 @@ public class PackUtils {
 
                 pos += maxLength;
             }
+
+            this.windowPos = windowPos;
         }
 
         public byte[] getDictionary() {
