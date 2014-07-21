@@ -40,8 +40,9 @@ public class LiteralsCache {
             }
         }
 
-        List<String> keys = new ArrayList<String>(stringsCountMap.asMap().keySet());
-        Collections.sort(keys, new Comparator<String>() {
+        String[] keys = stringsCountMap.asMap().keySet().toArray(new String[stringsCountMap.size()]);
+
+        Arrays.sort(keys, new Comparator<String>() {
             @Override
             public int compare(String o1, String o2) {
                 return ComparisonChain.start()
@@ -65,13 +66,14 @@ public class LiteralsCache {
 
     @Nullable
     private static String extractClassName(String s) {
-        if (PackUtils.CLASS_JVM_QNAME_PATTERN.matcher(s).matches()) {
-            return s;
-        }
-
-        Matcher matcher = PackUtils.CLASS_TYPE_PATTERN.matcher(s);
+        Matcher matcher = PackUtils.CLASS_NAME_OR_TYPE_PATTERN.matcher(s);
         if (matcher.matches()) {
-            return matcher.group(1);
+            String res = matcher.group(1);
+            if (res == null) {
+                res = matcher.group();
+            }
+
+            return res;
         }
 
         return null;

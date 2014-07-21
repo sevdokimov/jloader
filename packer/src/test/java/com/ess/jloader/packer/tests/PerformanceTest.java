@@ -5,6 +5,7 @@ import com.ess.jloader.packer.Config;
 import com.ess.jloader.packer.JarPacker;
 import org.junit.Test;
 
+import javax.swing.*;
 import java.io.File;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -19,6 +20,8 @@ public class PerformanceTest {
         File guavaLoader = TestUtils.getJarByMarker("loadGuava.marker.txt");
         File guava = TestUtils.getJarByMarker("com/google/common/base/Objects.class");
 
+        //JOptionPane.showMessageDialog(null, "Click Ok to continue");
+
         long time = System.currentTimeMillis();
 
         JarPacker packer = new JarPacker(new Config());
@@ -30,11 +33,15 @@ public class PerformanceTest {
 
         System.out.println("Packing time: " + (System.currentTimeMillis() - time));
 
-        URLClassLoader plainClassLoader = URLClassLoader.newInstance(new URL[]{guavaLoader.toURI().toURL(), guava.toURI().toURL()}, null);
-
-        long plainExecuteTime = getExecuteTime(plainClassLoader);
         long packedExecuteTime = getExecuteTime(new PackClassLoader(null, tempFile));
+
+        URLClassLoader plainClassLoader = URLClassLoader.newInstance(new URL[]{guavaLoader.toURI().toURL(), guava.toURI().toURL()}, null);
+        long plainExecuteTime = getExecuteTime(plainClassLoader);
+
         System.out.printf("Plain: %d, packed: %d, (res: %d%%)\n", plainExecuteTime, packedExecuteTime, (packedExecuteTime - plainExecuteTime) * 100/plainExecuteTime);
+
+        long srcSize = guava.length() + guavaLoader.length();
+        System.out.printf("Src: %d, Result: %d,  (%d%%)", srcSize, tempFile.length(), tempFile.length() * 100 / srcSize);
     }
 
     private long getExecuteTime(ClassLoader loader) throws Exception {

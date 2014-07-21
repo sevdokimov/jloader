@@ -28,6 +28,8 @@ public class PackUtils {
 
     public static final Pattern CLASS_TYPE_PATTERN = Pattern.compile("\\[*L((?:[\\w]+/)+[A-Z][\\w\\$]*);");
 
+    public static final Pattern CLASS_NAME_OR_TYPE_PATTERN = Pattern.compile("\\[*L((?:[\\w]+/)+[A-Z][\\w\\$]*);|(?:[\\w]+/)+[A-Z][\\w\\$]*");
+
     public static final Pattern METHOD_DESCR_PATTERN = Pattern.compile("\\((?:\\[*(?:[BCDFIJSZ]|L(?:[\\w]+/)+[A-Z][\\w\\$]*;))*\\)\\[*(?:[BCDFIJSZV]|L(?:[\\w]+/)+[A-Z][\\w\\$]*;)");
 
     private PackUtils() {
