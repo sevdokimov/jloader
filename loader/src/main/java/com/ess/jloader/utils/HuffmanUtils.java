@@ -11,18 +11,6 @@ public class HuffmanUtils {
 
     public static final Object END_MARKER = new Object();
 
-    public static <T> TreeElement buildHuffmanTree(Map<T, Integer> map) {
-        assert map.size() > 0;
-
-        PriorityQueue<TreeElement> queue = new PriorityQueue<TreeElement>();
-
-        for (Map.Entry<T, Integer> entry : map.entrySet()) {
-            queue.add(new Leaf(entry.getValue(), entry.getKey()));
-        }
-
-        return buildHuffmanTree(queue);
-    }
-
     public static <T> TreeElement buildHuffmanTree(PriorityQueue<TreeElement> queue) {
         while (queue.size() > 1) {
             TreeElement e1 = queue.poll();

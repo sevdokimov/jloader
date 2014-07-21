@@ -1,7 +1,6 @@
 package com.ess.jloader.packer;
 
 import com.ess.jloader.utils.HuffmanOutputStream;
-import com.ess.jloader.utils.HuffmanUtils;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.AtomicLongMap;
@@ -21,7 +20,7 @@ public class LiteralsCache {
 
     private final Map<String, Integer> stringsMap = new LinkedHashMap<String, Integer>();
 
-    private final HuffmanUtils.TreeElement huffmanTreeRoot;
+    private final Map<String, boolean[]> huffmanPathMap;
 
     public LiteralsCache(Collection<ClassReader> classes) throws InvalidJarException {
         AtomicLongMap<String> stringsCountMap = AtomicLongMap.create();
@@ -61,7 +60,7 @@ public class LiteralsCache {
             }
         }
 
-        huffmanTreeRoot = HuffmanUtils.buildHuffmanTree(stringsMap);
+        huffmanPathMap = HuffmanOutputStream.buildPathMap(stringsMap);
     }
 
     @Nullable
@@ -88,8 +87,8 @@ public class LiteralsCache {
         return stringsMap;
     }
 
-    public HuffmanOutputStream createHuffmanOutput() {
-        return new HuffmanOutputStream(huffmanTreeRoot);
+    public HuffmanOutputStream<String> createHuffmanOutput() {
+        return new HuffmanOutputStream<String>(huffmanPathMap);
     }
 
     public void writeTo(DataOutputStream out) throws IOException {

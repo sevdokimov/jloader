@@ -1,25 +1,28 @@
 package com.ess.jloader.utils;
 
+import com.google.common.collect.Maps;
+
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
 
 /**
  * @author Sergey Evdokimov
  */
 @SuppressWarnings({"unchecked"})
-public class HuffmanOutputStream {
+public class HuffmanOutputStream<T> {
 
-    private final Map<Object, boolean[]> pathMap;
+    private final Map<T, boolean[]> pathMap;
 
     private OutputStream out;
 
     private int bits;
     private int curBit;
 
-    public HuffmanOutputStream(HuffmanUtils.TreeElement root) {
-        Map<Object, boolean[]> pathMap = new HashMap<Object, boolean[]>();
-        buildHuffmanMap(pathMap, new ArrayList<Boolean>(), root);
+    public HuffmanOutputStream(Map<T, boolean[]> pathMap) {
         this.pathMap = pathMap;
     }
 
@@ -28,7 +31,7 @@ public class HuffmanOutputStream {
         curBit = 1;
     }
 
-    public void write(Object t) throws IOException {
+    public void write(T t) throws IOException {
         boolean[] booleans = pathMap.get(t);
         for (boolean aBoolean : booleans) {
             if (aBoolean) {
@@ -50,7 +53,7 @@ public class HuffmanOutputStream {
         }
     }
 
-    private static <T> void buildHuffmanMap(Map<T, boolean[]> res, List<Boolean> path, HuffmanUtils.TreeElement element) {
+    private static <T> void buildPathMap(Map<T, boolean[]> res, List<Boolean> path, HuffmanUtils.TreeElement element) {
         if (element instanceof HuffmanUtils.Leaf) {
             boolean[] pathArray = new boolean[path.size()];
             for (int i = 0; i < pathArray.length; i++) {
@@ -63,14 +66,32 @@ public class HuffmanOutputStream {
             HuffmanUtils.Node node = (HuffmanUtils.Node) element;
 
             path.add(true);
-            buildHuffmanMap(res, path, node.trueNode);
+            buildPathMap(res, path, node.trueNode);
             path.set(path.size() - 1, false);
-            buildHuffmanMap(res, path, node.falseNode);
+            buildPathMap(res, path, node.falseNode);
             path.remove(path.size() - 1);
         }
         else {
             assert false;
         }
+    }
+
+    public static <T> Map<T, boolean[]> buildPathMap(Map<T, Integer> map) {
+        assert map.size() > 0;
+
+        PriorityQueue<HuffmanUtils.TreeElement> queue = new PriorityQueue<HuffmanUtils.TreeElement>();
+
+        for (Map.Entry<T, Integer> entry : map.entrySet()) {
+            queue.add(new HuffmanUtils.Leaf(entry.getValue(), entry.getKey()));
+        }
+
+        HuffmanUtils.TreeElement root = HuffmanUtils.buildHuffmanTree(queue);
+
+        Map<T, boolean[]> res = Maps.newHashMapWithExpectedSize(map.size());
+
+        buildPathMap(res, new ArrayList<Boolean>(), root);
+
+        return res;
     }
 
 }

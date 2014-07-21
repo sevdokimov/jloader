@@ -297,7 +297,7 @@ public class JarPacker {
             plainData.writeShort(constCount);
 
             plainData.writeShort(packedStr.size());
-            HuffmanOutputStream h = ctx.getLiteralsCache().createHuffmanOutput();
+            HuffmanOutputStream<String> h = ctx.getLiteralsCache().createHuffmanOutput();
             h.reset(plainData);
             for (String s : packedStr) {
                 h.write(s);
