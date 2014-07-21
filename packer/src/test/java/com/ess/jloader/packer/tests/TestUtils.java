@@ -1,9 +1,10 @@
 package com.ess.jloader.packer.tests;
 
+import com.ess.jloader.loader.PackClassLoader;
 import com.google.common.collect.Ordering;
-import com.google.common.util.concurrent.AtomicLongMap;
 
 import java.io.File;
+import java.lang.reflect.Method;
 import java.util.*;
 
 /**
@@ -52,6 +53,27 @@ public class TestUtils {
         }
 
         return res;
+    }
+
+    public static void runJar(File jar) throws Exception {
+        ClassLoader l = new PackClassLoader(null, jar);
+        runJar(l);
+    }
+
+    public static void runJar(ClassLoader l) throws Exception {
+        ClassLoader savedContextClassLoader = Thread.currentThread().getContextClassLoader();
+        Thread.currentThread().setContextClassLoader(l);
+
+        try {
+            Class aClass = l.loadClass("Main");
+
+            Method main = aClass.getMethod("main", new Class[]{String[].class});
+
+            main.invoke(null, (Object)new String[0]);
+
+        } finally {
+            Thread.currentThread().setContextClassLoader(savedContextClassLoader);
+        }
     }
 
 }

@@ -13,6 +13,7 @@
 
     <modules>
         <module>TestProject-1</module>
+        <module>testGuava</module>
     </modules>
 
     <build>

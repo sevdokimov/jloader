@@ -24,17 +24,9 @@ public class TestLoad {
 
         JarPacker.pack(src, tempFile);
 
-        ClassLoader l = new PackClassLoader(null, tempFile);
-        Class s = l.loadClass("Main");
-        checkClass(s);
+        TestUtils.runJar(tempFile);
 
         System.out.println("jar: " + src.length() + ", pack: " + tempFile.length());
-    }
-
-    private void checkClass(Class aClass) throws Exception {
-        Method main = aClass.getMethod("main", new Class[]{String[].class});
-
-        main.invoke(null, (Object)new String[0]);
     }
 
 

@@ -6,6 +6,8 @@ import com.ess.jloader.utils.OpenByteOutputStream;
 import com.ess.jloader.utils.Utils;
 
 import java.io.*;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.ByteBuffer;
 import java.util.PriorityQueue;
 import java.util.zip.*;
@@ -17,24 +19,25 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
     public static final String METADATA_ENTRY_NAME = "META-INF/literals.data";
 
-    private ZipFile zip;
-
-    private final String[] packedStrings;
-
     private final HuffmanUtils.TreeElement packedStrHuffmanTree;
 
     private final int[] versions = new int[8];
 
     private final byte[] dictionary;
 
+    private final ClassLoader delegateClassLoader;
+
     public PackClassLoader(ClassLoader parent, File packFile) throws IOException {
+        this(parent, new URLClassLoader(new URL[]{packFile.toURI().toURL()}));
+    }
+
+    public PackClassLoader(ClassLoader parent, ClassLoader delegate) throws IOException {
         super(parent);
-        zip = new ZipFile(packFile);
 
-        ZipEntry entry = zip.getEntry(METADATA_ENTRY_NAME);
-        if (entry == null) throw new RuntimeException();
+        delegateClassLoader = delegate;
 
-        DataInputStream inputStream = new DataInputStream(zip.getInputStream(entry));
+        DataInputStream inputStream = new DataInputStream(delegate.getResourceAsStream(METADATA_ENTRY_NAME));
+
         try {
             if (inputStream.readByte() != Utils.MAGIC) throw new RuntimeException();
 
@@ -45,7 +48,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             }
 
             int packedStringsCount = inputStream.readInt();
-            packedStrings = new String[packedStringsCount];
+            String[] packedStrings = new String[packedStringsCount];
             for (int i = 0; i < packedStringsCount; i++) {
                 packedStrings[i] = inputStream.readUTF();
             }
@@ -67,20 +70,14 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         }
     }
 
-    public PackClassLoader(File packFile) throws IOException {
-        this(getSystemClassLoader(), packFile);
-    }
-
     @Override
     protected Class<?> findClass(String name) throws ClassNotFoundException {
         String jvmClassName = name.replace('.', '/');
         String classFileName = jvmClassName.concat(".c");
 
         try {
-            ZipEntry entry = zip.getEntry(classFileName);
-            if (entry == null) throw new ClassNotFoundException();
-
-            InputStream inputStream = zip.getInputStream(entry);
+            InputStream inputStream = delegateClassLoader.getResourceAsStream(classFileName);
+            if (inputStream == null) throw new ClassNotFoundException();
 
             try {
                 DataInputStream in = new DataInputStream(inputStream);
@@ -89,7 +86,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 int size;
 
                 if ((flags & Utils.F_LONG_CLASS) == 0) {
-                    size = in.readShort();
+                    size = in.readUnsignedShort();
                 }
                 else {
                     size = in.readInt();
@@ -151,6 +148,11 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         }
     }
 
+    @Override
+    protected URL findResource(String name) {
+        return delegateClassLoader.getResource(name);
+    }
+
     private void skipConstTableTail(ByteBuffer buffer, DataInputStream in, int constCount) throws IOException {
         for (int i = 0; i < constCount; i++) {
             int tag = in.read();
@@ -193,7 +195,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         }
     }
 
+    @Override
     public void close() throws IOException {
-        zip.close();
+        if (delegateClassLoader instanceof Closeable) {
+            ((Closeable) delegateClassLoader).close();
+        }
     }
 }
