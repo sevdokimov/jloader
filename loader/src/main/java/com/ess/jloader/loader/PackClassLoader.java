@@ -36,7 +36,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         delegateClassLoader = delegate;
 
-        DataInputStream inputStream = new DataInputStream(delegate.getResourceAsStream(METADATA_ENTRY_NAME));
+        DataInputStream inputStream = new DataInputStream(new BufferedInputStream(delegate.getResourceAsStream(METADATA_ENTRY_NAME)));
 
         try {
             if (inputStream.readByte() != Utils.MAGIC) throw new RuntimeException();
@@ -78,6 +78,8 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         try {
             InputStream inputStream = delegateClassLoader.getResourceAsStream(classFileName);
             if (inputStream == null) throw new ClassNotFoundException();
+
+            inputStream = new BufferedInputStream(inputStream);
 
             try {
                 DataInputStream in = new DataInputStream(inputStream);
@@ -128,7 +130,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 Inflater inflater = new Inflater(true);
                 inflater.setDictionary(dictionary);
                 InflaterInputStream defIn = new InflaterInputStream(inputStream, inflater);
-                DataInputStream defDataIn = new DataInputStream(defIn);
+                DataInputStream defDataIn = new DataInputStream(new BufferedInputStream(defIn));
 
                 skipConstTableTail(buffer, defDataIn, constCount - 1 - packedStrCount - 2);
 

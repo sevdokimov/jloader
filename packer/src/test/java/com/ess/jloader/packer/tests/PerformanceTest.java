@@ -33,6 +33,8 @@ public class PerformanceTest {
 
         System.out.println("Packing time: " + (System.currentTimeMillis() - time));
 
+        getExecuteTime(URLClassLoader.newInstance(new URL[]{guavaLoader.toURI().toURL(), guava.toURI().toURL()}, null));
+
         long packedExecuteTime = getExecuteTime(new PackClassLoader(null, tempFile));
 
         URLClassLoader plainClassLoader = URLClassLoader.newInstance(new URL[]{guavaLoader.toURI().toURL(), guava.toURI().toURL()}, null);
