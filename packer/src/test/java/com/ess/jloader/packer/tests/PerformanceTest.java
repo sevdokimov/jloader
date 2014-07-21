@@ -20,7 +20,7 @@ public class PerformanceTest {
         File guavaLoader = TestUtils.getJarByMarker("loadGuava.marker.txt");
         File guava = TestUtils.getJarByMarker("com/google/common/base/Objects.class");
 
-        //JOptionPane.showMessageDialog(null, "Click Ok to continue");
+        JOptionPane.showMessageDialog(null, "Click Ok to continue");
 
         long time = System.currentTimeMillis();
 

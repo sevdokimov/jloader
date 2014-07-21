@@ -78,8 +78,8 @@ public class ByteArrayString {
     public int hashCode() {
         int result = hashCode;
         if (result == 0) {
-            for (int i = 0; i < length; i++) {
-                result = result * 31 + data[offset + i];
+            for (int i = offset, end = getEnd(); i < end; i++) {
+                result = result * 31 + data[i];
             }
 
             hashCode = result;

@@ -135,7 +135,7 @@ public class JarPacker {
                 return classDescriptor.forCompressionDataArray;
             }
         });
-        byte[] dictionary = PackUtils.buildDictionary(packedItems);
+        byte[] dictionary = DictionaryCalculator.buildDictionary(packedItems);
 
         JarOutputStream zipOutputStream;
 
