@@ -63,6 +63,8 @@ public class ByteArrayString {
 
         if (length != that.length) return false;
 
+        if (hashCode != 0 && hashCode != that.hashCode && that.hashCode != 0) return false;
+
         for (int i = 0; i < length; i++) {
             if (data[offset + i] != that.data[that.offset + i]) {
                 return false;
