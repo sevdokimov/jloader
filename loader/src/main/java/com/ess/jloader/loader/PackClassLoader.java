@@ -48,9 +48,11 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             }
 
             int packedStringsCount = inputStream.readInt();
-            String[] packedStrings = new String[packedStringsCount];
+            byte[][] packedStrings = new byte[packedStringsCount][];
             for (int i = 0; i < packedStringsCount; i++) {
-                packedStrings[i] = inputStream.readUTF();
+                int len = inputStream.readUnsignedShort();
+                packedStrings[i] = new byte[len];
+                inputStream.readFully(packedStrings[i]);
             }
 
             // Build Huffman tree
@@ -109,22 +111,26 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
                 // Const table
                 int packedStrCount = in.readUnsignedShort();
-                DataOutputStream out = new DataOutputStream(OpenByteOutputStream.wrap(array, buffer.position()));
+
 
                 // Class name
-                out.write(1);
+                buffer.put((byte) 1);
+
+                DataOutputStream out = new DataOutputStream(OpenByteOutputStream.wrap(array, buffer.position()));
                 out.writeUTF(jvmClassName);
-                out.write(7);
-                out.writeShort(1);
+                buffer.position(buffer.position() + out.size());
+
+                buffer.put((byte) 7);
+                buffer.putShort((short) 1);
 
                 // Packed String Constants
-                HuffmanInputStream<String> huffmanInputStream = new HuffmanInputStream<String>(inputStream, packedStrHuffmanTree);
+                HuffmanInputStream<byte[]> huffmanInputStream = new HuffmanInputStream<byte[]>(inputStream, packedStrHuffmanTree);
                 for (int i = 0; i < packedStrCount; i++) {
-                    out.write(1);
-                    out.writeUTF(huffmanInputStream.read());
+                    buffer.put((byte) 1);
+                    byte[] str = huffmanInputStream.read();
+                    buffer.putShort((short) str.length);
+                    buffer.put(str);
                 }
-
-                buffer.position(buffer.position() + out.size());
 
                 // Compressed data
                 Inflater inflater = new Inflater(true);
