@@ -54,4 +54,9 @@ public class ConstNameAndType extends AbstractConst {
         result = 31 * result + descr.hashCode();
         return result;
     }
+
+    @Override
+    public String toString() {
+        return name + ' ' + descr;
+    }
 }

@@ -35,4 +35,9 @@ public class ConstConst<T> extends AbstractConst {
     public int hashCode() {
         return tag * 31 + value.hashCode();
     }
+
+    @Override
+    public String toString() {
+        return value.toString();
+    }
 }

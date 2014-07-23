@@ -63,4 +63,9 @@ public abstract class ConstAbstractRef extends AbstractConst {
         result = 31 * result + descr.hashCode();
         return result;
     }
+
+    @Override
+    public String toString() {
+        return owner.getInternalName() + '#' + name + ' ' + descr;
+    }
 }

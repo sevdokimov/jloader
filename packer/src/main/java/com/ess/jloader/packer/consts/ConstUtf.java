@@ -42,4 +42,9 @@ public class ConstUtf extends AbstractConst {
     public int hashCode() {
         return value.hashCode();
     }
+
+    @Override
+    public String toString() {
+        return value;
+    }
 }
