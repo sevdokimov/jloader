@@ -1,8 +1,6 @@
 package com.ess.jloader.packer;
 
-import com.ess.jloader.packer.consts.AbstractConst;
-import com.ess.jloader.packer.consts.ConstUtf;
-import com.ess.jloader.packer.consts.Resolver;
+import com.ess.jloader.packer.consts.*;
 import com.ess.jloader.utils.HuffmanOutputStream;
 import com.ess.jloader.utils.OpenByteOutputStream;
 import com.ess.jloader.utils.Utils;
@@ -43,7 +41,7 @@ public class ClassDescriptor {
 
         String className = classReader.getClassName();
 
-        Collection<AbstractConst> consts = Resolver.resolveAll(classReader);
+        Collection<AbstractConst> consts = Resolver.resolveAll(classReader, true);
 
         Set<String> generatedStr = new LinkedHashSet<String>();
         Set<String> packedStr = new LinkedHashSet<String>();
@@ -98,6 +96,8 @@ public class ClassDescriptor {
 
         int constCount = buffer.getShort() & 0xFFFF;
         int remainingConstCount = constCount - 1;
+
+        assert constCount == getConstPoolSize(consts);
 
         plainData.writeInt(flags);
 
@@ -205,5 +205,17 @@ public class ClassDescriptor {
         }
 
         out.write(buffer.array(), oldPosition, buffer.position() - oldPosition);
+    }
+
+    private static int getConstPoolSize(Collection<AbstractConst> consts) {
+        int res = consts.size() + 1;
+
+        for (AbstractConst aConst : consts) {
+            if (aConst.getTag() == ConstLong.TAG || aConst.getTag() == ConstDouble.TAG) {
+                res++;
+            }
+        }
+
+        return res;
     }
 }

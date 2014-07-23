@@ -2,13 +2,14 @@ package com.ess.jloader.packer.consts;
 
 import com.ess.jloader.packer.InvalidJarException;
 import com.ess.jloader.packer.PackUtils;
-import com.sun.org.apache.bcel.internal.classfile.ConstantUtf8;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassWriter;
 
-import java.nio.file.ClosedWatchServiceException;
-import java.util.*;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * @author Sergey Evdokimov
@@ -123,6 +124,10 @@ public class Resolver {
     }
 
     public static Collection<AbstractConst> resolveAll(ClassReader classReader) {
+        return resolveAll(classReader, false);
+    }
+
+    public static Collection<AbstractConst> resolveAll(ClassReader classReader, boolean filterByRepack) {
         Resolver resolver = new Resolver(classReader);
 
         Set<AbstractConst> res = new LinkedHashSet<AbstractConst>();
@@ -132,6 +137,24 @@ public class Resolver {
             if (aConst != null) {
                 res.add(aConst);
             }
+        }
+
+        if (filterByRepack) {
+            ClassWriter classWriter = new ClassWriter(0);
+            classReader.accept(classWriter, 0);
+            res.retainAll(resolveAll(new ClassReader(classWriter.toByteArray())));
+        }
+
+        return res;
+    }
+
+    public static AbstractConst[] resolveAllPlain(ClassReader classReader) {
+        Resolver resolver = new Resolver(classReader);
+
+        AbstractConst[] res = new AbstractConst[classReader.getItemCount()];
+
+        for (int i = 1; i < classReader.getItemCount(); i++) {
+            res[i] = resolver.resolve(i, null);
         }
 
         return res;
