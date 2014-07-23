@@ -51,7 +51,7 @@ public class ClassDescriptor {
 
         generatedStr.add(className);
 
-        for (AbstractConst aConst : consts) {{
+        for (AbstractConst aConst : consts) {
             if (aConst.getTag() == ConstUtf.TAG) {
                 String s = ((ConstUtf)aConst).getValue();
 
@@ -64,7 +64,7 @@ public class ClassDescriptor {
                     }
                 }
             }
-        }}
+        }
 
         Collections.sort(notPackedStr);
 
@@ -97,6 +97,7 @@ public class ClassDescriptor {
         buffer.getInt(); // skip version
 
         int constCount = buffer.getShort() & 0xFFFF;
+        int remainingConstCount = constCount - 1;
 
         plainData.writeInt(flags);
 
@@ -119,14 +120,18 @@ public class ClassDescriptor {
 
         // First const is class name
         skipUtfConst(buffer, className);
+        remainingConstCount--;
+
         if (buffer.get() != 7) throw new RuntimeException();
         if (buffer.getShort() != 1) throw new RuntimeException();
+        remainingConstCount--;
 
         for (String s : packedStr) {
             skipUtfConst(buffer, s);
+            remainingConstCount--;
         }
 
-        copyConstTableTail(buffer, constCount - 1 - packedStr.size() - 2, compressed);
+        copyConstTableTail(buffer, remainingConstCount, compressed);
 
         int accessFlags = buffer.getShort();
         compressed.writeShort(accessFlags);
