@@ -1,5 +1,8 @@
 package com.ess.jloader.packer;
 
+import com.ess.jloader.packer.consts.AbstractConst;
+import com.ess.jloader.packer.consts.ConstUtf;
+import com.ess.jloader.packer.consts.Resolver;
 import com.ess.jloader.utils.HuffmanOutputStream;
 import com.ess.jloader.utils.OpenByteOutputStream;
 import com.ess.jloader.utils.Utils;
@@ -40,29 +43,30 @@ public class ClassDescriptor {
 
         String className = classReader.getClassName();
 
+        Collection<AbstractConst> consts = Resolver.resolveAll(classReader);
+
+        Set<String> generatedStr = new LinkedHashSet<String>();
         Set<String> packedStr = new LinkedHashSet<String>();
+        List<String> notPackedStr = new ArrayList<String>();
 
-        List<String> utfInConstPool = new ArrayList<String>();
+        generatedStr.add(className);
 
-        for (int i = 1; i < classReader.getItemCount(); i++) {
-            int pos = classReader.getItem(i);
-            if (pos == 0) continue;
+        for (AbstractConst aConst : consts) {{
+            if (aConst.getTag() == ConstUtf.TAG) {
+                String s = ((ConstUtf)aConst).getValue();
 
-            if (classReader.b[pos - 1] == 1) {
-                String s = PackUtils.readUtf(classReader.b, pos);
-
-                if (s.equals(className)) continue; // skip name of current class
-
-                if (ctx.getLiteralsCache().getHasString(s)) {
-                    packedStr.add(s);
-                }
-                else {
-                    utfInConstPool.add(s);
+                if (!generatedStr.contains(s)) {
+                    if (ctx.getLiteralsCache().getHasString(s)) {
+                        packedStr.add(s);
+                    }
+                    else {
+                        notPackedStr.add(s);
+                    }
                 }
             }
+        }}
 
-            if (packedStr.size() == 0xFFFF) break;
-        }
+        Collections.sort(notPackedStr);
 
         ClassWriter classWriter = new ClassWriter(0);
         classWriter.newClass(className);
@@ -70,8 +74,7 @@ public class ClassDescriptor {
             classWriter.newUTF8(s);
         }
 
-        Collections.sort(utfInConstPool);
-        for (String s : utfInConstPool) {
+        for (String s : notPackedStr) {
             classWriter.newUTF8(s);
         }
 
