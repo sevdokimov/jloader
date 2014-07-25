@@ -111,6 +111,27 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
                 int utfCount = in.readUnsignedShort();
                 int firstUtfIndex = constCount - utfCount;
+
+                int classCount = in.readUnsignedShort();
+
+                buffer.put((byte) 7);
+                buffer.putShort((short) firstUtfIndex); // Class name;
+
+                for (int i = 1; i < classCount; i++) {
+                    buffer.put((byte) 7);
+
+                    int utfIndex;
+
+                    if (utfCount > 255) {
+                        utfIndex = in.readUnsignedShort();
+                    }
+                    else {
+                        utfIndex = in.readUnsignedByte();
+                    }
+
+                    buffer.putShort((short) (utfIndex + firstUtfIndex));
+                }
+
                 int packedStrCount = in.readUnsignedShort();
 
                 OpenByteOutputStream utfBufferArray = new OpenByteOutputStream();
@@ -129,17 +150,13 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                     utfOutput.write(str);
                 }
 
-                // Const table
-                buffer.put((byte) 7);
-                buffer.putShort((short) firstUtfIndex); // Class name;
-
                 // Compressed data
                 Inflater inflater = new Inflater(true);
                 inflater.setDictionary(dictionary);
                 InflaterInputStream defIn = new InflaterInputStream(inputStream, inflater);
                 DataInputStream defDataIn = new DataInputStream(new BufferedInputStream(defIn));
 
-                skipConstTableTail(buffer, defDataIn, constCount - 1 - 1 - utfCount, firstUtfIndex, utfCount);
+                skipConstTableTail(buffer, defDataIn, constCount - 1 - classCount - utfCount, firstUtfIndex, utfCount);
 
                 utfBufferArray.writeTo(buffer);
 

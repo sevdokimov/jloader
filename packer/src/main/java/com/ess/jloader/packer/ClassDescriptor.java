@@ -5,6 +5,8 @@ import com.ess.jloader.utils.ClassWriterManager;
 import com.ess.jloader.utils.HuffmanOutputStream;
 import com.ess.jloader.utils.OpenByteOutputStream;
 import com.ess.jloader.utils.Utils;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -33,6 +35,8 @@ public class ClassDescriptor {
     private int constCount;
 
     private Set<String> generatedStr;
+
+    private List<String> allUtf;
 
     public ClassDescriptor(ClassReader classReader) {
         this.classReader = classReader;
@@ -78,27 +82,23 @@ public class ClassDescriptor {
 
         Collections.sort(notPackedStr);
 
+        moveToBegin(constClasses, 0, new ConstClass(className));
+
         ClassWriter classWriter = new ClassWriter(0);
         ClassWriterManager classWriterManager = new ClassWriterManager(classWriter, constCount);
 
-        int utfCount = generatedStr.size() + packedStr.size() + notPackedStr.size();
+        allUtf = Lists.newArrayList(Iterables.concat(generatedStr, packedStr, notPackedStr));
+
+        int utfCount = allUtf.size();
         firstUtfIndex = constCount - utfCount;
 
         classWriterManager.goHead(utfCount);
 
-        for (String s : generatedStr) {
-            classWriter.newUTF8(s);
-        }
-        for (String s : packedStr) {
-            classWriter.newUTF8(s);
-        }
-        for (String s : notPackedStr) {
+        for (String s : allUtf) {
             classWriter.newUTF8(s);
         }
 
         classWriterManager.goBack();
-
-        classWriter.newClass(className);
 
         for (ConstClass aClass : constClasses) {
             aClass.toWriter(classWriter);
@@ -140,6 +140,19 @@ public class ClassDescriptor {
         plainData.writeShort(constCount);
         plainData.writeShort(utfCount);
 
+        plainData.writeShort(constClasses.size());
+
+        skipClassConst(buffer, className);
+
+        // First const is class of current class
+        for (int i = 1; i < constClasses.size(); i++) {
+            if (buffer.get() != 7) throw new RuntimeException();
+            int utfIndex = buffer.getShort() & 0xFFFF;
+
+            assert allUtf.get(utfIndex - firstUtfIndex).equals(constClasses.get(i).getType());
+            writeUtfIndex(plainData, utfIndex);
+        }
+
         plainData.writeShort(packedStr.size());
         HuffmanOutputStream<String> h = ctx.getLiteralsCache().createHuffmanOutput();
         h.reset(plainData);
@@ -148,12 +161,7 @@ public class ClassDescriptor {
         }
         h.finish();
 
-        // First const is class of current class
-        if (buffer.get() != 7) throw new RuntimeException();
-        if ((buffer.getShort() & 0xFFFF) != firstUtfIndex) throw new RuntimeException();
-        //remainingConstCount--;
-
-        copyConstTableTail(buffer, constCount - 1 - 1 - utfCount, compressed);
+        copyConstTableTail(buffer, constCount - 1 - constClasses.size() - utfCount, compressed);
 
         for (String s : generatedStr) {
             skipUtfConst(buffer, s);
@@ -175,6 +183,17 @@ public class ClassDescriptor {
         compressed.write(classBytes, buffer.position(), classBytes.length - buffer.position());
     }
 
+    private <T> void moveToBegin(List<T> list, int beginIndex, T element) {
+        int oldIndex = list.indexOf(element);
+        assert oldIndex >= beginIndex;
+
+        for (int i = oldIndex; i > beginIndex; i--) {
+            list.set(i, list.get(i - 1));
+        }
+
+        list.set(beginIndex, element);
+    }
+
     public void writeTo(OutputStream out, byte[] dictionary) throws IOException {
         plainDataArray.writeTo(out);
 
@@ -184,6 +203,14 @@ public class ClassDescriptor {
         DeflaterOutputStream defOut = new DeflaterOutputStream(out, deflater);
         forCompressionDataArray.writeTo(defOut);
         defOut.close();
+    }
+
+    private void skipClassConst(ByteBuffer buffer, String className) {
+        int tag = buffer.get();
+        if (tag != ConstClass.TAG) throw new RuntimeException("" + tag);
+
+        int utfIndex = buffer.getShort();
+        assert className.equals(allUtf.get(utfIndex - firstUtfIndex));
     }
 
     private void skipUtfConst(ByteBuffer buffer, String value) {
@@ -197,16 +224,20 @@ public class ClassDescriptor {
         buffer.position(buffer.position() + strSize);
     }
 
-    private void copyUtfIndex(ByteBuffer buffer, DataOutputStream out) throws IOException {
-        int index = buffer.getShort() & 0xFFFF;
-        assert index >= firstUtfIndex;
+    private void writeUtfIndex(DataOutputStream out, int utfIndex) throws IOException {
+        assert utfIndex >= firstUtfIndex;
+        assert utfIndex < constCount;
 
         if (constCount - firstUtfIndex > 255) {
-            out.writeShort(index - firstUtfIndex);
+            out.writeShort(utfIndex - firstUtfIndex);
         }
         else {
-            out.writeByte(index - firstUtfIndex);
+            out.writeByte(utfIndex - firstUtfIndex);
         }
+    }
+
+    private void copyUtfIndex(ByteBuffer buffer, DataOutputStream out) throws IOException {
+        writeUtfIndex(out, buffer.getShort() & 0xFFFF);
     }
 
     private void copyConstTableTail(ByteBuffer buffer, int constCount, DataOutputStream out) throws IOException {
