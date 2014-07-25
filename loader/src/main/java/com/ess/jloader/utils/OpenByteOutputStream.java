@@ -1,6 +1,7 @@
 package com.ess.jloader.utils;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
 
 /**
  * @author Sergey Evdokimov
@@ -23,5 +24,9 @@ public class OpenByteOutputStream extends ByteArrayOutputStream {
         res.buf = buffer;
         res.count = position;
         return res;
+    }
+
+    public void writeTo(ByteBuffer buffer) {
+        buffer.put(buf, 0, count);
     }
 }

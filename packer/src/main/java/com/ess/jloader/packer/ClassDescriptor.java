@@ -1,6 +1,7 @@
 package com.ess.jloader.packer;
 
 import com.ess.jloader.packer.consts.*;
+import com.ess.jloader.utils.ClassWriterManager;
 import com.ess.jloader.utils.HuffmanOutputStream;
 import com.ess.jloader.utils.OpenByteOutputStream;
 import com.ess.jloader.utils.Utils;
@@ -28,6 +29,11 @@ public class ClassDescriptor {
     public OpenByteOutputStream plainDataArray;
     public OpenByteOutputStream forCompressionDataArray;
 
+    private int firstUtfIndex;
+    private int constCount;
+
+    private Set<String> generatedStr;
+
     public ClassDescriptor(ClassReader classReader) {
         this.classReader = classReader;
     }
@@ -42,12 +48,15 @@ public class ClassDescriptor {
         String className = classReader.getClassName();
 
         Collection<AbstractConst> consts = Resolver.resolveAll(classReader, true);
+        constCount = getConstPoolSize(consts);
 
-        Set<String> generatedStr = new LinkedHashSet<String>();
+        generatedStr = new LinkedHashSet<String>();
         Set<String> packedStr = new LinkedHashSet<String>();
         List<String> notPackedStr = new ArrayList<String>();
 
         generatedStr.add(className);
+
+        List<ConstClass> constClasses = new ArrayList<ConstClass>();
 
         for (AbstractConst aConst : consts) {
             if (aConst.getTag() == ConstUtf.TAG) {
@@ -62,21 +71,42 @@ public class ClassDescriptor {
                     }
                 }
             }
+            else if (aConst.getTag() == ConstClass.TAG) {
+                constClasses.add((ConstClass) aConst);
+            }
         }
 
         Collections.sort(notPackedStr);
 
         ClassWriter classWriter = new ClassWriter(0);
-        classWriter.newClass(className);
+        ClassWriterManager classWriterManager = new ClassWriterManager(classWriter, constCount);
+
+        int utfCount = generatedStr.size() + packedStr.size() + notPackedStr.size();
+        firstUtfIndex = constCount - utfCount;
+
+        classWriterManager.goHead(utfCount);
+
+        for (String s : generatedStr) {
+            classWriter.newUTF8(s);
+        }
         for (String s : packedStr) {
             classWriter.newUTF8(s);
         }
-
         for (String s : notPackedStr) {
             classWriter.newUTF8(s);
         }
 
+        classWriterManager.goBack();
+
+        classWriter.newClass(className);
+
+        for (ConstClass aClass : constClasses) {
+            aClass.toWriter(classWriter);
+        }
+
         classReader.accept(classWriter, 0);
+
+        classWriterManager.finish();
 
         byte[] classBytes = classWriter.toByteArray();
         ByteBuffer buffer = ByteBuffer.wrap(classBytes);
@@ -94,10 +124,9 @@ public class ClassDescriptor {
 
         buffer.getInt(); // skip version
 
-        int constCount = buffer.getShort() & 0xFFFF;
-        int remainingConstCount = constCount - 1;
-
-        assert constCount == getConstPoolSize(consts);
+        if ((buffer.getShort() & 0xFFFF) != constCount) {
+            throw new RuntimeException();
+        }
 
         plainData.writeInt(flags);
 
@@ -109,6 +138,7 @@ public class ClassDescriptor {
         }
 
         plainData.writeShort(constCount);
+        plainData.writeShort(utfCount);
 
         plainData.writeShort(packedStr.size());
         HuffmanOutputStream<String> h = ctx.getLiteralsCache().createHuffmanOutput();
@@ -118,26 +148,29 @@ public class ClassDescriptor {
         }
         h.finish();
 
-        // First const is class name
-        skipUtfConst(buffer, className);
-        remainingConstCount--;
-
+        // First const is class of current class
         if (buffer.get() != 7) throw new RuntimeException();
-        if (buffer.getShort() != 1) throw new RuntimeException();
-        remainingConstCount--;
+        if ((buffer.getShort() & 0xFFFF) != firstUtfIndex) throw new RuntimeException();
+        //remainingConstCount--;
 
+        copyConstTableTail(buffer, constCount - 1 - 1 - utfCount, compressed);
+
+        for (String s : generatedStr) {
+            skipUtfConst(buffer, s);
+        }
         for (String s : packedStr) {
             skipUtfConst(buffer, s);
-            remainingConstCount--;
         }
-
-        copyConstTableTail(buffer, remainingConstCount, compressed);
+        for (String s : notPackedStr) {
+            compressed.writeUTF(s);
+            skipUtfConst(buffer, s);
+        }
 
         int accessFlags = buffer.getShort();
         compressed.writeShort(accessFlags);
 
         int thisClassIndex = buffer.getShort();
-        if (thisClassIndex != 2) throw new RuntimeException(String.valueOf(thisClassIndex));
+        if (thisClassIndex != 1) throw new RuntimeException(String.valueOf(thisClassIndex));
 
         compressed.write(classBytes, buffer.position(), classBytes.length - buffer.position());
     }
@@ -160,51 +193,72 @@ public class ClassDescriptor {
             throw new RuntimeException();
         }
 
-        int strSize = buffer.getShort();
+        int strSize = buffer.getShort() & 0xFFFF;
         buffer.position(buffer.position() + strSize);
     }
 
-    private void copyConstTableTail(ByteBuffer buffer, int constCount, DataOutputStream out) throws IOException {
-        int oldPosition = buffer.position();
+    private void copyUtfIndex(ByteBuffer buffer, DataOutputStream out) throws IOException {
+        int index = buffer.getShort() & 0xFFFF;
+        assert index >= firstUtfIndex;
 
+        if (constCount - firstUtfIndex > 255) {
+            out.writeShort(index - firstUtfIndex);
+        }
+        else {
+            out.writeByte(index - firstUtfIndex);
+        }
+    }
+
+    private void copyConstTableTail(ByteBuffer buffer, int constCount, DataOutputStream out) throws IOException {
         for (int i = 0; i < constCount; i++) {
             int tag = buffer.get();
 
-            int size;
+            out.write(tag);
+
             switch (tag) {
                 case 9: // ClassWriter.FIELD:
                 case 10: // ClassWriter.METH:
                 case 11: // ClassWriter.IMETH:
+//                    int classIndex = buffer.getShort();
+//                    out.writeShort(classIndex);
+//                    int nameType = buffer.getShort();
+//                    out.writeShort(nameType);
+//                    break;
+
                 case 3: // ClassWriter.INT:
                 case 4: // ClassWriter.FLOAT:
-                case 12: // ClassWriter.NAME_TYPE:
                 case 18: // ClassWriter.INDY:
-                    size = 4;
+                    out.write(buffer.array(), buffer.position(), 4);
+                    buffer.position(buffer.position() + 4);
                     break;
+
+                case 12: // ClassWriter.NAME_TYPE:
+                    copyUtfIndex(buffer, out);
+                    copyUtfIndex(buffer, out);
+                    break;
+
                 case 5:// ClassWriter.LONG:
                 case 6: // ClassWriter.DOUBLE:
-                    size = 8;
+                    out.write(buffer.array(), buffer.position(), 8);
+                    buffer.position(buffer.position() + 8);
                     ++i;
-                    break;
-                case 1: // ClassWriter.UTF8:
-                    size = buffer.getShort() & 0xFFFF;
                     break;
 
                 case 15: // ClassWriter.HANDLE:
-                    size = 3;
+                    out.write(buffer.array(), buffer.position(), 3);
+                    buffer.position(buffer.position() + 3);
                     break;
-                // case ClassWriter.CLASS:
-                // case ClassWriter.STR:
-                // case ClassWriter.MTYPE
+
+                case 7: // ClassWriter.CLASS
+                case 8: // ClassWriter.STR
+                case 16: // ClassWriter.MTYPE
+                    copyUtfIndex(buffer, out);
+                    break;
+
                 default:
-                    size = 2;
-                    break;
+                    throw new RuntimeException(String.valueOf(tag));
             }
-
-            buffer.position(buffer.position() + size);
         }
-
-        out.write(buffer.array(), oldPosition, buffer.position() - oldPosition);
     }
 
     private static int getConstPoolSize(Collection<AbstractConst> consts) {

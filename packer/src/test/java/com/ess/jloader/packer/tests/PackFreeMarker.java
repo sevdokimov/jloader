@@ -92,6 +92,8 @@ public class PackFreeMarker {
         JarPacker.pack(freeMarkerJar, packedFreeMarker);
 
         System.out.printf("Src: %d, Result: %d,  (%d%%)", freeMarkerJar.length(), packedFreeMarker.length(), packedFreeMarker.length() * 100 / freeMarkerJar.length());
+
+        assert packedFreeMarker.length() <= 571774;
     }
 
     @Test

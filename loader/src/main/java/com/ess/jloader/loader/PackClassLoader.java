@@ -109,28 +109,29 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 int constCount = in.readUnsignedShort();
                 buffer.putShort((short) constCount);
 
-                // Const table
+                int utfCount = in.readUnsignedShort();
+                int firstUtfIndex = constCount - utfCount;
                 int packedStrCount = in.readUnsignedShort();
 
+                OpenByteOutputStream utfBufferArray = new OpenByteOutputStream();
+                DataOutputStream utfOutput = new DataOutputStream(utfBufferArray);
 
-                // Class name
-                buffer.put((byte) 1);
+                // Generated utf
+                utfOutput.write(1);
+                utfOutput.writeUTF(jvmClassName);
 
-                DataOutputStream out = new DataOutputStream(OpenByteOutputStream.wrap(array, buffer.position()));
-                out.writeUTF(jvmClassName);
-                buffer.position(buffer.position() + out.size());
-
-                buffer.put((byte) 7);
-                buffer.putShort((short) 1);
-
-                // Packed String Constants
+                // Packed utf
                 HuffmanInputStream<byte[]> huffmanInputStream = new HuffmanInputStream<byte[]>(inputStream, packedStrHuffmanTree);
                 for (int i = 0; i < packedStrCount; i++) {
-                    buffer.put((byte) 1);
+                    utfOutput.write((byte) 1);
                     byte[] str = huffmanInputStream.read();
-                    buffer.putShort((short) str.length);
-                    buffer.put(str);
+                    utfOutput.writeShort((short) str.length);
+                    utfOutput.write(str);
                 }
+
+                // Const table
+                buffer.put((byte) 7);
+                buffer.putShort((short) firstUtfIndex); // Class name;
 
                 // Compressed data
                 Inflater inflater = new Inflater(true);
@@ -138,12 +139,22 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 InflaterInputStream defIn = new InflaterInputStream(inputStream, inflater);
                 DataInputStream defDataIn = new DataInputStream(new BufferedInputStream(defIn));
 
-                skipConstTableTail(buffer, defDataIn, constCount - 1 - packedStrCount - 2);
+                skipConstTableTail(buffer, defDataIn, constCount - 1 - 1 - utfCount, firstUtfIndex, utfCount);
+
+                utfBufferArray.writeTo(buffer);
+
+                for (int i = utfCount - 1 - packedStrCount; --i >= 0; ) {
+                    buffer.put((byte) 1);
+                    int utfSize = defDataIn.readUnsignedShort();
+                    buffer.putShort((short) utfSize);
+                    defDataIn.readFully(array, buffer.position(), utfSize);
+                    buffer.position(buffer.position() + utfSize);
+                }
 
                 int accessFlags = defDataIn.readShort();
                 buffer.putShort((short) accessFlags);
 
-                buffer.putShort((short) 2);
+                buffer.putShort((short) 1);
 
                 defDataIn.readFully(array, buffer.position(), size - buffer.position());
 
@@ -161,45 +172,69 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         return delegateClassLoader.getResource(name);
     }
 
-    private void skipConstTableTail(ByteBuffer buffer, DataInputStream in, int constCount) throws IOException {
-        for (int i = 0; i < constCount; i++) {
+    private void skipConstTableTail(ByteBuffer buffer, DataInputStream in, int count, int firstUtfIndex, int utfCount) throws IOException {
+        byte[] array = buffer.array();
+
+        for (int i = 0; i < count; i++) {
             int tag = in.read();
             buffer.put((byte) tag);
 
-            int size;
             switch (tag) {
                 case 9: // ClassWriter.FIELD:
                 case 10: // ClassWriter.METH:
                 case 11: // ClassWriter.IMETH:
                 case 3: // ClassWriter.INT:
                 case 4: // ClassWriter.FLOAT:
-                case 12: // ClassWriter.NAME_TYPE:
                 case 18: // ClassWriter.INDY:
-                    size = 4;
+                    in.readFully(array, buffer.position(), 4);
+                    buffer.position(buffer.position() + 4);
                     break;
+
+                case 12: // ClassWriter.NAME_TYPE:
+                    int index;
+
+                    if (utfCount > 255) {
+                        index = in.readUnsignedShort();
+                        buffer.putShort((short) (index + firstUtfIndex));
+                        index = in.readUnsignedShort();
+                        buffer.putShort((short) (index + firstUtfIndex));
+                    }
+                    else {
+                        index = in.readUnsignedByte();
+                        buffer.putShort((short) (index + firstUtfIndex));
+                        index = in.readUnsignedByte();
+                        buffer.putShort((short) (index + firstUtfIndex));
+                    }
+
+                    break;
+
                 case 5:// ClassWriter.LONG:
                 case 6: // ClassWriter.DOUBLE:
-                    size = 8;
+                    in.readFully(array, buffer.position(), 8);
+                    buffer.position(buffer.position() + 8);
                     ++i;
-                    break;
-                case 1: // ClassWriter.UTF8:
-                    size = in.readUnsignedShort();
-                    buffer.putShort((short) size);
                     break;
 
                 case 15: // ClassWriter.HANDLE:
-                    size = 3;
+                    in.readFully(array, buffer.position(), 3);
+                    buffer.position(buffer.position() + 3);
                     break;
-                // case ClassWriter.CLASS:
-                // case ClassWriter.STR:
-                // case ClassWriter.MTYPE
-                default:
-                    size = 2;
-                    break;
-            }
 
-            in.readFully(buffer.array(), buffer.position(), size);
-            buffer.position(buffer.position() + size);
+                case 7: // ClassWriter.CLASS
+                case 8: // ClassWriter.STR
+                case 16: // ClassWriter.MTYPE
+                    if (utfCount > 255) {
+                        index = in.readUnsignedShort();
+                    }
+                    else {
+                        index = in.readUnsignedByte();
+                    }
+                    buffer.putShort((short) (index + firstUtfIndex));
+                    break;
+
+                default:
+                    throw new RuntimeException();
+            }
         }
     }
 
