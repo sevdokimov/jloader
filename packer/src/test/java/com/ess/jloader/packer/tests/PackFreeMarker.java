@@ -19,7 +19,7 @@ public class PackFreeMarker {
     private void printStats(JarPacker packer) throws IOException {
         Collection<ClassReader> classes = packer.getClassReaders();
 
-        System.out.println("Strings in literal cache: " + new LiteralsCache(packer.getClassReaders()).getStringsMap().size());
+        System.out.println("Strings in literal cache: " + new LiteralsCache(packer.getClassMap().values()).getStringsMap().size());
 
         AtomicLongMap<String> map = AtomicLongMap.create();
 

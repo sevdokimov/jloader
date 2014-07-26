@@ -12,7 +12,7 @@ public class CompressionContext {
     private LiteralsCache literalsCache;
     private VersionCache versionCache;
 
-    public CompressionContext(Collection<ClassReader> classes) {
+    public CompressionContext(Collection<ClassDescriptor> classes) {
         literalsCache = new LiteralsCache(classes);
         versionCache = new VersionCache(classes);
     }

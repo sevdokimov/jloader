@@ -17,9 +17,9 @@ public class VersionCache {
 
     private final List<Integer> versions = new ArrayList<Integer>(8);
 
-    public VersionCache(Collection<ClassReader> classes) throws InvalidJarException {
-        for (ClassReader classReader : classes) {
-            Integer version = classReader.readInt(4);
+    public VersionCache(Collection<ClassDescriptor> classes) throws InvalidJarException {
+        for (ClassDescriptor classDescriptor : classes) {
+            Integer version = classDescriptor.getClassReader().readInt(4);
             if (!versions.contains(version)) {
                 if (versions.size() == 8) {
                     throw new InvalidJarException();

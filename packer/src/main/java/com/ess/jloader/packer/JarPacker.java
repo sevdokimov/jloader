@@ -120,7 +120,7 @@ public class JarPacker {
     }
 
     public void pack(OutputStream output) throws IOException {
-        CompressionContext ctx = new CompressionContext(classReaders);
+        CompressionContext ctx = new CompressionContext(classMap.values());
 
         for (ClassDescriptor classDescriptor : classMap.values()) {
             classDescriptor.pack(ctx);
@@ -132,6 +132,7 @@ public class JarPacker {
                 return classDescriptor.forCompressionDataArray;
             }
         });
+//        byte[] dictionary = new byte[0];
         byte[] dictionary = DictionaryCalculator.buildDictionary(packedItems);
 
         JarOutputStream zipOutputStream;
@@ -202,6 +203,10 @@ public class JarPacker {
         JarPacker packer = new JarPacker(new Config());
         packer.addJar(src);
         packer.writeResult(dest);
+    }
+
+    public Map<String, ClassDescriptor> getClassMap() {
+        return classMap;
     }
 
     public Collection<ClassReader> getClassReaders() {

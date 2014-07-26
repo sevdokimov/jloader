@@ -1,5 +1,7 @@
 package com.ess.jloader.packer;
 
+import com.ess.jloader.packer.consts.AbstractConst;
+import com.ess.jloader.packer.consts.ConstUtf;
 import com.ess.jloader.utils.HuffmanOutputStream;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
@@ -21,17 +23,14 @@ public class LiteralsCache {
 
     private final Map<String, boolean[]> huffmanPathMap;
 
-    public LiteralsCache(Collection<ClassReader> classes) throws InvalidJarException {
+    public LiteralsCache(Collection<ClassDescriptor> classes) throws InvalidJarException {
         CountMap<String> stringsCountMap = new CountMap<String>();
 
-        for (ClassReader classReader : classes) {
-            for (int i = 0; i < classReader.getItemCount() - 1; i++) {
-                int pos = classReader.getItem(i + 1);
-
-                if (pos > 0 && classReader.b[pos - 1] == 1) {
-                    String s = PackUtils.readUtf(classReader, pos);
-
-                    if (!s.equals(classReader.getClassName())) {
+        for (ClassDescriptor classDescriptor : classes) {
+            for (AbstractConst aConst : classDescriptor.getConsts()) {
+                if (aConst instanceof ConstUtf) {
+                    String s = ((ConstUtf) aConst).getValue();
+                    if (!classDescriptor.getGeneratedStr().contains(s)) {
                         stringsCountMap.incrementAndGet(s);
                     }
                 }

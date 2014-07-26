@@ -28,18 +28,42 @@ public class ClassDescriptor {
 
     public final ClassReader classReader;
 
+    private final String className;
+
+    private final Collection<AbstractConst> consts;
+
     public OpenByteOutputStream plainDataArray;
     public OpenByteOutputStream forCompressionDataArray;
 
     private int firstUtfIndex;
     private int constCount;
 
-    private Set<String> generatedStr;
+    private final Set<String> generatedStr;
 
     private List<String> allUtf;
 
     public ClassDescriptor(ClassReader classReader) {
         this.classReader = classReader;
+
+        className = classReader.getClassName();
+
+        consts = Resolver.resolveAll(classReader, true);
+        constCount = getConstPoolSize(consts);
+
+        generatedStr = new LinkedHashSet<String>();
+        generatedStr.add(className);
+    }
+
+    public Set<String> getGeneratedStr() {
+        return generatedStr;
+    }
+
+    public Collection<AbstractConst> getConsts() {
+        return consts;
+    }
+
+    public ClassReader getClassReader() {
+        return classReader;
     }
 
     public void pack(CompressionContext ctx) throws IOException {
@@ -49,16 +73,8 @@ public class ClassDescriptor {
         DataOutputStream plainData = new DataOutputStream(plainDataArray);
         DataOutputStream compressed = new DataOutputStream(forCompressionDataArray);
 
-        String className = classReader.getClassName();
-
-        Collection<AbstractConst> consts = Resolver.resolveAll(classReader, true);
-        constCount = getConstPoolSize(consts);
-
-        generatedStr = new LinkedHashSet<String>();
         Set<String> packedStr = new LinkedHashSet<String>();
         List<String> notPackedStr = new ArrayList<String>();
-
-        generatedStr.add(className);
 
         List<ConstClass> constClasses = new ArrayList<ConstClass>();
 
@@ -302,5 +318,10 @@ public class ClassDescriptor {
         }
 
         return res;
+    }
+
+    @Override
+    public String toString() {
+        return className;
     }
 }
