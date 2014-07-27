@@ -178,6 +178,9 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 buffer.putShort((short) 1); // this class name index
                 buffer.putShort((short) 2); // super class name index
 
+                // Process interfaces
+                processInterfaces(defDataIn, buffer, flags, classCount);
+
                 defDataIn.readFully(array, buffer.position(), size - buffer.position());
 
                 return defineClass(name, array, 0, size);
@@ -188,6 +191,20 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             throw new ClassNotFoundException("", e);
         }
     }
+
+    private void processInterfaces(DataInputStream defDataIn, ByteBuffer buffer, int flags, int classCount) throws IOException {
+        int interfaceCount = (flags >> Utils.F_INTERFACE_COUNT_SHIFT) & 3;
+        if (interfaceCount == 3) {
+            interfaceCount = defDataIn.readUnsignedByte();
+        }
+        buffer.putShort((short) interfaceCount);
+
+        for (int i = 0; i < interfaceCount; i++) {
+            int classIndex = readLimitedShort(defDataIn, classCount - 1) + 3;
+            buffer.putShort((short) classIndex);
+        }
+    }
+
 
     private int readLimitedShort(DataInputStream in, int limit) throws IOException {
         if (CHECK_LIMITS) {

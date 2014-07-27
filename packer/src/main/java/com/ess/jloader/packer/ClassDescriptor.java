@@ -48,6 +48,8 @@ public class ClassDescriptor {
     private List<ConstClass> constClasses;
     private List<ConstNameAndType> constNameAndType;
 
+    private int flags = 0;
+
     public ClassDescriptor(ClassReader classReader) {
         this.classReader = classReader;
 
@@ -148,8 +150,6 @@ public class ClassDescriptor {
         byte[] classBytes = repack(classReader, constClasses, constNameAndType, allUtf);
         ByteBuffer buffer = ByteBuffer.wrap(classBytes);
 
-        int flags = 0;
-
         int version = buffer.getInt(4);
         flags |= ctx.getVersionCache().getVersionIndex(version);
 
@@ -162,8 +162,6 @@ public class ClassDescriptor {
         if ((buffer.getShort() & 0xFFFF) != constCount) {
             throw new RuntimeException();
         }
-
-        plainData.writeInt(flags);
 
         if (classBytes.length > 0xFFFF) {
             plainData.writeInt(classBytes.length);
@@ -225,7 +223,28 @@ public class ClassDescriptor {
         int superClassIndex = buffer.getShort();
         if (superClassIndex != 2) throw new RuntimeException(String.valueOf(thisClassIndex));
 
+        processInterfaces(buffer, compressed);
+
         compressed.write(classBytes, buffer.position(), classBytes.length - buffer.position());
+    }
+
+    private void processInterfaces(ByteBuffer buffer, DataOutputStream out) throws IOException {
+        int interfaceCount = buffer.getShort() & 0xFFFF;
+
+        if (interfaceCount <= 2) {
+            flags |= interfaceCount << Utils.F_INTERFACE_COUNT_SHIFT;
+        }
+        else {
+            if (interfaceCount > 255) throw new InvalidJarException();
+            flags |= 3 << Utils.F_INTERFACE_COUNT_SHIFT;
+
+            out.write(interfaceCount);
+        }
+
+        for (int i = 0; i < interfaceCount; i++) {
+            int classIndex = buffer.getShort();
+            writeLimitedNumber(out, classIndex - 3, constClasses.size() - 1);
+        }
     }
 
     private <T> void moveToBegin(List<T> list, int beginIndex, T element) {
@@ -240,6 +259,9 @@ public class ClassDescriptor {
     }
 
     public void writeTo(OutputStream out, byte[] dictionary) throws IOException {
+        DataOutputStream dataOut = new DataOutputStream(out);
+        dataOut.writeInt(flags);
+
         plainDataArray.writeTo(out);
 
         Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION, true);
