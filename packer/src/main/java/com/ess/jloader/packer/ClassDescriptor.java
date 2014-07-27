@@ -134,6 +134,7 @@ public class ClassDescriptor {
         Collections.sort(notPackedStr);
 
         moveToBegin(constClasses, 0, new ConstClass(className));
+        moveToBegin(constClasses, 1, new ConstClass(classReader.getSuperName()));
 
         allUtf = Lists.newArrayList(Iterables.concat(generatedStr, packedStr, notPackedStr));
 
@@ -216,6 +217,9 @@ public class ClassDescriptor {
 
         int thisClassIndex = buffer.getShort();
         if (thisClassIndex != 1) throw new RuntimeException(String.valueOf(thisClassIndex));
+
+        int superClassIndex = buffer.getShort();
+        if (superClassIndex != 2) throw new RuntimeException(String.valueOf(thisClassIndex));
 
         compressed.write(classBytes, buffer.position(), classBytes.length - buffer.position());
     }

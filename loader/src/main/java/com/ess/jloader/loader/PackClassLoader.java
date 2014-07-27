@@ -178,7 +178,8 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 int accessFlags = defDataIn.readShort();
                 buffer.putShort((short) accessFlags);
 
-                buffer.putShort((short) 1);
+                buffer.putShort((short) 1); // this class name index
+                buffer.putShort((short) 2); // super class name index
 
                 defDataIn.readFully(array, buffer.position(), size - buffer.position());
 
