@@ -17,6 +17,8 @@ import java.util.zip.*;
  */
 public class PackClassLoader extends ClassLoader implements Closeable {
 
+    public static final boolean CHECK_LIMITS = false;
+
     public static final String METADATA_ENTRY_NAME = "META-INF/literals.data";
 
     private final HuffmanUtils.TreeElement packedStrHuffmanTree;
@@ -185,6 +187,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
     }
 
     private int readLimitedShort(DataInputStream in, int limit) throws IOException {
+        if (CHECK_LIMITS) {
+            if (in.readUnsignedShort() != limit) throw new RuntimeException();
+        }
+
         if (limit < 256) {
             if (limit == 0) {
                 return 0;
@@ -197,6 +203,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
     }
 
     private int readSmallShort3(DataInputStream in) throws IOException {
+        if (CHECK_LIMITS) {
+            if (in.readByte() != 0x73) throw new RuntimeException();
+        }
+
         int x = in.readUnsignedByte();
         if (x <= 251) {
             return x;

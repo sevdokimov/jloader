@@ -1,14 +1,13 @@
 package com.ess.jloader.packer;
 
+import com.ess.jloader.loader.PackClassLoader;
 import com.ess.jloader.packer.consts.*;
 import com.ess.jloader.utils.ClassWriterManager;
 import com.ess.jloader.utils.HuffmanOutputStream;
 import com.ess.jloader.utils.OpenByteOutputStream;
 import com.ess.jloader.utils.Utils;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassReader;
@@ -270,6 +269,10 @@ public class ClassDescriptor {
     private void writeSmallShort3(DataOutputStream out, int x) throws IOException {
         assert x <= 0xFFFF;
 
+        if (PackClassLoader.CHECK_LIMITS) {
+            out.writeByte(0x73);
+        }
+
         if (x <= 251) {
             out.write(x);
         }
@@ -290,6 +293,10 @@ public class ClassDescriptor {
 
     private void writeLimitedNumber(DataOutputStream out, int x, int limit) throws IOException {
         assert x <= limit;
+
+        if (PackClassLoader.CHECK_LIMITS) {
+            out.writeShort(limit);
+        }
 
         if (limit == 0) {
             // data no needed
