@@ -5,8 +5,10 @@ import com.ess.jloader.utils.ClassWriterManager;
 import com.ess.jloader.utils.HuffmanOutputStream;
 import com.ess.jloader.utils.OpenByteOutputStream;
 import com.ess.jloader.utils.Utils;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.log4j.Logger;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -66,6 +68,34 @@ public class ClassDescriptor {
         return classReader;
     }
 
+    private byte[] repack(ClassReader classReader,
+                          Collection<ConstClass> constClasses,
+                          Collection<ConstNameAndType> constNameAndTypes,
+                          Collection<String> utfs) {
+        ClassWriter classWriter = new ClassWriter(0);
+        ClassWriterManager classWriterManager = new ClassWriterManager(classWriter, constCount);
+
+        classWriterManager.goHead(utfs.size());
+        for (String utf : utfs) {
+            classWriter.newUTF8(utf);
+        }
+
+        classWriterManager.goHead(constNameAndTypes.size());
+        for (ConstNameAndType aConst : constNameAndTypes) {
+            aConst.toWriter(classWriter);
+        }
+
+        classWriterManager.goBack();
+        for (ConstClass aConst : constClasses) {
+            aConst.toWriter(classWriter);
+        }
+
+        classReader.accept(classWriter, 0);
+        classWriterManager.finish();
+
+        return classWriter.toByteArray();
+    }
+
     public void pack(CompressionContext ctx) throws IOException {
         plainDataArray = new OpenByteOutputStream();
         forCompressionDataArray = new OpenByteOutputStream();
@@ -104,36 +134,12 @@ public class ClassDescriptor {
 
         moveToBegin(constClasses, 0, new ConstClass(className));
 
-        ClassWriter classWriter = new ClassWriter(0);
-        ClassWriterManager classWriterManager = new ClassWriterManager(classWriter, constCount);
-
         allUtf = Lists.newArrayList(Iterables.concat(generatedStr, packedStr, notPackedStr));
 
         int utfCount = allUtf.size();
         firstUtfIndex = constCount - utfCount;
 
-        classWriterManager.goHead(utfCount);
-
-        for (String s : allUtf) {
-            classWriter.newUTF8(s);
-        }
-
-        classWriterManager.goHead(constNameAndType.size());
-        for (ConstNameAndType nameAndType : constNameAndType) {
-            nameAndType.toWriter(classWriter);
-        }
-
-        classWriterManager.goBack();
-
-        for (ConstClass aClass : constClasses) {
-            aClass.toWriter(classWriter);
-        }
-
-        classReader.accept(classWriter, 0);
-
-        classWriterManager.finish();
-
-        byte[] classBytes = classWriter.toByteArray();
+        byte[] classBytes = repack(classReader, constClasses, constNameAndType, allUtf);
         ByteBuffer buffer = ByteBuffer.wrap(classBytes);
 
         int flags = 0;
