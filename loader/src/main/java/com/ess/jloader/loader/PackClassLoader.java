@@ -181,7 +181,11 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 // Process interfaces
                 processInterfaces(defDataIn, buffer, flags, classCount);
 
-                defDataIn.readFully(array, buffer.position(), size - buffer.position());
+                processFields(defDataIn, buffer, firstUtfIndex, utfCount);
+                processMethods(defDataIn, buffer, firstUtfIndex, utfCount);
+                processClassAttr(defDataIn, buffer, firstUtfIndex, utfCount);
+
+                assert !buffer.hasRemaining();
 
                 return defineClass(name, array, 0, size);
             } finally {
@@ -205,6 +209,70 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         }
     }
 
+    private void processFields(DataInputStream defDataIn, ByteBuffer buffer, int firstUtfIndex, int utfCount) throws IOException {
+        int fieldCount = readSmallShort3(defDataIn);
+        buffer.putShort((short) fieldCount);
+
+        for (int i = 0; i < fieldCount; i++) {
+            short accessFlags = defDataIn.readShort();
+            buffer.putShort(accessFlags);
+
+            int nameIndex = readLimitedShort(defDataIn, utfCount - 1) + firstUtfIndex;
+            buffer.putShort((short) nameIndex);
+
+            int descrIndex = readLimitedShort(defDataIn, utfCount - 1) + firstUtfIndex;
+            buffer.putShort((short) descrIndex);
+
+            int attrCount = readSmallShort3(defDataIn);
+            buffer.putShort((short) attrCount);
+
+            for (int j = 0; j < attrCount; j++) {
+                processAttr(defDataIn, buffer, firstUtfIndex, utfCount);
+            }
+        }
+    }
+
+    private void processMethods(DataInputStream defDataIn, ByteBuffer buffer, int firstUtfIndex, int utfCount) throws IOException {
+        int methodCount = readSmallShort3(defDataIn);
+        buffer.putShort((short) methodCount);
+
+        for (int i = 0; i < methodCount; i++) {
+            short accessFlags = defDataIn.readShort();
+            buffer.putShort(accessFlags);
+
+            int nameIndex = readLimitedShort(defDataIn, utfCount - 1) + firstUtfIndex;
+            buffer.putShort((short) nameIndex);
+
+            int descrIndex = readLimitedShort(defDataIn, utfCount - 1) + firstUtfIndex;
+            buffer.putShort((short) descrIndex);
+
+            int attrCount = readSmallShort3(defDataIn);
+            buffer.putShort((short) attrCount);
+
+            for (int j = 0; j < attrCount; j++) {
+                processAttr(defDataIn, buffer, firstUtfIndex, utfCount);
+            }
+        }
+    }
+
+    private void processClassAttr(DataInputStream defDataIn, ByteBuffer buffer, int firstUtfIndex, int utfCount) throws IOException {
+        int attrCount = readSmallShort3(defDataIn);
+        buffer.putShort((short) attrCount);
+
+        for (int j = 0; j < attrCount; j++) {
+            processAttr(defDataIn, buffer, firstUtfIndex, utfCount);
+        }
+    }
+
+    private void processAttr(DataInputStream defDataIn, ByteBuffer buffer, int firstUtfIndex, int utfCount) throws IOException {
+        int nameIndex = readLimitedShort(defDataIn, utfCount - 1) + firstUtfIndex;
+        buffer.putShort((short) nameIndex);
+
+        int length = defDataIn.readInt();
+        buffer.putInt(length);
+        defDataIn.readFully(buffer.array(), buffer.position(), length);
+        buffer.position(buffer.position() + length);
+    }
 
     private int readLimitedShort(DataInputStream in, int limit) throws IOException {
         if (CHECK_LIMITS) {

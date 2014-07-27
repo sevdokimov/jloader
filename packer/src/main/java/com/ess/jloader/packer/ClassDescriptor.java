@@ -225,8 +225,10 @@ public class ClassDescriptor {
 
         processInterfaces(buffer, compressed);
         processFields(buffer, compressed);
+        processMethods(buffer, compressed);
+        processClassAttributes(buffer, compressed);
 
-        compressed.write(classBytes, buffer.position(), classBytes.length - buffer.position());
+        assert !buffer.hasRemaining();
     }
 
     private void processInterfaces(ByteBuffer buffer, DataOutputStream out) throws IOException {
@@ -256,8 +258,6 @@ public class ClassDescriptor {
         out.writeInt(length);
         out.write(buffer.array(), buffer.position(), length);
         buffer.position(buffer.position() + length);
-
-        System.out.println(length);
     }
 
     private void processFields(ByteBuffer buffer, DataOutputStream out) throws IOException {
@@ -282,6 +282,39 @@ public class ClassDescriptor {
             }
         }
     }
+
+    private void processMethods(ByteBuffer buffer, DataOutputStream out) throws IOException {
+        int methodCount = buffer.getShort() & 0xFFFF;
+        writeSmallShort3(out, methodCount);
+
+        for (int i = 0; i < methodCount; i++) {
+            short accessFlags = buffer.getShort();
+            out.writeShort(accessFlags);
+
+            int nameIndex = buffer.getShort() & 0xFFFF;
+            writeUtfIndex(out, nameIndex);
+
+            int descrIndex = buffer.getShort() & 0xFFFF;
+            writeUtfIndex(out, descrIndex);
+
+            int attrCount = buffer.getShort() & 0xFFFF;
+            writeSmallShort3(out, attrCount);
+
+            for (int j = 0; j < attrCount; j++) {
+                skipAttr(buffer, out);
+            }
+        }
+    }
+
+    private void processClassAttributes(ByteBuffer buffer, DataOutputStream out) throws IOException {
+        int attrCount = buffer.getShort() & 0xFFFF;
+        writeSmallShort3(out, attrCount);
+
+        for (int j = 0; j < attrCount; j++) {
+            skipAttr(buffer, out);
+        }
+    }
+
 
     private <T> void moveToBegin(List<T> list, int beginIndex, T element) {
         int oldIndex = list.indexOf(element);
