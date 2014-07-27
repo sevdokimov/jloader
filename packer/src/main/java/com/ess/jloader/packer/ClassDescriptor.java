@@ -145,9 +145,7 @@ public class ClassDescriptor {
             flags |= Utils.F_LONG_CLASS;
         }
 
-        buffer.position(4); // skip 0xCAFEBABE
-
-        buffer.getInt(); // skip version
+        buffer.position(4 + 4); // skip 0xCAFEBABE, version
 
         if ((buffer.getShort() & 0xFFFF) != constCount) {
             throw new RuntimeException();
@@ -162,23 +160,21 @@ public class ClassDescriptor {
             plainData.writeShort(classBytes.length);
         }
 
-        plainData.writeShort(constCount);
-        plainData.writeShort(utfCount);
-
-        plainData.writeShort(constClasses.size());
+        writeSmallShort3(plainData, constCount);
+        writeLimitedNumber(plainData, utfCount, constCount);
+        writeSmallShort3(plainData, constClasses.size());
 
         skipClassConst(buffer, className);
 
         // First const is class of current class
         for (int i = 1; i < constClasses.size(); i++) {
-            if (buffer.get() != 7) throw new RuntimeException();
-            int utfIndex = buffer.getShort() & 0xFFFF;
+            int utfIndex = skipClassConst(buffer, constClasses.get(i).getType());
 
-            assert allUtf.get(utfIndex - firstUtfIndex).equals(constClasses.get(i).getType());
             writeUtfIndex(plainData, utfIndex);
         }
 
-        plainData.writeShort(packedStr.size());
+        writeLimitedNumber(plainData, packedStr.size(), utfCount);
+
         HuffmanOutputStream<String> h = ctx.getLiteralsCache().createHuffmanOutput();
         h.reset(plainData);
         for (String s : packedStr) {
@@ -230,12 +226,14 @@ public class ClassDescriptor {
         defOut.close();
     }
 
-    private void skipClassConst(ByteBuffer buffer, String className) {
+    private int skipClassConst(ByteBuffer buffer, String className) {
         int tag = buffer.get();
         if (tag != ConstClass.TAG) throw new RuntimeException("" + tag);
 
         int utfIndex = buffer.getShort();
         assert className.equals(allUtf.get(utfIndex - firstUtfIndex));
+
+        return utfIndex;
     }
 
     private void skipUtfConst(ByteBuffer buffer, String value) {
@@ -249,16 +247,41 @@ public class ClassDescriptor {
         buffer.position(buffer.position() + strSize);
     }
 
-    private void writeUtfIndex(DataOutputStream out, int utfIndex) throws IOException {
-        assert utfIndex >= firstUtfIndex;
-        assert utfIndex < constCount;
+    private void writeSmallShort3(DataOutputStream out, int x) throws IOException {
+        assert x <= 0xFFFF;
 
-        if (constCount - firstUtfIndex > 255) {
-            out.writeShort(utfIndex - firstUtfIndex);
+        if (x <= 251) {
+            out.write(x);
         }
         else {
-            out.writeByte(utfIndex - firstUtfIndex);
+            int z = x + 4;
+            int d = 251 + (z >> 8);
+
+            if (d < 255) {
+                out.write(d);
+                out.write(z);
+            }
+            else {
+                out.write(255);
+                out.writeShort(x);
+            }
         }
+    }
+
+    private void writeLimitedNumber(DataOutputStream out, int x, int limit) throws IOException {
+        assert x <= limit;
+
+        if (limit < 256) {
+            out.write(x);
+        }
+        else {
+            out.writeShort(x);
+        }
+    }
+
+    private void writeUtfIndex(DataOutputStream out, int utfIndex) throws IOException {
+        assert utfIndex >= firstUtfIndex;
+        writeLimitedNumber(out, utfIndex - firstUtfIndex, constCount - firstUtfIndex - 1);
     }
 
     private void copyUtfIndex(ByteBuffer buffer, DataOutputStream out) throws IOException {

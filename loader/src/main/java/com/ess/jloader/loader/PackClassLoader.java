@@ -106,13 +106,13 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 buffer.putInt(versions[flags & 7]);
 
                 // Const count
-                int constCount = in.readUnsignedShort();
+                int constCount = readSmallShort3(in);
                 buffer.putShort((short) constCount);
 
-                int utfCount = in.readUnsignedShort();
+                int utfCount = readLimitedShort(in, constCount);
                 int firstUtfIndex = constCount - utfCount;
 
-                int classCount = in.readUnsignedShort();
+                int classCount = readSmallShort3(in);
 
                 buffer.put((byte) 7);
                 buffer.putShort((short) firstUtfIndex); // Class name;
@@ -132,7 +132,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                     buffer.putShort((short) (utfIndex + firstUtfIndex));
                 }
 
-                int packedStrCount = in.readUnsignedShort();
+                int packedStrCount = readLimitedShort(in, utfCount);
 
                 OpenByteOutputStream utfBufferArray = new OpenByteOutputStream();
                 DataOutputStream utfOutput = new DataOutputStream(utfBufferArray);
@@ -182,6 +182,28 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         } catch (IOException e) {
             throw new ClassNotFoundException("", e);
         }
+    }
+
+    private int readLimitedShort(DataInputStream in, int limit) throws IOException {
+        if (limit < 256) {
+            return in.readUnsignedByte();
+        }
+        else {
+            return in.readUnsignedShort();
+        }
+    }
+
+    private int readSmallShort3(DataInputStream in) throws IOException {
+        int x = in.readUnsignedByte();
+        if (x <= 251) {
+            return x;
+        }
+
+        if (x == 255) {
+            return in.readUnsignedShort();
+        }
+
+        return (((x - 251) << 8) + in.readUnsignedByte()) - 4;
     }
 
     @Override
