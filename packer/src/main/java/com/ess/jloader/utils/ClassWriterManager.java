@@ -70,9 +70,11 @@ public class ClassWriterManager {
     }
 
     public void goHead(int n) {
-        assert n > 0;
+        assert n >= 0;
 
-        if (savedIndex != 0) throw new IllegalStateException();
+        if (savedIndex != 0) {
+            goBack();
+        }
 
         try {
             poolField.set(classWriter, new ByteVector());

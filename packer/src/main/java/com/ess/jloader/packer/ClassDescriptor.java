@@ -77,6 +77,7 @@ public class ClassDescriptor {
         List<String> notPackedStr = new ArrayList<String>();
 
         List<ConstClass> constClasses = new ArrayList<ConstClass>();
+        List<ConstNameAndType> constNameAndType = new ArrayList<ConstNameAndType>();
 
         for (AbstractConst aConst : consts) {
             if (aConst.getTag() == ConstUtf.TAG) {
@@ -93,6 +94,9 @@ public class ClassDescriptor {
             }
             else if (aConst.getTag() == ConstClass.TAG) {
                 constClasses.add((ConstClass) aConst);
+            }
+            else if (aConst.getTag() == ConstNameAndType.TAG) {
+                constNameAndType.add((ConstNameAndType) aConst);
             }
         }
 
@@ -112,6 +116,11 @@ public class ClassDescriptor {
 
         for (String s : allUtf) {
             classWriter.newUTF8(s);
+        }
+
+        classWriterManager.goHead(constNameAndType.size());
+        for (ConstNameAndType nameAndType : constNameAndType) {
+            nameAndType.toWriter(classWriter);
         }
 
         classWriterManager.goBack();
