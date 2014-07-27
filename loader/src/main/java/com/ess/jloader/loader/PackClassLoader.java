@@ -121,8 +121,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 for (int i = 1; i < classCount; i++) {
                     buffer.put((byte) 7);
 
-                    int utfIndex = readLimitedShort(in, utfCount);
-
+                    int utfIndex = readLimitedShort(in, utfCount - 1);
                     buffer.putShort((short) (utfIndex + firstUtfIndex));
                 }
 
@@ -154,8 +153,8 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
                 for (int i = 0; i < nameAndTypeCount; i++) {
                     buffer.put((byte) 12); // ClassWriter.NAME_TYPE
-                    buffer.putShort((short) (readLimitedShort(defDataIn, utfCount) + firstUtfIndex));
-                    buffer.putShort((short) (readLimitedShort(defDataIn, utfCount) + firstUtfIndex));
+                    buffer.putShort((short) (readLimitedShort(defDataIn, utfCount - 1) + firstUtfIndex));
+                    buffer.putShort((short) (readLimitedShort(defDataIn, utfCount - 1) + firstUtfIndex));
                 }
 
                 utfBufferArray.writeTo(buffer);
@@ -248,7 +247,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 case 7: // ClassWriter.CLASS
                 case 8: // ClassWriter.STR
                 case 16: // ClassWriter.MTYPE
-                    int index = readLimitedShort(in, utfCount);
+                    int index = readLimitedShort(in, utfCount - 1);
                     buffer.putShort((short) (index + firstUtfIndex));
                     break;
 
