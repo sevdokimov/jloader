@@ -38,11 +38,15 @@ public class ClassDescriptor {
     public OpenByteOutputStream forCompressionDataArray;
 
     private int firstUtfIndex;
+    private int firstNameAndTypeIndex;
     private int constCount;
 
     private final Set<String> generatedStr;
 
     private List<String> allUtf;
+
+    private List<ConstClass> constClasses;
+    private List<ConstNameAndType> constNameAndType;
 
     public ClassDescriptor(ClassReader classReader) {
         this.classReader = classReader;
@@ -106,8 +110,8 @@ public class ClassDescriptor {
         Set<String> packedStr = new LinkedHashSet<String>();
         List<String> notPackedStr = new ArrayList<String>();
 
-        List<ConstClass> constClasses = new ArrayList<ConstClass>();
-        List<ConstNameAndType> constNameAndType = new ArrayList<ConstNameAndType>();
+        constClasses = new ArrayList<ConstClass>();
+        constNameAndType = new ArrayList<ConstNameAndType>();
 
         for (AbstractConst aConst : consts) {
             if (aConst.getTag() == ConstUtf.TAG) {
@@ -139,6 +143,7 @@ public class ClassDescriptor {
 
         int utfCount = allUtf.size();
         firstUtfIndex = constCount - utfCount;
+        firstNameAndTypeIndex = firstUtfIndex - constNameAndType.size();
 
         byte[] classBytes = repack(classReader, constClasses, constNameAndType, allUtf);
         ByteBuffer buffer = ByteBuffer.wrap(classBytes);
@@ -292,6 +297,7 @@ public class ClassDescriptor {
     }
 
     private void writeLimitedNumber(DataOutputStream out, int x, int limit) throws IOException {
+        assert x >= 0;
         assert x <= limit;
 
         if (PackClassLoader.CHECK_LIMITS) {
@@ -301,7 +307,7 @@ public class ClassDescriptor {
         if (limit == 0) {
             // data no needed
         }
-        if (limit < 256) {
+        else if (limit < 256) {
             out.write(x);
         }
         else {
@@ -311,7 +317,7 @@ public class ClassDescriptor {
 
     private void writeUtfIndex(DataOutputStream out, int utfIndex) throws IOException {
         assert utfIndex >= firstUtfIndex;
-        writeLimitedNumber(out, utfIndex - firstUtfIndex, constCount - firstUtfIndex - 1);
+        writeLimitedNumber(out, utfIndex - firstUtfIndex, allUtf.size() - 1);
     }
 
     private void copyUtfIndex(ByteBuffer buffer, DataOutputStream out) throws IOException {
@@ -337,11 +343,11 @@ public class ClassDescriptor {
                 case 9: // ClassWriter.FIELD:
                 case 10: // ClassWriter.METH:
                 case 11: // ClassWriter.IMETH:
-//                    int classIndex = buffer.getShort();
-//                    out.writeShort(classIndex);
-//                    int nameType = buffer.getShort();
-//                    out.writeShort(nameType);
-//                    break;
+                    int classIndex = buffer.getShort();
+                    writeLimitedNumber(out, classIndex - 1, constClasses.size() - 1);
+                    int nameTypeIndex = buffer.getShort();
+                    writeLimitedNumber(out, nameTypeIndex - firstNameAndTypeIndex, constNameAndType.size() - 1);
+                    break;
 
                 case 3: // ClassWriter.INT:
                 case 4: // ClassWriter.FLOAT:

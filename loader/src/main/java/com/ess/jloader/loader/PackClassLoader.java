@@ -151,7 +151,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 InflaterInputStream defIn = new InflaterInputStream(inputStream, inflater);
                 DataInputStream defDataIn = new DataInputStream(new BufferedInputStream(defIn));
 
-                skipConstTableTail(buffer, defDataIn, constCount - 1 - classCount - nameAndTypeCount - utfCount, firstUtfIndex, utfCount);
+                skipConstTableTail(buffer, defDataIn, constCount - 1 - classCount - nameAndTypeCount - utfCount,
+                        firstUtfIndex, utfCount,
+                        classCount,
+                        firstUtfIndex - nameAndTypeCount, nameAndTypeCount);
 
                 for (int i = 0; i < nameAndTypeCount; i++) {
                     buffer.put((byte) 12); // ClassWriter.NAME_TYPE
@@ -188,7 +191,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
     private int readLimitedShort(DataInputStream in, int limit) throws IOException {
         if (CHECK_LIMITS) {
-            if (in.readUnsignedShort() != limit) throw new RuntimeException();
+            int storedLimit = in.readUnsignedShort();
+            if (storedLimit != limit) {
+                throw new RuntimeException();
+            }
         }
 
         if (limit < 256) {
@@ -224,7 +230,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         return delegateClassLoader.getResource(name);
     }
 
-    private void skipConstTableTail(ByteBuffer buffer, DataInputStream in, int count, int firstUtfIndex, int utfCount) throws IOException {
+    private void skipConstTableTail(ByteBuffer buffer, DataInputStream in, int count,
+                                    int firstUtfIndex, int utfCount,
+                                    int classCount,
+                                    int firstNameAndTypeIndex, int nameAndTypeCount) throws IOException {
         byte[] array = buffer.array();
 
         for (int i = 0; i < count; i++) {
@@ -235,6 +244,12 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 case 9: // ClassWriter.FIELD:
                 case 10: // ClassWriter.METH:
                 case 11: // ClassWriter.IMETH:
+                    int classIndex = readLimitedShort(in, classCount - 1);
+                    buffer.putShort((short) (classIndex + 1));
+                    int nameAndTypeIndex = readLimitedShort(in, nameAndTypeCount - 1);
+                    buffer.putShort((short) (nameAndTypeIndex + firstNameAndTypeIndex));
+                    break;
+
                 case 3: // ClassWriter.INT:
                 case 4: // ClassWriter.FLOAT:
                 case 18: // ClassWriter.INDY:
