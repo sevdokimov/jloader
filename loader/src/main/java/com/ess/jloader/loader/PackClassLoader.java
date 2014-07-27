@@ -113,6 +113,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 int firstUtfIndex = constCount - utfCount;
 
                 int classCount = readSmallShort3(in);
+                int nameAndTypeCount = readSmallShort3(in);
 
                 buffer.put((byte) 7);
                 buffer.putShort((short) firstUtfIndex); // Class name;
@@ -156,7 +157,13 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 InflaterInputStream defIn = new InflaterInputStream(inputStream, inflater);
                 DataInputStream defDataIn = new DataInputStream(new BufferedInputStream(defIn));
 
-                skipConstTableTail(buffer, defDataIn, constCount - 1 - classCount - utfCount, firstUtfIndex, utfCount);
+                skipConstTableTail(buffer, defDataIn, constCount - 1 - classCount - nameAndTypeCount - utfCount, firstUtfIndex, utfCount);
+
+                for (int i = 0; i < nameAndTypeCount; i++) {
+                    buffer.put((byte) 12); // ClassWriter.NAME_TYPE
+                    buffer.putShort((short) (readLimitedShort(defDataIn, utfCount) + firstUtfIndex));
+                    buffer.putShort((short) (readLimitedShort(defDataIn, utfCount) + firstUtfIndex));
+                }
 
                 utfBufferArray.writeTo(buffer);
 
@@ -229,23 +236,23 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                     buffer.position(buffer.position() + 4);
                     break;
 
-                case 12: // ClassWriter.NAME_TYPE:
-                    int index;
-
-                    if (utfCount > 255) {
-                        index = in.readUnsignedShort();
-                        buffer.putShort((short) (index + firstUtfIndex));
-                        index = in.readUnsignedShort();
-                        buffer.putShort((short) (index + firstUtfIndex));
-                    }
-                    else {
-                        index = in.readUnsignedByte();
-                        buffer.putShort((short) (index + firstUtfIndex));
-                        index = in.readUnsignedByte();
-                        buffer.putShort((short) (index + firstUtfIndex));
-                    }
-
-                    break;
+//                case 12: // ClassWriter.NAME_TYPE:
+//                    int index;
+//
+//                    if (utfCount > 255) {
+//                        index = in.readUnsignedShort();
+//                        buffer.putShort((short) (index + firstUtfIndex));
+//                        index = in.readUnsignedShort();
+//                        buffer.putShort((short) (index + firstUtfIndex));
+//                    }
+//                    else {
+//                        index = in.readUnsignedByte();
+//                        buffer.putShort((short) (index + firstUtfIndex));
+//                        index = in.readUnsignedByte();
+//                        buffer.putShort((short) (index + firstUtfIndex));
+//                    }
+//
+//                    break;
 
                 case 5:// ClassWriter.LONG:
                 case 6: // ClassWriter.DOUBLE:
@@ -262,6 +269,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 case 7: // ClassWriter.CLASS
                 case 8: // ClassWriter.STR
                 case 16: // ClassWriter.MTYPE
+                    int index;
                     if (utfCount > 255) {
                         index = in.readUnsignedShort();
                     }

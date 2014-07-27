@@ -10,6 +10,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 
@@ -169,6 +170,7 @@ public class ClassDescriptor {
         writeSmallShort3(plainData, constCount);
         writeLimitedNumber(plainData, utfCount, constCount);
         writeSmallShort3(plainData, constClasses.size());
+        writeSmallShort3(plainData, constNameAndType.size());
 
         skipClassConst(buffer, className);
 
@@ -188,7 +190,15 @@ public class ClassDescriptor {
         }
         h.finish();
 
-        copyConstTableTail(buffer, constCount - 1 - constClasses.size() - utfCount, compressed);
+        copyConstTableTail(buffer, constCount - 1 - constClasses.size() - constNameAndType.size() - utfCount, compressed);
+
+        for (ConstNameAndType nameAndType : constNameAndType) {
+            int tag = buffer.get();
+            assert tag == ConstNameAndType.TAG;
+
+            copyUtfIndex(buffer, compressed, nameAndType.getName());
+            copyUtfIndex(buffer, compressed, nameAndType.getDescr());
+        }
 
         for (String s : generatedStr) {
             skipUtfConst(buffer, s);
@@ -291,7 +301,16 @@ public class ClassDescriptor {
     }
 
     private void copyUtfIndex(ByteBuffer buffer, DataOutputStream out) throws IOException {
-        writeUtfIndex(out, buffer.getShort() & 0xFFFF);
+        copyUtfIndex(buffer, out, null);
+    }
+
+    private void copyUtfIndex(ByteBuffer buffer, DataOutputStream out, @Nullable String expectedValue) throws IOException {
+        int utfIndex = buffer.getShort() & 0xFFFF;
+        writeUtfIndex(out, utfIndex);
+
+        if (expectedValue != null) {
+            assert allUtf.get(utfIndex - firstUtfIndex).equals(expectedValue);
+        }
     }
 
     private void copyConstTableTail(ByteBuffer buffer, int constCount, DataOutputStream out) throws IOException {
