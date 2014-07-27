@@ -224,6 +224,7 @@ public class ClassDescriptor {
         if (superClassIndex != 2) throw new RuntimeException(String.valueOf(thisClassIndex));
 
         processInterfaces(buffer, compressed);
+        processFields(buffer, compressed);
 
         compressed.write(classBytes, buffer.position(), classBytes.length - buffer.position());
     }
@@ -244,6 +245,41 @@ public class ClassDescriptor {
         for (int i = 0; i < interfaceCount; i++) {
             int classIndex = buffer.getShort();
             writeLimitedNumber(out, classIndex - 3, constClasses.size() - 1);
+        }
+    }
+
+    private void skipAttr(ByteBuffer buffer, DataOutputStream out) throws IOException {
+        int nameIndex = buffer.getShort() & 0xFFFF;
+        writeUtfIndex(out, nameIndex);
+
+        int length = buffer.getInt();
+        out.writeInt(length);
+        out.write(buffer.array(), buffer.position(), length);
+        buffer.position(buffer.position() + length);
+
+        System.out.println(length);
+    }
+
+    private void processFields(ByteBuffer buffer, DataOutputStream out) throws IOException {
+        int fieldCount = buffer.getShort() & 0xFFFF;
+        writeSmallShort3(out, fieldCount);
+
+        for (int i = 0; i < fieldCount; i++) {
+            short accessFlags = buffer.getShort();
+            out.writeShort(accessFlags);
+
+            int nameIndex = buffer.getShort() & 0xFFFF;
+            writeUtfIndex(out, nameIndex);
+
+            int descrIndex = buffer.getShort() & 0xFFFF;
+            writeUtfIndex(out, descrIndex);
+
+            int attrCount = buffer.getShort() & 0xFFFF;
+            writeSmallShort3(out, attrCount);
+
+            for (int j = 0; j < attrCount; j++) {
+                skipAttr(buffer, out);
+            }
         }
     }
 
