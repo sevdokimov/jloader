@@ -291,6 +291,9 @@ public class ClassDescriptor {
     private void writeLimitedNumber(DataOutputStream out, int x, int limit) throws IOException {
         assert x <= limit;
 
+        if (limit == 0) {
+            // data no needed
+        }
         if (limit < 256) {
             out.write(x);
         }

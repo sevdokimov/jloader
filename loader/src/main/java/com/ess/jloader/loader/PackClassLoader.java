@@ -121,14 +121,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 for (int i = 1; i < classCount; i++) {
                     buffer.put((byte) 7);
 
-                    int utfIndex;
-
-                    if (utfCount > 255) {
-                        utfIndex = in.readUnsignedShort();
-                    }
-                    else {
-                        utfIndex = in.readUnsignedByte();
-                    }
+                    int utfIndex = readLimitedShort(in, utfCount);
 
                     buffer.putShort((short) (utfIndex + firstUtfIndex));
                 }
@@ -194,6 +187,9 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
     private int readLimitedShort(DataInputStream in, int limit) throws IOException {
         if (limit < 256) {
+            if (limit == 0) {
+                return 0;
+            }
             return in.readUnsignedByte();
         }
         else {
@@ -237,24 +233,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                     buffer.position(buffer.position() + 4);
                     break;
 
-//                case 12: // ClassWriter.NAME_TYPE:
-//                    int index;
-//
-//                    if (utfCount > 255) {
-//                        index = in.readUnsignedShort();
-//                        buffer.putShort((short) (index + firstUtfIndex));
-//                        index = in.readUnsignedShort();
-//                        buffer.putShort((short) (index + firstUtfIndex));
-//                    }
-//                    else {
-//                        index = in.readUnsignedByte();
-//                        buffer.putShort((short) (index + firstUtfIndex));
-//                        index = in.readUnsignedByte();
-//                        buffer.putShort((short) (index + firstUtfIndex));
-//                    }
-//
-//                    break;
-
                 case 5:// ClassWriter.LONG:
                 case 6: // ClassWriter.DOUBLE:
                     in.readFully(array, buffer.position(), 8);
@@ -270,13 +248,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 case 7: // ClassWriter.CLASS
                 case 8: // ClassWriter.STR
                 case 16: // ClassWriter.MTYPE
-                    int index;
-                    if (utfCount > 255) {
-                        index = in.readUnsignedShort();
-                    }
-                    else {
-                        index = in.readUnsignedByte();
-                    }
+                    int index = readLimitedShort(in, utfCount);
                     buffer.putShort((short) (index + firstUtfIndex));
                     break;
 
