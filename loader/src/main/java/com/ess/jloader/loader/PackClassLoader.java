@@ -128,6 +128,8 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         private int[] predefinedUtfIndexes;
 
+        private int sourceFileIndex;
+
         public Unpacker(InputStream inputStream, String className) {
             this.inputStream = inputStream;
             this.in = new DataInputStream(inputStream);
@@ -188,6 +190,16 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             int processedUtfCount = 1;
 
             processedUtfCount = extractPredefinedStrings(utfOutput, processedUtfCount, predefinedStrings);
+            if ((flags & Utils.F_HAS_SOURCE_FILE_ATTR) != 0) {
+                sourceFileIndex = processedUtfCount;
+
+                utfOutput.write(1);
+                utfOutput.writeUTF("SourceFile");
+                utfOutput.write(1);
+                utfOutput.writeUTF(Utils.generateSourceFileName(className));
+
+                processedUtfCount += 2;
+            }
 
             // Packed utf
             HuffmanInputStream<byte[]> huffmanInputStream = new HuffmanInputStream<byte[]>(inputStream, packedStrHuffmanTree);
@@ -374,6 +386,14 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         private void processClassAttr(DataInputStream defDataIn) throws IOException {
             int attrCount = readSmallShort3(defDataIn);
             buffer.putShort((short) attrCount);
+
+            if ((flags & Utils.F_HAS_SOURCE_FILE_ATTR) != 0) {
+                buffer.putShort((short) (sourceFileIndex + firstUtfIndex));
+                buffer.putInt(2);
+                buffer.putShort((short) (sourceFileIndex + 1 + firstUtfIndex));
+
+                attrCount--;
+            }
 
             for (int j = 0; j < attrCount; j++) {
                 processAttr(defDataIn);

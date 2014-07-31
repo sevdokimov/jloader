@@ -10,8 +10,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.*;
+import org.objectweb.asm.tree.ClassNode;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -83,6 +83,17 @@ public class ClassDescriptor {
             if (predefinedUtfIndexes[i] == 1) {
                 predefinedUtfIndexes[i] = generatedStr.size();
                 generatedStr.add(Utils.PREDEFINED_UTF[i]);
+            }
+        }
+
+        ClassNode cn = new ClassNode();
+        classReader.accept(cn, 0);
+        if (cn.sourceFile != null) {
+            String sourceFileName = Utils.generateSourceFileName(className);
+            if (sourceFileName.equals(cn.sourceFile)) {
+                flags |= Utils.F_HAS_SOURCE_FILE_ATTR;
+                generatedStr.add("SourceFile");
+                generatedStr.add(sourceFileName);
             }
         }
     }
@@ -275,11 +286,22 @@ public class ClassDescriptor {
         }
     }
 
+    private String getUtfByIndex(int index) {
+        return allUtf.get(index - firstUtfIndex);
+    }
+
     private void skipAttr(ByteBuffer buffer, DataOutputStream out) throws IOException {
         int nameIndex = buffer.getShort() & 0xFFFF;
+        int length = buffer.getInt();
+
+        if ((flags & Utils.F_HAS_SOURCE_FILE_ATTR) != 0 && getUtfByIndex(nameIndex).equals("SourceFile")) {
+            if (length != 2) throw new InvalidJarException();
+            buffer.position(buffer.position() + 2);
+            return;
+        }
+
         writeUtfIndex(out, nameIndex);
 
-        int length = buffer.getInt();
         out.writeInt(length);
         out.write(buffer.array(), buffer.position(), length);
         buffer.position(buffer.position() + length);
