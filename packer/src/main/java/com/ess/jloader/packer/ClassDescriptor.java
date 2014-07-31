@@ -49,6 +49,9 @@ public class ClassDescriptor {
     private List<ConstNameAndType> constNameAndType;
 
     private int flags = 0;
+    private int predefinedUtfFlags = 0;
+
+    private int[] predefinedUtfIndexes = new int[Utils.PREDEFINED_UTF.length];
 
     public ClassDescriptor(ClassReader classReader) {
         this.classReader = classReader;
@@ -60,6 +63,28 @@ public class ClassDescriptor {
 
         generatedStr = new LinkedHashSet<String>();
         generatedStr.add(className);
+
+        List<String> predefinedStr = Arrays.asList(Utils.PREDEFINED_UTF);
+        for (AbstractConst aConst : consts) {
+            if (aConst instanceof ConstUtf) {
+                String s = ((ConstUtf) aConst).getValue();
+                if (generatedStr.contains(s)) continue;
+
+                int idx = predefinedStr.indexOf(s);
+
+                if (idx >= 0) {
+                    predefinedUtfFlags |= 1 << (Utils.PREDEFINED_UTF.length - idx - 1);
+                    predefinedUtfIndexes[idx] = 1;
+                }
+            }
+        }
+
+        for (int i = 0; i < Utils.PREDEFINED_UTF.length; i++) {
+            if (predefinedUtfIndexes[i] == 1) {
+                predefinedUtfIndexes[i] = generatedStr.size();
+                generatedStr.add(Utils.PREDEFINED_UTF[i]);
+            }
+        }
     }
 
     public Set<String> getGeneratedStr() {
@@ -329,7 +354,8 @@ public class ClassDescriptor {
 
     public void writeTo(OutputStream out, byte[] dictionary) throws IOException {
         DataOutputStream dataOut = new DataOutputStream(out);
-        dataOut.writeInt(flags);
+        dataOut.writeShort(flags);
+        dataOut.writeShort(predefinedUtfFlags);
 
         plainDataArray.writeTo(out);
 

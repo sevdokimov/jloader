@@ -5,6 +5,16 @@ package com.ess.jloader.utils;
  */
 public class Utils {
 
+    public static final String[] PREDEFINED_UTF = {
+            "SourceFile",
+            "Code",
+            "LineNumberTable",
+            "LocalVariableTable",
+            "Exceptions",
+            "InnerClasses",
+            "Synthetic"
+    };
+
     public static final byte PACKER_VERSION = 0x01;
 
     public static final byte MAGIC = (byte) 0xAA;
