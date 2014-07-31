@@ -140,14 +140,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             flags = in.readUnsignedShort();
             int predefinedStrings = in.readUnsignedShort();
 
-            int size;
-
-            if ((flags & Utils.F_LONG_CLASS) == 0) {
-                size = in.readUnsignedShort();
-            }
-            else {
-                size = in.readInt();
-            }
+            int size = readClassSize();
 
             ByteBuffer buffer = ByteBuffer.allocate(size);
             this.buffer = buffer;
@@ -252,6 +245,15 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             assert !buffer.hasRemaining();
 
             return array;
+        }
+
+        private int readClassSize() throws IOException {
+            int size = in.readShort();
+            if (size < 0) {
+                size = (-size) << 15 | in.readShort();
+            }
+
+            return size;
         }
 
         private int extractPredefinedStrings(DataOutputStream utfOutput, int currentUtfIndex, int predefinedStrFlags) throws IOException {

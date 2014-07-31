@@ -21,13 +21,11 @@ public class Utils {
     /*
      * Flag bits:
      * 0, 1, 2 - class version index.
-     * 3 - F_LONG_CLASS
      * 4,5 - interface count
      * 6 - F_HAS_SOURCE_FILE_ATTR
      */
 
 
-    public static final int F_LONG_CLASS = 1 << 3;
     public static final int F_INTERFACE_COUNT_SHIFT = 4;
 
     public static final int F_HAS_SOURCE_FILE_ATTR = 1 << 6;

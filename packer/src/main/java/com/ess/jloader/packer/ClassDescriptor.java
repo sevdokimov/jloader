@@ -10,7 +10,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
-import org.objectweb.asm.*;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.ClassNode;
 
 import java.io.DataOutputStream;
@@ -95,6 +96,16 @@ public class ClassDescriptor {
                 generatedStr.add("SourceFile");
                 generatedStr.add(sourceFileName);
             }
+        }
+    }
+
+    private void writeClassSize(DataOutputStream out, int size) throws IOException {
+        if (size < 0x8000) {
+            out.writeShort(size);
+        }
+        else {
+            out.writeShort(-(size >>> 15));
+            out.writeShort(size & 0x7FFF);
         }
     }
 
@@ -189,22 +200,13 @@ public class ClassDescriptor {
         int version = buffer.getInt(4);
         flags |= ctx.getVersionCache().getVersionIndex(version);
 
-        if (classBytes.length > 0xFFFF) {
-            flags |= Utils.F_LONG_CLASS;
-        }
-
         buffer.position(4 + 4); // skip 0xCAFEBABE, version
 
         if ((buffer.getShort() & 0xFFFF) != constCount) {
             throw new RuntimeException();
         }
 
-        if (classBytes.length > 0xFFFF) {
-            plainData.writeInt(classBytes.length);
-        }
-        else {
-            plainData.writeShort(classBytes.length);
-        }
+        writeClassSize(plainData, classBytes.length);
 
         writeSmallShort3(plainData, constCount);
         writeLimitedNumber(plainData, utfCount, constCount);
