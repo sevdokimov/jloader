@@ -449,6 +449,9 @@ public class ClassDescriptor {
         else if (limit < 256) {
             out.write(x);
         }
+        else if (limit < 256*3) {
+            writeSmallShort3(out, x);
+        }
         else {
             out.writeShort(x);
         }

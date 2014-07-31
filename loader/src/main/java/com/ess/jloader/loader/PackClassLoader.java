@@ -429,6 +429,9 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 }
                 res = in.readUnsignedByte();
             }
+            else if (limit < 256 * 3) {
+                res = readSmallShort3(in);
+            }
             else {
                 res = in.readUnsignedShort();
             }
