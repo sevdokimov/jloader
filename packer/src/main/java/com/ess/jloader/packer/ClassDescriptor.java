@@ -338,39 +338,6 @@ public class ClassDescriptor {
         return res;
     }
 
-//    private void skipAttr(ByteBuffer buffer, DataOutputStream out) throws IOException {
-//        int nameIndex = buffer.getShort() & 0xFFFF;
-//        int length = buffer.getInt();
-//
-//        if ((flags & Utils.F_HAS_SOURCE_FILE_ATTR) != 0 && getUtfByIndex(nameIndex).equals("SourceFile")) {
-//            if (length != 2) throw new InvalidJarException();
-//            buffer.position(buffer.position() + 2);
-//            return;
-//        }
-//
-//        writeUtfIndex(out, nameIndex);
-//
-//        out.writeInt(length);
-//        out.write(buffer.array(), buffer.position(), length);
-//        buffer.position(buffer.position() + length);
-//    }
-
-//    private void skipMethodAttr(ByteBuffer buffer, DataOutputStream out, ) throws IOException {
-//        int nameIndex = buffer.getShort() & 0xFFFF;
-//        int length = buffer.getInt();
-//
-//        if (getUtfByIndex(nameIndex).equals("Code")) {
-//            buffer.position(buffer.position() + length);
-//            return;
-//        }
-//
-//        writeUtfIndex(out, nameIndex);
-//
-//        out.writeInt(length);
-//        out.write(buffer.array(), buffer.position(), length);
-//        buffer.position(buffer.position() + length);
-//    }
-
     private void processFields(ByteBuffer buffer, DataOutputStream out) throws IOException {
         int fieldCount = buffer.getShort() & 0xFFFF;
         writeSmallShort3(out, fieldCount);
