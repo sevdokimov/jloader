@@ -123,6 +123,9 @@ public class ClassDescriptor {
 
     private byte[] repack(ClassReader classReader,
                           Collection<ConstClass> constClasses,
+                          Collection<ConstField> constField,
+                          Collection<ConstInterface> constInteface,
+                          Collection<ConstMethod> constMethod,
                           Collection<ConstNameAndType> constNameAndTypes,
                           Collection<String> utfs) {
         ClassWriter classWriter = new ClassWriter(0);
@@ -133,15 +136,18 @@ public class ClassDescriptor {
             classWriter.newUTF8(utf);
         }
 
-        classWriterManager.goHead(constNameAndTypes.size());
-        for (ConstNameAndType aConst : constNameAndTypes) {
-            aConst.toWriter(classWriter);
-        }
+        classWriterManager.toWriterTop(constNameAndTypes);
 
         classWriterManager.goBack();
-        for (ConstClass aConst : constClasses) {
-            aConst.toWriter(classWriter);
-        }
+        classWriterManager.toWriter(constClasses);
+
+        classWriterManager.toWriterTop(constMethod);
+
+        classWriterManager.toWriterTop(constInteface);
+
+        classWriterManager.toWriterTop(constField);
+
+        classWriterManager.goBack();
 
         classReader.accept(classWriter, 0);
         classWriterManager.finish();
@@ -162,6 +168,10 @@ public class ClassDescriptor {
         constClasses = new ArrayList<ConstClass>();
         constNameAndType = new ArrayList<ConstNameAndType>();
 
+        List<ConstMethod> constMethod = new ArrayList<ConstMethod>();
+        List<ConstInterface> constInterface = new ArrayList<ConstInterface>();
+        List<ConstField> constField = new ArrayList<ConstField>();
+
         for (AbstractConst aConst : consts) {
             if (aConst.getTag() == ConstUtf.TAG) {
                 String s = ((ConstUtf)aConst).getValue();
@@ -181,6 +191,15 @@ public class ClassDescriptor {
             else if (aConst.getTag() == ConstNameAndType.TAG) {
                 constNameAndType.add((ConstNameAndType) aConst);
             }
+            else if (aConst instanceof ConstMethod) {
+                constMethod.add((ConstMethod) aConst);
+            }
+            else if (aConst instanceof ConstInterface) {
+                constInterface.add((ConstInterface) aConst);
+            }
+            else if (aConst instanceof ConstField) {
+                constField.add((ConstField) aConst);
+            }
         }
 
         Collections.sort(notPackedStr);
@@ -194,7 +213,9 @@ public class ClassDescriptor {
         firstUtfIndex = constCount - utfCount;
         firstNameAndTypeIndex = firstUtfIndex - constNameAndType.size();
 
-        byte[] classBytes = repack(classReader, constClasses, constNameAndType, allUtf);
+        byte[] classBytes = repack(classReader, constClasses, constField, constInterface, constMethod,
+                constNameAndType, allUtf);
+
         ByteBuffer buffer = ByteBuffer.wrap(classBytes);
 
         int version = buffer.getInt(4);

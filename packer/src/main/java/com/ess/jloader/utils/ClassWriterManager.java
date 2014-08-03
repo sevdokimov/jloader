@@ -1,5 +1,6 @@
 package com.ess.jloader.utils;
 
+import com.ess.jloader.packer.consts.AbstractConst;
 import com.google.common.base.Throwables;
 import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.ByteVector;
@@ -7,6 +8,7 @@ import org.objectweb.asm.ClassWriter;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -67,6 +69,17 @@ public class ClassWriterManager {
 
     public ClassWriter getClassWriter() {
         return classWriter;
+    }
+
+    public void toWriterTop(Collection<? extends AbstractConst> list) {
+        goHead(list.size());
+        toWriter(list);
+    }
+
+    public void toWriter(Collection<? extends AbstractConst> list) {
+        for (AbstractConst aConst : list) {
+            aConst.toWriter(classWriter);
+        }
     }
 
     public void goHead(int n) {
