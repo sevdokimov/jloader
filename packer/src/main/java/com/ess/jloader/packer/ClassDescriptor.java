@@ -45,6 +45,7 @@ public class ClassDescriptor {
     private final Set<String> generatedStr;
 
     private List<String> allUtf;
+    private Map<String, Integer> utf2index;
 
     private List<ConstClass> constClasses;
     private List<ConstNameAndType> constNameAndType;
@@ -209,6 +210,11 @@ public class ClassDescriptor {
 
         allUtf = Lists.newArrayList(Iterables.concat(generatedStr, packedStr, notPackedStr));
 
+        utf2index = new HashMap<String, Integer>();
+        for (int i = 0; i < allUtf.size(); i++) {
+            utf2index.put(allUtf.get(i), i);
+        }
+
         int utfCount = allUtf.size();
         firstUtfIndex = constCount - utfCount;
         firstNameAndTypeIndex = firstUtfIndex - constNameAndType.size();
@@ -313,22 +319,57 @@ public class ClassDescriptor {
         return allUtf.get(index - firstUtfIndex);
     }
 
-    private void skipAttr(ByteBuffer buffer, DataOutputStream out) throws IOException {
-        int nameIndex = buffer.getShort() & 0xFFFF;
-        int length = buffer.getInt();
+    private int getIndexByUtf(String utf) {
+        return utf2index.get(utf) + firstUtfIndex;
+    }
 
-        if ((flags & Utils.F_HAS_SOURCE_FILE_ATTR) != 0 && getUtfByIndex(nameIndex).equals("SourceFile")) {
-            if (length != 2) throw new InvalidJarException();
-            buffer.position(buffer.position() + 2);
-            return;
+    private ArrayList<Attribute> readAllAttributes(AttributeType type, ByteBuffer buffer) throws IOException {
+        int attrCount = buffer.getShort() & 0xFFFF;
+
+        ArrayList<Attribute> res = new ArrayList<Attribute>();
+
+        for (int i = 0; i < attrCount; i++) {
+            int nameIndex = buffer.getShort() & 0xFFFF;
+            String name = getUtfByIndex(nameIndex);
+
+            res.add(AttributeFactories.getInstance().read(type, name, buffer));
         }
 
-        writeUtfIndex(out, nameIndex);
-
-        out.writeInt(length);
-        out.write(buffer.array(), buffer.position(), length);
-        buffer.position(buffer.position() + length);
+        return res;
     }
+
+//    private void skipAttr(ByteBuffer buffer, DataOutputStream out) throws IOException {
+//        int nameIndex = buffer.getShort() & 0xFFFF;
+//        int length = buffer.getInt();
+//
+//        if ((flags & Utils.F_HAS_SOURCE_FILE_ATTR) != 0 && getUtfByIndex(nameIndex).equals("SourceFile")) {
+//            if (length != 2) throw new InvalidJarException();
+//            buffer.position(buffer.position() + 2);
+//            return;
+//        }
+//
+//        writeUtfIndex(out, nameIndex);
+//
+//        out.writeInt(length);
+//        out.write(buffer.array(), buffer.position(), length);
+//        buffer.position(buffer.position() + length);
+//    }
+
+//    private void skipMethodAttr(ByteBuffer buffer, DataOutputStream out, ) throws IOException {
+//        int nameIndex = buffer.getShort() & 0xFFFF;
+//        int length = buffer.getInt();
+//
+//        if (getUtfByIndex(nameIndex).equals("Code")) {
+//            buffer.position(buffer.position() + length);
+//            return;
+//        }
+//
+//        writeUtfIndex(out, nameIndex);
+//
+//        out.writeInt(length);
+//        out.write(buffer.array(), buffer.position(), length);
+//        buffer.position(buffer.position() + length);
+//    }
 
     private void processFields(ByteBuffer buffer, DataOutputStream out) throws IOException {
         int fieldCount = buffer.getShort() & 0xFFFF;
@@ -344,11 +385,13 @@ public class ClassDescriptor {
             int descrIndex = buffer.getShort() & 0xFFFF;
             writeUtfIndex(out, descrIndex);
 
-            int attrCount = buffer.getShort() & 0xFFFF;
-            writeSmallShort3(out, attrCount);
+            List<Attribute> attributes = readAllAttributes(AttributeType.FIELD, buffer);
 
-            for (int j = 0; j < attrCount; j++) {
-                skipAttr(buffer, out);
+            writeSmallShort3(out, attributes.size());
+
+            for (Attribute attribute : attributes) {
+                writeUtfIndex(out, getIndexByUtf(attribute.getName()));
+                attribute.writeTo(out, this);
             }
         }
     }
@@ -367,21 +410,29 @@ public class ClassDescriptor {
             int descrIndex = buffer.getShort() & 0xFFFF;
             writeUtfIndex(out, descrIndex);
 
-            int attrCount = buffer.getShort() & 0xFFFF;
-            writeSmallShort3(out, attrCount);
+            List<Attribute> attributes = readAllAttributes(AttributeType.METHOD, buffer);
 
-            for (int j = 0; j < attrCount; j++) {
-                skipAttr(buffer, out);
+            writeSmallShort3(out, attributes.size());
+
+            for (Attribute attribute : attributes) {
+                writeUtfIndex(out, getIndexByUtf(attribute.getName()));
+                attribute.writeTo(out, this);
             }
         }
     }
 
     private void processClassAttributes(ByteBuffer buffer, DataOutputStream out) throws IOException {
-        int attrCount = buffer.getShort() & 0xFFFF;
-        writeSmallShort3(out, attrCount);
+        List<Attribute> attributes = readAllAttributes(AttributeType.CLASS, buffer);
 
-        for (int j = 0; j < attrCount; j++) {
-            skipAttr(buffer, out);
+        writeSmallShort3(out, attributes.size());
+
+        for (Attribute attribute : attributes) {
+            if ((flags & Utils.F_HAS_SOURCE_FILE_ATTR) != 0 && attribute.getName().equals("SourceFile")) {
+                continue;
+            }
+
+            writeUtfIndex(out, getIndexByUtf(attribute.getName()));
+            attribute.writeTo(out, this);
         }
     }
 
