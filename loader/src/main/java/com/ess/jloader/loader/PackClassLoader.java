@@ -27,18 +27,23 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
     private final byte[] dictionary;
 
-    private final ClassLoader delegateClassLoader;
+    private final URLClassLoader delegateClassLoader;
+
+    private final ZipFile zipFile;
 
     public PackClassLoader(ClassLoader parent, File packFile) throws IOException {
-        this(parent, new URLClassLoader(new URL[]{packFile.toURI().toURL()}));
-    }
-
-    public PackClassLoader(ClassLoader parent, ClassLoader delegate) throws IOException {
         super(parent);
 
-        delegateClassLoader = delegate;
+        delegateClassLoader = new URLClassLoader(new URL[]{packFile.toURI().toURL()});
 
-        DataInputStream inputStream = new DataInputStream(new BufferedInputStream(delegate.getResourceAsStream(METADATA_ENTRY_NAME)));
+        zipFile = new ZipFile(packFile);
+
+      //  delegateClassLoader = delegate;
+        ZipEntry entry = zipFile.getEntry(METADATA_ENTRY_NAME);
+
+        boolean allRight = false;
+
+        DataInputStream inputStream = new DataInputStream(new BufferedInputStream(zipFile.getInputStream(entry)));
 
         try {
             if (inputStream.readByte() != Utils.MAGIC) throw new RuntimeException();
@@ -68,9 +73,15 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             int dictionarySize = inputStream.readUnsignedShort();
             dictionary = new byte[dictionarySize];
             inputStream.readFully(dictionary);
+
+            allRight = true;
         }
         finally {
             inputStream.close();
+
+            if (!allRight) {
+                zipFile.close();
+            }
         }
     }
 
@@ -80,8 +91,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         String classFileName = jvmClassName.concat(".c");
 
         try {
-            InputStream inputStream = delegateClassLoader.getResourceAsStream(classFileName);
-            if (inputStream == null) throw new ClassNotFoundException();
+            ZipEntry entry = zipFile.getEntry(classFileName);
+            if (entry == null) throw new ClassNotFoundException();
+
+            InputStream inputStream = zipFile.getInputStream(entry);
 
             try {
                 Unpacker unpacker = new Unpacker(new BufferedInputStream(inputStream), jvmClassName);
@@ -104,9 +117,8 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
     @Override
     public void close() throws IOException {
-        if (delegateClassLoader instanceof Closeable) {
-            ((Closeable) delegateClassLoader).close();
-        }
+        delegateClassLoader.close();
+        zipFile.close();
     }
 
     private class Unpacker {
