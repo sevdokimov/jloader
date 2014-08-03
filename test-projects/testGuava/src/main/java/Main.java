@@ -19,6 +19,8 @@ import java.util.zip.ZipInputStream;
  */
 public class Main {
 
+    private static final Pattern CLASS_PATTERN = Pattern.compile("(.*)\\.c(?:lass)?");
+
     public static File getJarByMarker(String marker) {
         String path = Thread.currentThread().getContextClassLoader().getResource(marker).getPath();
         int idx = path.lastIndexOf("!/");
@@ -43,7 +45,7 @@ public class Main {
             while ( (entry = zIn.getNextEntry()) != null) {
                 String name = entry.getName();
 
-                Matcher matcher = Pattern.compile("(.*)\\.c(?:lass)?").matcher(name);
+                Matcher matcher = CLASS_PATTERN.matcher(name);
 
                 if (matcher.matches()) {
                     String className = matcher.group(1).replace('/', '.');
