@@ -33,6 +33,9 @@ public class PerformanceTest {
 
         System.out.println("Packing time: " + (System.currentTimeMillis() - time));
 
+        long srcSize = guava.length() + guavaLoader.length();
+        System.out.printf("Src: %d, Result: %d,  (%d%%)\n", srcSize, tempFile.length(), tempFile.length() * 100 / srcSize);
+
         getExecuteTime(URLClassLoader.newInstance(new URL[]{guavaLoader.toURI().toURL(), guava.toURI().toURL()}, null));
 
         long packedExecuteTime = getExecuteTime(new PackClassLoader(null, tempFile));
@@ -41,9 +44,6 @@ public class PerformanceTest {
         long plainExecuteTime = getExecuteTime(plainClassLoader);
 
         System.out.printf("Plain: %d, packed: %d, (res: %d%%)\n", plainExecuteTime, packedExecuteTime, (packedExecuteTime - plainExecuteTime) * 100/plainExecuteTime);
-
-        long srcSize = guava.length() + guavaLoader.length();
-        System.out.printf("Src: %d, Result: %d,  (%d%%)", srcSize, tempFile.length(), tempFile.length() * 100 / srcSize);
     }
 
     private long getExecuteTime(ClassLoader loader) throws Exception {
