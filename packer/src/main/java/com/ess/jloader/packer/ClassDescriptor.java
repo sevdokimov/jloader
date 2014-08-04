@@ -329,7 +329,7 @@ public class ClassDescriptor {
             int nameIndex = buffer.getShort() & 0xFFFF;
             String name = getUtfByIndex(nameIndex);
 
-            res.add(AttributeFactories.getInstance().read(type, name, buffer));
+            res.add(AttributeUtils.getInstance().read(type, name, buffer));
         }
 
         return res;
@@ -379,7 +379,7 @@ public class ClassDescriptor {
             writeSmallShort3(out, attributes.size());
 
             if (!Modifier.isNative(accessFlags) && !Modifier.isAbstract(accessFlags)) {
-                Attribute code = AttributeFactories.findAttributeByName(attributes, "Code");
+                Attribute code = AttributeUtils.findAttributeByName(attributes, "Code");
                 assert code != null;
 
                 attributes.remove(code);
@@ -387,7 +387,7 @@ public class ClassDescriptor {
                 code.writeTo(out, this);
             }
             else {
-                assert AttributeFactories.findAttributeByName(attributes, "Code") == null;
+                assert AttributeUtils.findAttributeByName(attributes, "Code") == null;
             }
 
             for (Attribute attribute : attributes) {

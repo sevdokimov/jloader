@@ -10,17 +10,17 @@ import java.util.Collection;
 /**
  * @author Sergey Evdokimov
  */
-public class AttributeFactories {
+public class AttributeUtils {
 
     private final AttributeFactory[] list = new AttributeFactory[]{};
 
-    private static final AttributeFactories INSTANCE = new AttributeFactories();
+    private static final AttributeUtils INSTANCE = new AttributeUtils();
 
-    private AttributeFactories() {
+    private AttributeUtils() {
 
     }
 
-    public static AttributeFactories getInstance() {
+    public static AttributeUtils getInstance() {
         return INSTANCE;
     }
 
