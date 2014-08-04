@@ -247,6 +247,9 @@ public class ClassDescriptor {
         writeSmallShort3(plainData, constCount);
         writeLimitedNumber(plainData, utfCount, constCount);
         writeSmallShort3(plainData, constClasses.size());
+        writeSmallShort3(plainData, constFields.size());
+        writeSmallShort3(plainData, constInterfaces.size());
+        writeSmallShort3(plainData, constMethods.size());
         writeSmallShort3(plainData, constNameAndType.size());
 
         skipClassConst(buffer, className);

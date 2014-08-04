@@ -135,6 +135,13 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         private int classCount;
 
+        private int fieldConstCount;
+        private int firstFieldIndex;
+        private int methodConstCount;
+        private int firstMethodIndex;
+        private int imethodConstCount;
+        private int firstImethodIndex;
+
         private int[] predefinedUtfIndexes;
 
         private int sourceFileIndex;
@@ -169,7 +176,15 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             firstUtfIndex = constCount - utfCount;
 
             classCount = readSmallShort3(in);
+            fieldConstCount = readSmallShort3(in);
+            imethodConstCount = readSmallShort3(in);
+            methodConstCount = readSmallShort3(in);
+
             int nameAndTypeCount = readSmallShort3(in);
+
+            firstMethodIndex = firstUtfIndex - nameAndTypeCount - methodConstCount;
+            firstImethodIndex = firstMethodIndex - imethodConstCount;
+            firstFieldIndex = firstImethodIndex - fieldConstCount;
 
             buffer.put((byte) 7);
             buffer.putShort((short) firstUtfIndex); // Class name;
@@ -428,6 +443,8 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             buffer.putInt(codeLength);
             Utils.read(defDataIn, buffer, codeLength);
 
+            patchCode(ByteBuffer.wrap(buffer.array(), buffer.position() - codeLength, codeLength));
+
             int exceptionTableLength = defDataIn.readUnsignedShort();
             buffer.putShort((short) exceptionTableLength);
             Utils.read(defDataIn, buffer, exceptionTableLength * 4*2);
@@ -497,6 +514,118 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             }
 
             return (((x - 251) << 8) + in.readUnsignedByte()) - 4;
+        }
+
+        private void skipPadding(ByteBuffer codeBuffer, int startPosition) {
+            // skips 0 to 3 padding bytes
+            while (((codeBuffer.position() - startPosition) & 3) > 0) {
+                if (codeBuffer.get() != 0) {
+                    throw new RuntimeException();
+                }
+            }
+        }
+
+        private void patchCode(ByteBuffer codeBuffer) {
+            int startPosition = codeBuffer.position();
+
+            while (codeBuffer.hasRemaining()) {
+
+                // visits the instruction at this offset
+                int opcode = codeBuffer.get() & 0xFF;
+
+                switch (InsnTypes.TYPE[opcode]) {
+                    case InsnTypes.NOARG_INSN:
+                    case InsnTypes.IMPLVAR_INSN:
+                        break;
+
+                    case InsnTypes.VAR_INSN:
+                    case InsnTypes.SBYTE_INSN:
+                    case InsnTypes.LDC_INSN:
+                        codeBuffer.get();
+                        break;
+
+                    case InsnTypes.LABEL_INSN:
+                    case InsnTypes.SHORT_INSN:
+                    case InsnTypes.LDCW_INSN:
+                    case InsnTypes.TYPE_INSN:
+                    case InsnTypes.IINC_INSN:
+                        codeBuffer.getShort();
+                        break;
+
+                    case InsnTypes.LABELW_INSN:
+                        codeBuffer.getInt();
+                        break;
+
+                    case InsnTypes.WIDE_INSN:
+                        opcode = codeBuffer.get() & 0xFF;
+                        if (opcode == 132 /*Opcodes.IINC*/) {
+                            codeBuffer.getInt();
+                        } else {
+                            codeBuffer.getShort();
+                        }
+                        break;
+
+                    case InsnTypes.TABL_INSN: {
+                        skipPadding(codeBuffer, startPosition);
+
+                        int defaultLabel = codeBuffer.getInt(); // default ref
+
+                        int min = codeBuffer.getInt();
+                        int max = codeBuffer.getInt();
+                        assert min <= max;
+
+                        codeBuffer.position(codeBuffer.position() + (max - min + 1)*4);
+
+                        break;
+                    }
+
+                    case InsnTypes.LOOK_INSN: {
+                        skipPadding(codeBuffer, startPosition);
+
+                        int defaultLabel = codeBuffer.getInt();
+                        assert defaultLabel >= 0 && defaultLabel < codeBuffer.limit();
+
+                        int len = codeBuffer.getInt();
+                        codeBuffer.position(codeBuffer.position() + 8 * len);
+                        break;
+                    }
+
+                    case InsnTypes.ITFMETH_INSN:
+                    case InsnTypes.FIELDORMETH_INSN:
+                        if (opcode == 180 /*Opcodes.GETFIELD*/ || opcode == 181 /*Opcodes.PUTFIELD*/
+                                || opcode == 178 /*Opcodes.GETSTATIC*/ || opcode == 179 /*Opcodes.PUTSTATIC*/) {
+                            int fieldIndex = (codeBuffer.getShort() & 0xFFFF) + firstFieldIndex;
+                            codeBuffer.putShort(codeBuffer.position() - 2, (short) fieldIndex);
+                        } else if (opcode == 185 /*Opcodes.INVOKEINTERFACE*/) {
+                            int imethIndex = (codeBuffer.getShort() & 0xFFFF) + firstImethodIndex;
+                            codeBuffer.putShort(codeBuffer.position() - 2, (short) imethIndex);
+
+                            codeBuffer.getShort();
+                        }
+                        else if (opcode == 182/*Opcodes.INVOKEVIRTUAL*/ || opcode == 183/*Opcodes.INVOKESPECIAL*/
+                                || opcode == 184 /*Opcodes.INVOKESTATIC*/) {
+                            int methIndex = (codeBuffer.getShort() & 0xFFFF) + firstMethodIndex;
+                            codeBuffer.putShort(codeBuffer.position() - 2, (short) methIndex);
+                        }
+                        else {
+                            throw new UnsupportedOperationException(String.valueOf(opcode));
+                        }
+                        break;
+
+    //                case InsnTypes.INDYMETH_INSN: {
+    //                    throw new UnsupportedOperationException(); // todo Implement support of INVOKEDYNAMIC!!!
+    //                }
+
+                    case InsnTypes.MANA_INSN:
+                        codeBuffer.getShort();
+                        codeBuffer.get();
+                        break;
+
+                    default:
+                        throw new UnsupportedOperationException(String.valueOf(opcode));
+                }
+            }
+
         }
     }
 }

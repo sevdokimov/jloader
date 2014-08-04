@@ -1,13 +1,13 @@
 package com.ess.jloader.packer;
 
-import com.ess.jloader.utils.Utils;
+import com.ess.jloader.utils.InsnTypes;
 import org.jetbrains.annotations.Nullable;
+import org.objectweb.asm.Opcodes;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -57,6 +57,8 @@ public class AttributeCode extends Attribute {
         attributes = AttributeUtils.readAllAttributes(AttributeType.CODE, descriptor, buffer);
 
         assert buffer.position() - savedPos == length;
+
+        patchCode(descriptor);
     }
 
     @Override
@@ -77,6 +79,118 @@ public class AttributeCode extends Attribute {
             descriptor.writeUtfIndex(out, descriptor.getIndexByUtf(attribute.getName()));
             assert attribute instanceof UnknownAttribute;
             attribute.writeTo(out, descriptor);
+        }
+    }
+
+    private void skipPadding(ByteBuffer codeBuffer) {
+        // skips 0 to 3 padding bytes
+        while ((codeBuffer.position() & 3) > 0) {
+            if (codeBuffer.get() != 0) {
+                throw new RuntimeException();
+            }
+        }
+    }
+
+    private void patchCode(ClassDescriptor descriptor) {
+        ByteBuffer codeBuffer = ByteBuffer.wrap(code);
+
+        while (codeBuffer.hasRemaining()) {
+
+            // visits the instruction at this offset
+            int opcode = codeBuffer.get() & 0xFF;
+
+            switch (InsnTypes.TYPE[opcode]) {
+                case InsnTypes.NOARG_INSN:
+                case InsnTypes.IMPLVAR_INSN:
+                    break;
+
+                case InsnTypes.VAR_INSN:
+                case InsnTypes.SBYTE_INSN:
+                case InsnTypes.LDC_INSN:
+                    codeBuffer.get();
+                    break;
+
+                case InsnTypes.LABEL_INSN:
+                case InsnTypes.SHORT_INSN:
+                case InsnTypes.LDCW_INSN:
+                case InsnTypes.TYPE_INSN:
+                case InsnTypes.IINC_INSN:
+                    codeBuffer.getShort();
+                    break;
+
+                case InsnTypes.LABELW_INSN:
+                    codeBuffer.getInt();
+                    break;
+
+                case InsnTypes.WIDE_INSN:
+                    opcode = codeBuffer.get() & 0xFF;
+                    if (opcode == Opcodes.IINC) {
+                        codeBuffer.getInt();
+                    } else {
+                        codeBuffer.getShort();
+                    }
+                    break;
+
+                case InsnTypes.TABL_INSN: {
+                    skipPadding(codeBuffer);
+
+                    int defaultLabel = codeBuffer.getInt(); // default ref
+                    assert defaultLabel >= 0 && defaultLabel < code.length;
+
+                    int min = codeBuffer.getInt();
+                    int max = codeBuffer.getInt();
+                    assert min <= max;
+
+                    for (int i = 0; i < max - min + 1; i++) {
+                        int label = codeBuffer.getInt();
+                        assert label >= 0 && label < code.length;
+                    }
+                    break;
+                }
+
+                case InsnTypes.LOOK_INSN: {
+                    skipPadding(codeBuffer);
+
+                    codeBuffer.getInt();
+                    int len = codeBuffer.getInt();
+                    codeBuffer.position(codeBuffer.position() + 8 * len);
+                    break;
+                }
+
+                case InsnTypes.ITFMETH_INSN:
+                case InsnTypes.FIELDORMETH_INSN:
+                    if (opcode == Opcodes.GETFIELD || opcode == Opcodes.PUTFIELD
+                            || opcode == Opcodes.GETSTATIC || opcode == Opcodes.PUTSTATIC) {
+                        int fieldIndex = descriptor.formatFiledIndex(codeBuffer.getShort() & 0xFFFF);
+                        codeBuffer.putShort(codeBuffer.position() - 2, (short) fieldIndex);
+                    } else if (opcode == Opcodes.INVOKEINTERFACE) {
+                        int imethIndex = descriptor.formatIMethodIndex(codeBuffer.getShort() & 0xFFFF);
+                        codeBuffer.putShort(codeBuffer.position() - 2, (short) imethIndex);
+
+                        codeBuffer.getShort();
+                    }
+                    else if (opcode == Opcodes.INVOKEVIRTUAL || opcode == Opcodes.INVOKESPECIAL
+                            || opcode == Opcodes.INVOKESTATIC) {
+                        int methIndex = descriptor.formatMethodIndex(codeBuffer.getShort() & 0xFFFF);
+                        codeBuffer.putShort(codeBuffer.position() - 2, (short) methIndex);
+                    }
+                    else {
+                        throw new UnsupportedOperationException(String.valueOf(opcode));
+                    }
+                    break;
+
+//                case InsnTypes.INDYMETH_INSN: {
+//                    throw new UnsupportedOperationException(); // todo Implement support of INVOKEDYNAMIC!!!
+//                }
+
+                case InsnTypes.MANA_INSN:
+                    codeBuffer.getShort();
+                    codeBuffer.get();
+                    break;
+
+                default:
+                    throw new UnsupportedOperationException(String.valueOf(opcode));
+            }
         }
     }
 
