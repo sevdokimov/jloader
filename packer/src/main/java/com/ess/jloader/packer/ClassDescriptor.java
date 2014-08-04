@@ -270,7 +270,23 @@ public class ClassDescriptor {
         }
         h.finish();
 
-        copyConstTableTail(buffer, constCount - 1 - constClasses.size() - constNameAndType.size() - utfCount, compressed);
+        copyConstTableTail(buffer, constCount - 1 - constClasses.size()
+                - constFields.size() - constInterfaces.size()- constMethods.size()
+                - constNameAndType.size()
+                - utfCount, compressed);
+
+        for (ConstAbstractRef ref : Iterables.concat(constFields, constInterfaces, constMethods)) {
+            int tag = buffer.get();
+            assert tag == ref.getTag();
+
+            int classIndex = buffer.getShort() & 0xFFFF;
+            assert constClasses.get(classIndex - 1).getType().equals(ref.getOwner().getInternalName());
+            writeLimitedNumber(compressed, classIndex, constClasses.size());
+
+            int nameTypeIndex = buffer.getShort() & 0xFFFF;
+            assert nameTypeIndex >= firstNameAndTypeIndex && nameTypeIndex < firstNameAndTypeIndex + constNameAndType.size();
+            writeLimitedNumber(compressed, nameTypeIndex - firstNameAndTypeIndex, constNameAndType.size());
+        }
 
         for (ConstNameAndType nameAndType : constNameAndType) {
             int tag = buffer.get();

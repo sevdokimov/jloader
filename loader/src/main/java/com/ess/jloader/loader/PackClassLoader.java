@@ -234,8 +234,31 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             InflaterInputStream defIn = new InflaterInputStream(inputStream, inflater);
             DataInputStream defDataIn = new DataInputStream(new BufferedInputStream(defIn));
 
-            skipConstTableTail(defDataIn, constCount - 1 - classCount - nameAndTypeCount - utfCount,
+            skipConstTableTail(defDataIn, constCount - 1 - classCount
+                            - fieldConstCount - imethodConstCount - methodConstCount
+                            - nameAndTypeCount
+                            - utfCount,
                     firstUtfIndex - nameAndTypeCount, nameAndTypeCount);
+
+            int firstNameAndType = firstUtfIndex - nameAndTypeCount;
+
+            for (int i = 0; i < fieldConstCount; i++) {
+                buffer.put((byte) 9);
+                buffer.putShort((short) readLimitedShort(defDataIn, classCount));
+                buffer.putShort((short) (readLimitedShort(defDataIn, nameAndTypeCount) + firstNameAndType));
+            }
+
+            for (int i = 0; i < imethodConstCount; i++) {
+                buffer.put((byte) 11);
+                buffer.putShort((short) readLimitedShort(defDataIn, classCount));
+                buffer.putShort((short) (readLimitedShort(defDataIn, nameAndTypeCount) + firstNameAndType));
+            }
+
+            for (int i = 0; i < methodConstCount; i++) {
+                buffer.put((byte) 10);
+                buffer.putShort((short) readLimitedShort(defDataIn, classCount));
+                buffer.putShort((short) (readLimitedShort(defDataIn, nameAndTypeCount) + firstNameAndType));
+            }
 
             for (int i = 0; i < nameAndTypeCount; i++) {
                 buffer.put((byte) 12); // ClassWriter.NAME_TYPE
@@ -310,15 +333,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 buffer.put((byte) tag);
 
                 switch (tag) {
-                    case 9: // ClassWriter.FIELD:
-                    case 10: // ClassWriter.METH:
-                    case 11: // ClassWriter.IMETH:
-                        int classIndex = readLimitedShort(in, classCount - 1);
-                        buffer.putShort((short) (classIndex + 1));
-                        int nameAndTypeIndex = readLimitedShort(in, nameAndTypeCount - 1);
-                        buffer.putShort((short) (nameAndTypeIndex + firstNameAndTypeIndex));
-                        break;
-
                     case 3: // ClassWriter.INT:
                     case 4: // ClassWriter.FLOAT:
                     case 18: // ClassWriter.INDY:
