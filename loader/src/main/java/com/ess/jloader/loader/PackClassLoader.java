@@ -1,9 +1,6 @@
 package com.ess.jloader.loader;
 
-import com.ess.jloader.utils.HuffmanInputStream;
-import com.ess.jloader.utils.HuffmanUtils;
-import com.ess.jloader.utils.OpenByteOutputStream;
-import com.ess.jloader.utils.Utils;
+import com.ess.jloader.utils.*;
 
 import java.io.*;
 import java.net.URL;
@@ -379,8 +376,8 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             buffer.putShort((short) methodCount);
 
             for (int i = 0; i < methodCount; i++) {
-                short accessFlags = defDataIn.readShort();
-                buffer.putShort(accessFlags);
+                int accessFlags = defDataIn.readShort();
+                buffer.putShort((short) accessFlags);
 
                 int nameIndex = readUtfIndex(defDataIn);
                 buffer.putShort((short) nameIndex);
@@ -390,6 +387,12 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
                 int attrCount = readSmallShort3(defDataIn);
                 buffer.putShort((short) attrCount);
+
+                if ((accessFlags & (0x00000400 /*Modifier.ABSTRACT*/ | 0x00000100 /*Modifier.NATIVE*/)) == 0) {
+                    buffer.putShort((short) (firstUtfIndex + predefinedUtfIndexes[Utils.PS_CODE]));
+                    processCodeAttr(defDataIn);
+                    attrCount--;
+                }
 
                 for (int j = 0; j < attrCount; j++) {
                     processAttr(defDataIn);
@@ -412,6 +415,13 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             for (int j = 0; j < attrCount; j++) {
                 processAttr(defDataIn);
             }
+        }
+
+        private void processCodeAttr(DataInputStream defDataIn) throws IOException {
+            int length = defDataIn.readInt();
+            buffer.putInt(length);
+            defDataIn.readFully(buffer.array(), buffer.position(), length);
+            buffer.position(buffer.position() + length);
         }
 
         private void processAttr(DataInputStream defDataIn) throws IOException {

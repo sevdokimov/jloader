@@ -1,10 +1,11 @@
 package com.ess.jloader.packer;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collection;
 
 /**
  * @author Sergey Evdokimov
@@ -33,5 +34,16 @@ public class AttributeFactories {
         }
 
         return UnknownAttribute.FACTORY.read(type, name, buffer);
+    }
+
+    @Nullable
+    public static Attribute findAttributeByName(Collection<? extends Attribute> attributes, @NotNull String name) {
+        for (Attribute attribute : attributes) {
+            if (attribute.getName().equals(name)) {
+                return attribute;
+            }
+        }
+
+        return null;
     }
 }

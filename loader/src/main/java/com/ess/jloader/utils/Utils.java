@@ -14,6 +14,8 @@ public class Utils {
             "Synthetic"
     };
 
+    public static final int PS_CODE = 0;
+
     public static final byte PACKER_VERSION = 0x01;
 
     public static final byte MAGIC = (byte) 0xAA;

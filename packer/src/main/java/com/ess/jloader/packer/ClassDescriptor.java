@@ -2,10 +2,7 @@ package com.ess.jloader.packer;
 
 import com.ess.jloader.loader.PackClassLoader;
 import com.ess.jloader.packer.consts.*;
-import com.ess.jloader.utils.ClassWriterManager;
-import com.ess.jloader.utils.HuffmanOutputStream;
-import com.ess.jloader.utils.OpenByteOutputStream;
-import com.ess.jloader.utils.Utils;
+import com.ess.jloader.utils.*;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
@@ -368,7 +365,7 @@ public class ClassDescriptor {
         writeSmallShort3(out, methodCount);
 
         for (int i = 0; i < methodCount; i++) {
-            short accessFlags = buffer.getShort();
+            int accessFlags = buffer.getShort();
             out.writeShort(accessFlags);
 
             int nameIndex = buffer.getShort() & 0xFFFF;
@@ -380,6 +377,18 @@ public class ClassDescriptor {
             List<Attribute> attributes = readAllAttributes(AttributeType.METHOD, buffer);
 
             writeSmallShort3(out, attributes.size());
+
+            if (!Modifier.isNative(accessFlags) && !Modifier.isAbstract(accessFlags)) {
+                Attribute code = AttributeFactories.findAttributeByName(attributes, "Code");
+                assert code != null;
+
+                attributes.remove(code);
+
+                code.writeTo(out, this);
+            }
+            else {
+                assert AttributeFactories.findAttributeByName(attributes, "Code") == null;
+            }
 
             for (Attribute attribute : attributes) {
                 writeUtfIndex(out, getIndexByUtf(attribute.getName()));
