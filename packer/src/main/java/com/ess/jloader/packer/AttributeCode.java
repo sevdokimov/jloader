@@ -61,8 +61,6 @@ public class AttributeCode extends Attribute {
 
     @Override
     public void writeTo(DataOutputStream out, ClassDescriptor descriptor) throws IOException {
-        out.writeInt(length);
-
         out.writeShort(maxStack);
         out.writeShort(maxLocals);
 
@@ -74,9 +72,10 @@ public class AttributeCode extends Attribute {
             record.writeTo(out);
         }
 
-        out.writeShort(attributes.size());
+        descriptor.writeSmallShort3(out, attributes.size());
         for (Attribute attribute : attributes) {
-            out.writeShort(descriptor.getIndexByUtf(attribute.getName()));
+            descriptor.writeUtfIndex(out, descriptor.getIndexByUtf(attribute.getName()));
+            assert attribute instanceof UnknownAttribute;
             attribute.writeTo(out, descriptor);
         }
     }

@@ -1,5 +1,9 @@
 package com.ess.jloader.utils;
 
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
 /**
  * @author Sergey Evdokimov
  */
@@ -46,5 +50,11 @@ public class Utils {
         }
 
         return className.concat(".java");
+    }
+
+    public static void read(DataInputStream in, ByteBuffer buffer, int length) throws IOException {
+        int position = buffer.position();
+        in.readFully(buffer.array(), position, length);
+        buffer.position(position + length);
     }
 }

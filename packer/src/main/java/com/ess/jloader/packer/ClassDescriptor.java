@@ -445,7 +445,7 @@ public class ClassDescriptor {
         buffer.position(buffer.position() + strSize);
     }
 
-    private void writeSmallShort3(DataOutputStream out, int x) throws IOException {
+    public void writeSmallShort3(DataOutputStream out, int x) throws IOException {
         assert x <= 0xFFFF;
 
         if (PackClassLoader.CHECK_LIMITS) {

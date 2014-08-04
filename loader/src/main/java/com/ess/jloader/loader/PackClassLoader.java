@@ -418,10 +418,27 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         }
 
         private void processCodeAttr(DataInputStream defDataIn) throws IOException {
-            int length = defDataIn.readInt();
-            buffer.putInt(length);
-            defDataIn.readFully(buffer.array(), buffer.position(), length);
-            buffer.position(buffer.position() + length);
+            int lengthPosition = buffer.position();
+
+            defDataIn.readFully(buffer.array(), lengthPosition + 4, 4); // read max_stack & max_locals
+
+            buffer.position(lengthPosition + 4 + 4);
+
+            int codeLength = defDataIn.readInt();
+            buffer.putInt(codeLength);
+            Utils.read(defDataIn, buffer, codeLength);
+
+            int exceptionTableLength = defDataIn.readUnsignedShort();
+            buffer.putShort((short) exceptionTableLength);
+            Utils.read(defDataIn, buffer, exceptionTableLength * 4*2);
+
+            int attrCount = readSmallShort3(defDataIn);
+            buffer.putShort((short) attrCount);
+            for (int i = 0; i < attrCount; i++) {
+                processAttr(defDataIn);
+            }
+
+            buffer.putInt(lengthPosition, buffer.position() - lengthPosition - 4);
         }
 
         private void processAttr(DataInputStream defDataIn) throws IOException {
