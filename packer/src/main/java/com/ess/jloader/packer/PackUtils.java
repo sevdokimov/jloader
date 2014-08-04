@@ -8,6 +8,7 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -188,4 +189,10 @@ public class PackUtils {
         }
     }
 
+    public static byte[] readBytes(ByteBuffer buffer, int length) {
+        int newPos = buffer.position() + length;
+        byte[] res = Arrays.copyOfRange(buffer.array(), buffer.position(), newPos);
+        buffer.position(newPos);
+        return res;
+    }
 }

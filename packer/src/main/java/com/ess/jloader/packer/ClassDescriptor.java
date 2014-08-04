@@ -312,27 +312,12 @@ public class ClassDescriptor {
         }
     }
 
-    private String getUtfByIndex(int index) {
+    public String getUtfByIndex(int index) {
         return allUtf.get(index - firstUtfIndex);
     }
 
-    private int getIndexByUtf(String utf) {
+    public int getIndexByUtf(String utf) {
         return utf2index.get(utf) + firstUtfIndex;
-    }
-
-    private ArrayList<Attribute> readAllAttributes(AttributeType type, ByteBuffer buffer) throws IOException {
-        int attrCount = buffer.getShort() & 0xFFFF;
-
-        ArrayList<Attribute> res = new ArrayList<Attribute>();
-
-        for (int i = 0; i < attrCount; i++) {
-            int nameIndex = buffer.getShort() & 0xFFFF;
-            String name = getUtfByIndex(nameIndex);
-
-            res.add(AttributeUtils.getInstance().read(type, name, buffer));
-        }
-
-        return res;
     }
 
     private void processFields(ByteBuffer buffer, DataOutputStream out) throws IOException {
@@ -349,7 +334,7 @@ public class ClassDescriptor {
             int descrIndex = buffer.getShort() & 0xFFFF;
             writeUtfIndex(out, descrIndex);
 
-            List<Attribute> attributes = readAllAttributes(AttributeType.FIELD, buffer);
+            List<Attribute> attributes = AttributeUtils.readAllAttributes(AttributeType.FIELD, this, buffer);
 
             writeSmallShort3(out, attributes.size());
 
@@ -374,7 +359,7 @@ public class ClassDescriptor {
             int descrIndex = buffer.getShort() & 0xFFFF;
             writeUtfIndex(out, descrIndex);
 
-            List<Attribute> attributes = readAllAttributes(AttributeType.METHOD, buffer);
+            List<Attribute> attributes = AttributeUtils.readAllAttributes(AttributeType.METHOD, this, buffer);
 
             writeSmallShort3(out, attributes.size());
 
@@ -398,7 +383,7 @@ public class ClassDescriptor {
     }
 
     private void processClassAttributes(ByteBuffer buffer, DataOutputStream out) throws IOException {
-        List<Attribute> attributes = readAllAttributes(AttributeType.CLASS, buffer);
+        List<Attribute> attributes = AttributeUtils.readAllAttributes(AttributeType.CLASS, this, buffer);
 
         writeSmallShort3(out, attributes.size());
 
@@ -507,7 +492,7 @@ public class ClassDescriptor {
         }
     }
 
-    private void writeUtfIndex(DataOutputStream out, int utfIndex) throws IOException {
+    public void writeUtfIndex(DataOutputStream out, int utfIndex) throws IOException {
         assert utfIndex >= firstUtfIndex;
         writeLimitedNumber(out, utfIndex - firstUtfIndex, allUtf.size() - 1);
     }

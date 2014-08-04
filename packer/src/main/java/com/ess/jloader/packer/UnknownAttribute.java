@@ -1,10 +1,10 @@
 package com.ess.jloader.packer;
 
-import java.io.DataInputStream;
+import org.jetbrains.annotations.Nullable;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 /**
  * @author Sergey Evdokimov
@@ -15,16 +15,11 @@ public class UnknownAttribute extends Attribute {
 
     private byte[] body;
 
-    public UnknownAttribute(String name, ByteBuffer buffer) throws IOException {
+    public UnknownAttribute(String name, ByteBuffer buffer) {
         super(name);
 
         length = buffer.getInt();
-
-        int newPosition = buffer.position() + length;
-
-        body = Arrays.copyOfRange(buffer.array(), buffer.position(), newPosition);
-
-        buffer.position(newPosition);
+        body = PackUtils.readBytes(buffer, length);
     }
 
 
@@ -35,8 +30,9 @@ public class UnknownAttribute extends Attribute {
     }
 
     public static final AttributeFactory<UnknownAttribute> FACTORY = new AttributeFactory<UnknownAttribute>() {
+        @Nullable
         @Override
-        public UnknownAttribute read(AttributeType type, String name, ByteBuffer buffer) throws IOException {
+        public UnknownAttribute read(AttributeType type, ClassDescriptor descriptor, String name, ByteBuffer buffer) {
             return new UnknownAttribute(name, buffer);
         }
     };
