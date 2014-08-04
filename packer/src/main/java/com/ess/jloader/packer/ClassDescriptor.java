@@ -39,6 +39,15 @@ public class ClassDescriptor {
     private int firstNameAndTypeIndex;
     private int constCount;
 
+    private int firstFieldIndex;
+    private List<ConstField> constFields;
+
+    private int firstMethodIndex;
+    private List<ConstMethod> constMethods;
+
+    private int firstIMethodIndex;
+    private List<ConstInterface> constInterfaces;
+
     private final Set<String> generatedStr;
 
     private List<String> allUtf;
@@ -166,9 +175,9 @@ public class ClassDescriptor {
         constClasses = new ArrayList<ConstClass>();
         constNameAndType = new ArrayList<ConstNameAndType>();
 
-        List<ConstMethod> constMethod = new ArrayList<ConstMethod>();
-        List<ConstInterface> constInterface = new ArrayList<ConstInterface>();
-        List<ConstField> constField = new ArrayList<ConstField>();
+        constMethods = new ArrayList<ConstMethod>();
+        constInterfaces = new ArrayList<ConstInterface>();
+        constFields = new ArrayList<ConstField>();
 
         for (AbstractConst aConst : consts) {
             if (aConst.getTag() == ConstUtf.TAG) {
@@ -190,13 +199,13 @@ public class ClassDescriptor {
                 constNameAndType.add((ConstNameAndType) aConst);
             }
             else if (aConst instanceof ConstMethod) {
-                constMethod.add((ConstMethod) aConst);
+                constMethods.add((ConstMethod) aConst);
             }
             else if (aConst instanceof ConstInterface) {
-                constInterface.add((ConstInterface) aConst);
+                constInterfaces.add((ConstInterface) aConst);
             }
             else if (aConst instanceof ConstField) {
-                constField.add((ConstField) aConst);
+                constFields.add((ConstField) aConst);
             }
         }
 
@@ -215,8 +224,11 @@ public class ClassDescriptor {
         int utfCount = allUtf.size();
         firstUtfIndex = constCount - utfCount;
         firstNameAndTypeIndex = firstUtfIndex - constNameAndType.size();
+        firstMethodIndex = firstNameAndTypeIndex - constMethods.size();
+        firstIMethodIndex = firstMethodIndex - constInterfaces.size();
+        firstFieldIndex = firstIMethodIndex - constFields.size();
 
-        byte[] classBytes = repack(classReader, constClasses, constField, constInterface, constMethod,
+        byte[] classBytes = repack(classReader, constClasses, constFields, constInterfaces, constMethods,
                 constNameAndType, allUtf);
 
         ByteBuffer buffer = ByteBuffer.wrap(classBytes);
@@ -572,6 +584,27 @@ public class ClassDescriptor {
         }
 
         return res;
+    }
+
+    public int formatFiledIndex(int index) {
+        assert index >= firstFieldIndex;
+        assert index < firstFieldIndex + constFields.size();
+
+        return index - firstFieldIndex;
+    }
+
+    public int formatMethodIndex(int index) {
+        assert index >= firstMethodIndex;
+        assert index < firstMethodIndex + constMethods.size();
+
+        return index - firstMethodIndex;
+    }
+
+    public int formatIMethodIndex(int index) {
+        assert index >= firstIMethodIndex;
+        assert index < firstIMethodIndex + constInterfaces.size();
+
+        return index - firstIMethodIndex;
     }
 
     @Override
