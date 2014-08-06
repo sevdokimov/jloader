@@ -3,6 +3,7 @@ package com.ess.jloader.packer;
 import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.InnerClassNode;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -195,4 +196,39 @@ public class PackUtils {
         buffer.position(newPos);
         return res;
     }
+
+    public static int evaluateAnonymousClassCount(ClassNode cn) {
+        Set<Integer> anonymousIndexes = new HashSet<Integer>();
+        int maxAnonymousClassIndex = 0;
+        for (InnerClassNode innerClass : cn.innerClasses) {
+            if (innerClass.innerName == null) {
+                int dollarIndex = innerClass.name.lastIndexOf('$');
+                if (dollarIndex == cn.name.length() && innerClass.name.startsWith(cn.name)) {
+                    try {
+                        int index = Integer.parseInt(innerClass.name.substring(dollarIndex + 1));
+
+                        if (index == 0) {
+                            return 0;
+                        }
+
+                        if (index > maxAnonymousClassIndex) {
+                            maxAnonymousClassIndex = index;
+                        }
+                        anonymousIndexes.add(index);
+                    } catch (NumberFormatException ignored) {
+
+                    }
+                }
+            }
+        }
+
+        for (int i = 1; i < maxAnonymousClassIndex; i++) {
+            if (!anonymousIndexes.contains(i)) {
+                return 0;
+            }
+        }
+
+        return maxAnonymousClassIndex;
+    }
+
 }

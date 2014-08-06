@@ -61,6 +61,9 @@ public class ClassDescriptor {
 
     private final int[] predefinedUtfIndexes = new int[Utils.PREDEFINED_UTF.length];
 
+    private int anonymousClassCount;
+    private int firstAnonymousNameIndex;
+
     public ClassDescriptor(ClassReader classReader) {
         this.classReader = classReader;
 
@@ -103,6 +106,12 @@ public class ClassDescriptor {
                 generatedStr.add("SourceFile");
                 generatedStr.add(sourceFileName);
             }
+        }
+
+        anonymousClassCount = PackUtils.evaluateAnonymousClassCount(cn);
+        firstAnonymousNameIndex = generatedStr.size();
+        for (int i = 1; i <= anonymousClassCount; i++) {
+            generatedStr.add(className + '$' + i);
         }
     }
 
@@ -247,6 +256,11 @@ public class ClassDescriptor {
         }
 
         writeClassSize(plainData, classBytes.length);
+
+        if (anonymousClassCount > 0) {
+            flags |= Utils.F_HAS_ANONYMOUS_CLASSES;
+            writeSmallShort3(plainData, anonymousClassCount);
+        }
 
         writeSmallShort3(plainData, constCount);
         writeLimitedNumber(plainData, utfCount, constCount);
@@ -625,6 +639,10 @@ public class ClassDescriptor {
         assert index < firstIMethodIndex + constInterfaces.size();
 
         return index - firstIMethodIndex;
+    }
+
+    public int getAnonymousClassCount() {
+        return anonymousClassCount;
     }
 
     @Override

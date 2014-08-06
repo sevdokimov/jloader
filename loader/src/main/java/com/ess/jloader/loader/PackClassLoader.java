@@ -145,6 +145,9 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         private int sourceFileIndex;
 
+        private int anonymousClassCount;
+        private int firstAnonymousNameIndex;
+
         public Unpacker(InputStream inputStream, String className) {
             this.inputStream = inputStream;
             this.in = new DataInputStream(inputStream);
@@ -166,6 +169,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
             // Version
             buffer.putInt(versions[flags & 7]);
+
+            if ((flags & Utils.F_HAS_ANONYMOUS_CLASSES) != 0) {
+                anonymousClassCount = readSmallShort3(in);
+            }
 
             // Const count
             int constCount = readSmallShort3(in);
@@ -215,6 +222,13 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 utfOutput.writeUTF(Utils.generateSourceFileName(className));
 
                 processedUtfCount += 2;
+            }
+
+            firstAnonymousNameIndex = processedUtfCount;
+            for (int i = 1; i <= anonymousClassCount; i++) {
+                utfOutput.write(1);
+                utfOutput.writeUTF(className + '$' + i);
+                processedUtfCount++;
             }
 
             // Packed utf
