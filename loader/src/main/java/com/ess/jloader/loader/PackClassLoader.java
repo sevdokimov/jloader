@@ -114,7 +114,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
     @Override
     public void close() throws IOException {
-        delegateClassLoader.close();
         zipFile.close();
     }
 
