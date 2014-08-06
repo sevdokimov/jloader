@@ -59,7 +59,7 @@ public class ClassDescriptor {
     private int flags = 0;
     private int predefinedUtfFlags = 0;
 
-    private int[] predefinedUtfIndexes = new int[Utils.PREDEFINED_UTF.length];
+    private final int[] predefinedUtfIndexes = new int[Utils.PREDEFINED_UTF.length];
 
     public ClassDescriptor(ClassReader classReader) {
         this.classReader = classReader;
@@ -126,6 +126,10 @@ public class ClassDescriptor {
 
     public ClassReader getClassReader() {
         return classReader;
+    }
+
+    public List<ConstClass> getConstClasses() {
+        return constClasses;
     }
 
     private byte[] repack(ClassReader classReader,
@@ -476,7 +480,7 @@ public class ClassDescriptor {
         buffer.position(buffer.position() + strSize);
     }
 
-    public void writeSmallShort3(DataOutputStream out, int x) throws IOException {
+    public static void writeSmallShort3(DataOutputStream out, int x) throws IOException {
         assert x <= 0xFFFF;
 
         if (PackClassLoader.CHECK_LIMITS) {
@@ -501,7 +505,7 @@ public class ClassDescriptor {
         }
     }
 
-    private void writeLimitedNumber(DataOutputStream out, int x, int limit) throws IOException {
+    public static void writeLimitedNumber(DataOutputStream out, int x, int limit) throws IOException {
         assert x >= 0;
         assert x <= limit;
 
