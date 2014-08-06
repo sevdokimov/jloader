@@ -288,7 +288,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             processMethods(defDataIn);
             processClassAttr(defDataIn);
 
-            assert !buffer.hasRemaining();
+            assert !buffer.hasRemaining() : className;
 
             return array;
         }
@@ -310,7 +310,9 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
             for (int i = 0; i < predefinedUtfCount; i++) {
                 if (predefinedStrFlags < 0) {
-                    predefinedUtfIndexes[i] = currentUtfIndex++;
+                    predefinedUtfIndexes[i] = currentUtfIndex + firstUtfIndex;
+
+                    currentUtfIndex++;
 
                     utfOutput.write(1);
                     utfOutput.writeUTF(Utils.PREDEFINED_UTF[i]);
@@ -417,13 +419,13 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 buffer.putShort((short) attrCount);
 
                 if ((accessFlags & (0x00000400 /*Modifier.ABSTRACT*/ | 0x00000100 /*Modifier.NATIVE*/)) == 0) {
-                    buffer.putShort((short) (firstUtfIndex + predefinedUtfIndexes[Utils.PS_CODE]));
+                    buffer.putShort((short) predefinedUtfIndexes[Utils.PS_CODE]);
                     processCodeAttr(defDataIn);
                     attrCount--;
                 }
 
                 for (int j = 0; j < attrCount; j++) {
-                    processAttr(defDataIn);
+                    processMethodAttr(defDataIn);
                 }
             }
         }
@@ -475,10 +477,41 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             int nameIndex = readUtfIndex(defDataIn);
             buffer.putShort((short) nameIndex);
 
+            processAttrBodyDefault(defDataIn);
+        }
+
+        private void processAttrBodyDefault(DataInputStream defDataIn) throws IOException {
             int length = defDataIn.readInt();
             buffer.putInt(length);
-            defDataIn.readFully(buffer.array(), buffer.position(), length);
-            buffer.position(buffer.position() + length);
+            Utils.read(defDataIn, buffer, length);
+        }
+
+
+        private void processMethodAttr(DataInputStream defDataIn) throws IOException {
+            int nameIndex = readUtfIndex(defDataIn);
+            buffer.putShort((short) nameIndex);
+
+            if (nameIndex == predefinedUtfIndexes[Utils.PS_EXCEPTIONS]) {
+                processExceptionAttr(defDataIn);
+            }
+            else {
+                processAttrBodyDefault(defDataIn);
+            }
+        }
+
+        private void processExceptionAttr(DataInputStream defDataIn) throws IOException {
+            int savedPosition = buffer.position();
+            buffer.position(savedPosition + 4 + 2);
+
+            do {
+                int classIndex = readLimitedShort(defDataIn, classCount);
+                if (classIndex == 0) break;
+
+                buffer.putShort((short) classIndex);
+            } while (true);
+
+            buffer.putInt(savedPosition, buffer.position() - savedPosition - 4);
+            buffer.putShort(savedPosition + 4, (short) ((buffer.position() - savedPosition - 4 - 2) >>> 1));
         }
 
         private int readUtfIndex(DataInputStream in) throws IOException {

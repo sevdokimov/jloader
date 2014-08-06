@@ -19,6 +19,7 @@ public class Utils {
     };
 
     public static final int PS_CODE = 0;
+    public static final int PS_EXCEPTIONS = 3;
 
     public static final byte PACKER_VERSION = 0x01;
 
