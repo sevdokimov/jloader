@@ -47,6 +47,18 @@ public class AttributeUtils {
         return null;
     }
 
+    @NotNull
+    public static Attribute removeAttributeByName(Collection<? extends Attribute> attributes, @NotNull String name) {
+        for (Attribute attribute : attributes) {
+            if (attribute.getName().equals(name)) {
+                attributes.remove(attribute);
+                return attribute;
+            }
+        }
+
+        throw new IllegalArgumentException();
+    }
+
     public static ArrayList<Attribute> readAllAttributes(AttributeType type, ClassDescriptor descriptor, ByteBuffer buffer) {
         int attrCount = buffer.getShort() & 0xFFFF;
 

@@ -399,10 +399,7 @@ public class ClassDescriptor {
             writeSmallShort3(out, attributes.size());
 
             if (!Modifier.isNative(accessFlags) && !Modifier.isAbstract(accessFlags)) {
-                Attribute code = AttributeUtils.findAttributeByName(attributes, "Code");
-                assert code != null;
-
-                attributes.remove(code);
+                Attribute code = AttributeUtils.removeAttributeByName(attributes, "Code");
 
                 code.writeTo(out, this);
             }
