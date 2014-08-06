@@ -15,11 +15,13 @@ public class Utils {
             "LocalVariableTable",
             "Exceptions",
             "InnerClasses",
-            "Synthetic"
+            "Synthetic",
+            "Signature",
     };
 
     public static final int PS_CODE = 0;
     public static final int PS_EXCEPTIONS = 3;
+    public static final int PS_SIGNATURE = 6;
 
     public static final byte PACKER_VERSION = 0x01;
 

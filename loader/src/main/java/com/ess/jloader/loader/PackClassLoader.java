@@ -477,10 +477,17 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             int nameIndex = readUtfIndex(defDataIn);
             buffer.putShort((short) nameIndex);
 
-            processAttrBodyDefault(defDataIn);
+            processAttrBodyDefault(defDataIn, nameIndex);
         }
 
-        private void processAttrBodyDefault(DataInputStream defDataIn) throws IOException {
+        private void processAttrBodyDefault(DataInputStream defDataIn, int nameIndex) throws IOException {
+            if (nameIndex == predefinedUtfIndexes[Utils.PS_SIGNATURE]) {
+                int signUtf = readUtfIndex(defDataIn);
+                buffer.putInt(2);
+                buffer.putShort((short) signUtf);
+                return;
+            }
+
             int length = defDataIn.readInt();
             buffer.putInt(length);
             Utils.read(defDataIn, buffer, length);
@@ -495,7 +502,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 processExceptionAttr(defDataIn);
             }
             else {
-                processAttrBodyDefault(defDataIn);
+                processAttrBodyDefault(defDataIn, nameIndex);
             }
         }
 

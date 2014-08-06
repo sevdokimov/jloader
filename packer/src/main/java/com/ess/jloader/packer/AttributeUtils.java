@@ -12,7 +12,10 @@ import java.util.Collection;
  */
 public class AttributeUtils {
 
-    private final AttributeFactory[] list = new AttributeFactory[]{AttributeExceptions.FACTORY, AttributeCode.FACTORY};
+    private final AttributeFactory[] list = new AttributeFactory[]{
+            AttributeSignature.FACTORY,
+            AttributeExceptions.FACTORY,
+            AttributeCode.FACTORY};
 
     private static final AttributeUtils INSTANCE = new AttributeUtils();
 
