@@ -1,14 +1,12 @@
 package com.ess.jloader.packer;
 
+import com.ess.jloader.loader.PackClassLoader;
 import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.InnerClassNode;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.DataOutput;
-import java.io.IOException;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -37,6 +35,53 @@ public class PackUtils {
     }
 
     public static void getTable(@NotNull ClassNode classNode) {
+    }
+
+    public static void writeSmallShort3(DataOutputStream out, int x) throws IOException {
+        assert x <= 0xFFFF;
+
+        if (PackClassLoader.CHECK_LIMITS) {
+            out.writeByte(0x73);
+        }
+
+        if (x <= 251) {
+            out.write(x);
+        }
+        else {
+            int z = x + 4;
+            int d = 251 + (z >> 8);
+
+            if (d < 255) {
+                out.write(d);
+                out.write(z);
+            }
+            else {
+                out.write(255);
+                out.writeShort(x);
+            }
+        }
+    }
+
+    public static void writeLimitedNumber(DataOutputStream out, int x, int limit) throws IOException {
+        assert x >= 0;
+        assert x <= limit;
+
+        if (PackClassLoader.CHECK_LIMITS) {
+            out.writeShort(limit);
+        }
+
+        if (limit == 0) {
+            // data no needed
+        }
+        else if (limit < 256) {
+            out.write(x);
+        }
+        else if (limit < 256*3) {
+            writeSmallShort3(out, x);
+        }
+        else {
+            out.writeShort(x);
+        }
     }
 
     private static class Package {

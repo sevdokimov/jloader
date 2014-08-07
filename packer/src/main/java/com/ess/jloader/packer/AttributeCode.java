@@ -74,7 +74,7 @@ public class AttributeCode extends Attribute {
             record.writeTo(out);
         }
 
-        descriptor.writeSmallShort3(out, attributes.size());
+        PackUtils.writeSmallShort3(out, attributes.size());
         for (Attribute attribute : attributes) {
             descriptor.writeUtfIndex(out, descriptor.getIndexByUtf(attribute.getName()));
             assert attribute instanceof UnknownAttribute;

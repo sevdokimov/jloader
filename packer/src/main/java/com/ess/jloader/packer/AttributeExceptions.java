@@ -40,10 +40,10 @@ public class AttributeExceptions extends Attribute {
         Arrays.sort(m);
 
         for (Integer x : m) {
-            ClassDescriptor.writeLimitedNumber(out, x, descriptor.getConstClasses().size());
+            PackUtils.writeLimitedNumber(out, x, descriptor.getConstClasses().size());
         }
 
-        ClassDescriptor.writeLimitedNumber(out, 0, descriptor.getConstClasses().size());
+        PackUtils.writeLimitedNumber(out, 0, descriptor.getConstClasses().size());
     }
 
     public static final AttributeFactory FACTORY = new AttributeFactory() {

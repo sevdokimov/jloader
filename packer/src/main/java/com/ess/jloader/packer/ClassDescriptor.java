@@ -1,6 +1,5 @@
 package com.ess.jloader.packer;
 
-import com.ess.jloader.loader.PackClassLoader;
 import com.ess.jloader.packer.consts.*;
 import com.ess.jloader.utils.*;
 import com.google.common.collect.Iterables;
@@ -259,16 +258,16 @@ public class ClassDescriptor {
 
         if (anonymousClassCount > 0) {
             flags |= Utils.F_HAS_ANONYMOUS_CLASSES;
-            writeSmallShort3(plainData, anonymousClassCount);
+            PackUtils.writeSmallShort3(plainData, anonymousClassCount);
         }
 
-        writeSmallShort3(plainData, constCount);
-        writeLimitedNumber(plainData, utfCount, constCount);
-        writeSmallShort3(plainData, constClasses.size());
-        writeSmallShort3(plainData, constFields.size());
-        writeSmallShort3(plainData, constInterfaces.size());
-        writeSmallShort3(plainData, constMethods.size());
-        writeSmallShort3(plainData, constNameAndType.size());
+        PackUtils.writeSmallShort3(plainData, constCount);
+        PackUtils.writeLimitedNumber(plainData, utfCount, constCount);
+        PackUtils.writeSmallShort3(plainData, constClasses.size());
+        PackUtils.writeSmallShort3(plainData, constFields.size());
+        PackUtils.writeSmallShort3(plainData, constInterfaces.size());
+        PackUtils.writeSmallShort3(plainData, constMethods.size());
+        PackUtils.writeSmallShort3(plainData, constNameAndType.size());
 
         skipClassConst(buffer, className);
 
@@ -279,7 +278,7 @@ public class ClassDescriptor {
             writeUtfIndex(plainData, utfIndex);
         }
 
-        writeLimitedNumber(plainData, packedStr.size(), utfCount);
+        PackUtils.writeLimitedNumber(plainData, packedStr.size(), utfCount);
 
         HuffmanOutputStream<String> h = ctx.getLiteralsCache().createHuffmanOutput();
         h.reset(plainData);
@@ -299,11 +298,11 @@ public class ClassDescriptor {
 
             int classIndex = buffer.getShort() & 0xFFFF;
             assert constClasses.get(classIndex - 1).getType().equals(ref.getOwner().getInternalName());
-            writeLimitedNumber(compressed, classIndex, constClasses.size());
+            PackUtils.writeLimitedNumber(compressed, classIndex, constClasses.size());
 
             int nameTypeIndex = buffer.getShort() & 0xFFFF;
             assert nameTypeIndex >= firstNameAndTypeIndex && nameTypeIndex < firstNameAndTypeIndex + constNameAndType.size();
-            writeLimitedNumber(compressed, nameTypeIndex - firstNameAndTypeIndex, constNameAndType.size());
+            PackUtils.writeLimitedNumber(compressed, nameTypeIndex - firstNameAndTypeIndex, constNameAndType.size());
         }
 
         for (ConstNameAndType nameAndType : constNameAndType) {
@@ -357,7 +356,7 @@ public class ClassDescriptor {
 
         for (int i = 0; i < interfaceCount; i++) {
             int classIndex = buffer.getShort();
-            writeLimitedNumber(out, classIndex - 3, constClasses.size() - 1);
+            PackUtils.writeLimitedNumber(out, classIndex - 3, constClasses.size() - 1);
         }
     }
 
@@ -371,7 +370,7 @@ public class ClassDescriptor {
 
     private void processFields(ByteBuffer buffer, DataOutputStream out) throws IOException {
         int fieldCount = buffer.getShort() & 0xFFFF;
-        writeSmallShort3(out, fieldCount);
+        PackUtils.writeSmallShort3(out, fieldCount);
 
         for (int i = 0; i < fieldCount; i++) {
             short accessFlags = buffer.getShort();
@@ -385,7 +384,7 @@ public class ClassDescriptor {
 
             List<Attribute> attributes = AttributeUtils.readAllAttributes(AttributeType.FIELD, this, buffer);
 
-            writeSmallShort3(out, attributes.size());
+            PackUtils.writeSmallShort3(out, attributes.size());
 
             for (Attribute attribute : attributes) {
                 writeUtfIndex(out, getIndexByUtf(attribute.getName()));
@@ -396,7 +395,7 @@ public class ClassDescriptor {
 
     private void processMethods(ByteBuffer buffer, DataOutputStream out) throws IOException {
         int methodCount = buffer.getShort() & 0xFFFF;
-        writeSmallShort3(out, methodCount);
+        PackUtils.writeSmallShort3(out, methodCount);
 
         for (int i = 0; i < methodCount; i++) {
             int accessFlags = buffer.getShort();
@@ -410,7 +409,7 @@ public class ClassDescriptor {
 
             List<Attribute> attributes = AttributeUtils.readAllAttributes(AttributeType.METHOD, this, buffer);
 
-            writeSmallShort3(out, attributes.size());
+            PackUtils.writeSmallShort3(out, attributes.size());
 
             if (!Modifier.isNative(accessFlags) && !Modifier.isAbstract(accessFlags)) {
                 Attribute code = AttributeUtils.removeAttributeByName(attributes, "Code");
@@ -431,7 +430,7 @@ public class ClassDescriptor {
     private void processClassAttributes(ByteBuffer buffer, DataOutputStream out) throws IOException {
         List<Attribute> attributes = AttributeUtils.readAllAttributes(AttributeType.CLASS, this, buffer);
 
-        writeSmallShort3(out, attributes.size());
+        PackUtils.writeSmallShort3(out, attributes.size());
 
         for (Attribute attribute : attributes) {
             if ((flags & Utils.F_HAS_SOURCE_FILE_ATTR) != 0 && attribute.getName().equals("SourceFile")) {
@@ -491,56 +490,9 @@ public class ClassDescriptor {
         buffer.position(buffer.position() + strSize);
     }
 
-    public static void writeSmallShort3(DataOutputStream out, int x) throws IOException {
-        assert x <= 0xFFFF;
-
-        if (PackClassLoader.CHECK_LIMITS) {
-            out.writeByte(0x73);
-        }
-
-        if (x <= 251) {
-            out.write(x);
-        }
-        else {
-            int z = x + 4;
-            int d = 251 + (z >> 8);
-
-            if (d < 255) {
-                out.write(d);
-                out.write(z);
-            }
-            else {
-                out.write(255);
-                out.writeShort(x);
-            }
-        }
-    }
-
-    public static void writeLimitedNumber(DataOutputStream out, int x, int limit) throws IOException {
-        assert x >= 0;
-        assert x <= limit;
-
-        if (PackClassLoader.CHECK_LIMITS) {
-            out.writeShort(limit);
-        }
-
-        if (limit == 0) {
-            // data no needed
-        }
-        else if (limit < 256) {
-            out.write(x);
-        }
-        else if (limit < 256*3) {
-            writeSmallShort3(out, x);
-        }
-        else {
-            out.writeShort(x);
-        }
-    }
-
     public void writeUtfIndex(DataOutputStream out, int utfIndex) throws IOException {
         assert utfIndex >= firstUtfIndex;
-        writeLimitedNumber(out, utfIndex - firstUtfIndex, allUtf.size() - 1);
+        PackUtils.writeLimitedNumber(out, utfIndex - firstUtfIndex, allUtf.size() - 1);
     }
 
     private void copyUtfIndex(ByteBuffer buffer, DataOutputStream out) throws IOException {
@@ -567,9 +519,9 @@ public class ClassDescriptor {
                 case 10: // ClassWriter.METH:
                 case 11: // ClassWriter.IMETH:
                     int classIndex = buffer.getShort();
-                    writeLimitedNumber(out, classIndex - 1, constClasses.size() - 1);
+                    PackUtils.writeLimitedNumber(out, classIndex - 1, constClasses.size() - 1);
                     int nameTypeIndex = buffer.getShort();
-                    writeLimitedNumber(out, nameTypeIndex - firstNameAndTypeIndex, constNameAndType.size() - 1);
+                    PackUtils.writeLimitedNumber(out, nameTypeIndex - firstNameAndTypeIndex, constNameAndType.size() - 1);
                     break;
 
                 case 3: // ClassWriter.INT:
