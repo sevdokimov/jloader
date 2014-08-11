@@ -62,7 +62,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             // Build Huffman tree
             PriorityQueue<HuffmanUtils.TreeElement> queue = new PriorityQueue<HuffmanUtils.TreeElement>();
             for (int i = 0; i < packedStringsCount; i++) {
-                int count = inputStream.readUnsignedShort();
+                int count = readSmallShort3(inputStream);
                 queue.add(new HuffmanUtils.Leaf(count, packedStrings[i]));
             }
             packedStrHuffmanTree = HuffmanUtils.buildHuffmanTree(queue);
@@ -115,6 +115,23 @@ public class PackClassLoader extends ClassLoader implements Closeable {
     @Override
     public void close() throws IOException {
         zipFile.close();
+    }
+
+    static int readSmallShort3(DataInputStream in) throws IOException {
+        if (CHECK_LIMITS) {
+            if (in.readByte() != 0x73) throw new RuntimeException();
+        }
+
+        int x = in.readUnsignedByte();
+        if (x <= 251) {
+            return x;
+        }
+
+        if (x == 255) {
+            return in.readUnsignedShort();
+        }
+
+        return (((x - 251) << 8) + in.readUnsignedByte()) - 4;
     }
 
     private class Unpacker {
@@ -564,23 +581,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             assert res <= limit;
 
             return res;
-        }
-
-        private int readSmallShort3(DataInputStream in) throws IOException {
-            if (CHECK_LIMITS) {
-                if (in.readByte() != 0x73) throw new RuntimeException();
-            }
-
-            int x = in.readUnsignedByte();
-            if (x <= 251) {
-                return x;
-            }
-
-            if (x == 255) {
-                return in.readUnsignedShort();
-            }
-
-            return (((x - 251) << 8) + in.readUnsignedByte()) - 4;
         }
 
         private void skipPadding(ByteBuffer codeBuffer, int startPosition) {

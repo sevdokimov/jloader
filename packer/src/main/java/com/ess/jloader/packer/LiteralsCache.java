@@ -99,8 +99,7 @@ public class LiteralsCache {
             if (integer > 0xFFFF) {
                 throw new InvalidJarException();
             }
-
-            out.writeShort(integer);
+            PackUtils.writeSmallShort3(out, integer);
         }
     }
 }
