@@ -24,12 +24,10 @@ public class AttributeCode extends Attribute {
 
     private ArrayList<Attribute> attributes;
 
-    private int length;
-
     public AttributeCode(ByteBuffer buffer, ClassDescriptor descriptor) {
         super("Code");
 
-        length = buffer.getInt();
+        int length = buffer.getInt();
 
         int savedPos = buffer.position();
 
