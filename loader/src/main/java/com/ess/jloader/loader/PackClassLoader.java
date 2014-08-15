@@ -266,8 +266,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             skipConstTableTail(defDataIn, constCount - 1 - classCount
                             - fieldConstCount - imethodConstCount - methodConstCount
                             - nameAndTypeCount
-                            - utfCount,
-                    firstUtfIndex - nameAndTypeCount, nameAndTypeCount);
+                            - utfCount);
 
             int firstNameAndType = firstUtfIndex - nameAndTypeCount;
 
@@ -350,8 +349,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             return currentUtfIndex;
         }
 
-        private void skipConstTableTail(DataInputStream in, int count,
-                                        int firstNameAndTypeIndex, int nameAndTypeCount) throws IOException {
+        private void skipConstTableTail(DataInputStream in, int count) throws IOException {
             ByteBuffer buffer = this.buffer;
             byte[] array = buffer.array();
 
@@ -627,7 +625,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                     case InsnTypes.TABL_INSN: {
                         skipPadding(codeBuffer, startPosition);
 
-                        int defaultLabel = codeBuffer.getInt(); // default ref
+                        codeBuffer.getInt(); // default ref
 
                         int min = codeBuffer.getInt();
                         int max = codeBuffer.getInt();

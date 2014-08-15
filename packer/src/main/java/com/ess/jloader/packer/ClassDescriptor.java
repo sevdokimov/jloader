@@ -4,13 +4,15 @@ import com.ess.jloader.packer.consts.*;
 import com.ess.jloader.utils.*;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.ClassNode;
 
-import java.io.*;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.zip.Deflater;
@@ -20,8 +22,6 @@ import java.util.zip.DeflaterOutputStream;
 * @author Sergey Evdokimov
 */
 public class ClassDescriptor {
-
-    private static final Logger log = Logger.getLogger(ClassDescriptor.class);
 
     public final ClassReader classReader;
 
