@@ -148,6 +148,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         private ByteBuffer buffer;
 
         private int utfCount;
+        private LimitNumberReader utfCountLimiter;
         private int firstUtfIndex;
 
         private int classCount;
@@ -194,7 +195,11 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             int constCount = readSmallShort3(in);
             buffer.putShort((short) constCount);
 
-            utfCount = readLimitedShort(in, constCount);
+            LimitNumberReader constCountLimiter = new LimitNumberReader(constCount);
+
+            utfCount = constCountLimiter.read(in);
+            utfCountLimiter = new LimitNumberReader(utfCount - 1);
+
             firstUtfIndex = constCount - utfCount;
 
             classCount = readSmallShort3(in);
@@ -238,7 +243,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 processedUtfCount += 2;
             }
 
-            int packedStrCount = readLimitedShort(in, utfCount);
+            int packedStrCount = utfCountLimiter.read(in);
 
             firstAnonymousNameIndex = processedUtfCount;
             for (int i = 1; i <= anonymousClassCount; i++) {
@@ -544,6 +549,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         private int readUtfIndex(DataInput in) throws IOException {
             return firstUtfIndex + readLimitedShort(in, utfCount - 1);
+        }
+
+        private int readUtfIndex(BitInputStream in) throws IOException {
+            return firstUtfIndex + utfCountLimiter.read(in);
         }
 
         private int readLimitedShort(DataInput in, int limit) throws IOException {

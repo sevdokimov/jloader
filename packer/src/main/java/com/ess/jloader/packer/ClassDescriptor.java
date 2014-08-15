@@ -35,6 +35,7 @@ public class ClassDescriptor {
     private int firstUtfIndex;
     private int firstNameAndTypeIndex;
     private int constCount;
+    private LimitNumberWriter constCountLimiter;
 
     private int firstFieldIndex;
     private List<ConstField> constFields;
@@ -48,6 +49,7 @@ public class ClassDescriptor {
     private final Set<String> generatedStr;
 
     private List<String> allUtf;
+    private LimitNumberWriter utfLimiter;
     private Map<String, Integer> utf2index;
 
     private List<ConstClass> constClasses;
@@ -70,6 +72,7 @@ public class ClassDescriptor {
 
         consts = Resolver.resolveAll(classReader, true);
         constCount = getConstPoolSize(consts);
+        constCountLimiter = LimitNumberWriter.create(constCount);
 
         generatedStr = new LinkedHashSet<String>();
         generatedStr.add(className);
@@ -230,14 +233,14 @@ public class ClassDescriptor {
         moveToBegin(constClasses, 1, new ConstClass(classReader.getSuperName()));
 
         allUtf = Lists.newArrayList(Iterables.concat(generatedStr, packedStr, notPackedStr));
+        utfLimiter = LimitNumberWriter.create(allUtf.size() - 1);
 
         utf2index = new HashMap<String, Integer>();
         for (int i = 0; i < allUtf.size(); i++) {
             utf2index.put(allUtf.get(i), i);
         }
 
-        int utfCount = allUtf.size();
-        firstUtfIndex = constCount - utfCount;
+        firstUtfIndex = constCount - allUtf.size();
         firstNameAndTypeIndex = firstUtfIndex - constNameAndType.size();
         firstMethodIndex = firstNameAndTypeIndex - constMethods.size();
         firstIMethodIndex = firstMethodIndex - constInterfaces.size();
@@ -262,8 +265,12 @@ public class ClassDescriptor {
         plainData.writeSmall_0_3_8_16(anonymousClassCount);
 
         PackUtils.writeSmallShort3(plainData, constCount);
-        PackUtils.writeLimitedNumber(plainData, utfCount, constCount);
+
+        constCountLimiter.write(plainData, allUtf.size());
+
         PackUtils.writeSmallShort3(plainData, constClasses.size());
+        LimitNumberWriter constClassesLimiter = LimitNumberWriter.create(constClasses.size());
+
         PackUtils.writeSmallShort3(plainData, constFields.size());
         PackUtils.writeSmallShort3(plainData, constInterfaces.size());
         PackUtils.writeSmallShort3(plainData, constMethods.size());
@@ -282,7 +289,7 @@ public class ClassDescriptor {
             plainData.writeBoolean(b);
         }
 
-        PackUtils.writeLimitedNumber(plainData, packedStr.size(), utfCount);
+        utfLimiter.write(plainData, packedStr.size());
 
         HuffmanOutputStream<String> h = ctx.getLiteralsCache().createHuffmanOutput();
         h.reset(plainData);
@@ -295,7 +302,7 @@ public class ClassDescriptor {
         copyConstTableTail(buffer, constCount - 1 - constClasses.size()
                 - constFields.size() - constInterfaces.size() - constMethods.size()
                 - constNameAndType.size()
-                - utfCount, compressed);
+                - allUtf.size(), compressed);
 
         for (ConstAbstractRef ref : Iterables.concat(constFields, constInterfaces, constMethods)) {
             int tag = buffer.get();
@@ -481,6 +488,11 @@ public class ClassDescriptor {
 
         int strSize = buffer.getShort() & 0xFFFF;
         buffer.position(buffer.position() + strSize);
+    }
+
+    public void writeUtfIndex(BitOutputStream out, int utfIndex) throws IOException {
+        assert utfIndex >= firstUtfIndex;
+        utfLimiter.write(out, utfIndex - firstUtfIndex);
     }
 
     public void writeUtfIndex(DataOutput out, int utfIndex) throws IOException {
