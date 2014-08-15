@@ -30,17 +30,14 @@ public class Utils {
 
     /*
      * Flag bits:
-     * 0, 1, 2 - class version index.
      * 4,5 - interface count
      * 6 - F_HAS_SOURCE_FILE_ATTR
-     * 7 - F_HAS_ANONYMOUS_CLASSES
      */
 
 
     public static final int F_INTERFACE_COUNT_SHIFT = 4;
 
     public static final int F_HAS_SOURCE_FILE_ATTR = 1 << 6;
-    public static final int F_HAS_ANONYMOUS_CLASSES = 1 << 7;
 
     public static String fileNameToClassName(String fileName) {
         assert fileName.endsWith(".class") : fileName;

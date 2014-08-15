@@ -47,7 +47,34 @@ public class BitOutputStream extends FilterOutputStream implements DataOutput {
         }
     }
 
-    public void writeSmall_0_1_4_8(int x) throws IOException {
+    public void writeSmall_0_3_8_16(int x) throws IOException {
+        if (x == 0) {
+            writeBit(0);
+            return;
+        }
+
+        writeBit(1);
+
+        x--;
+
+        if (x < 7) {
+            writeBits(x, 3);
+            return;
+        }
+        writeBits(7, 3);
+
+        x -= 7;
+
+        if (x < 0xFF) {
+            writeByte(x);
+            return;
+        }
+        writeByte(0xFF);
+
+        writeShort(x);
+    }
+
+    public void writeSmall2__0_1_4_8(int x) throws IOException {
         assert x < (1 + (1 << 1) + (1 << 4) + (1 << 8));
 
         if (x == 0) {

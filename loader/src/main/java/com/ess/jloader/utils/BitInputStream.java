@@ -93,7 +93,25 @@ public class BitInputStream extends FilterInputStream implements DataInput {
         throw new UnsupportedOperationException();
     }
 
-    public int readSmall_0_1_4_8() throws IOException {
+    public int readSmall_0_3_8_16() throws IOException {
+        if (readBit() == 0) {
+            return 0;
+        }
+
+        int res = readBits(3);
+        if (res < 7) {
+            return res + 1;
+        }
+
+        res = readBits(8);
+        if (res < 0xFF) {
+            return res + 1 + 7;
+        }
+
+        return readUnsignedShort();
+    }
+
+    public int readSmall2__0_1_4_8() throws IOException {
         int z = readBits(2);
 
         if (z == 0) {

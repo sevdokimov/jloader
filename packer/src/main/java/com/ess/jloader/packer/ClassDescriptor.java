@@ -255,10 +255,7 @@ public class ClassDescriptor {
             throw new RuntimeException();
         }
 
-        if (anonymousClassCount > 0) {
-            flags |= Utils.F_HAS_ANONYMOUS_CLASSES;
-            plainData.writeSmall_0_1_4_8(anonymousClassCount);
-        }
+        plainData.writeSmall_0_3_8_16(anonymousClassCount);
 
         PackUtils.writeSmallShort3(plainData, constCount);
         PackUtils.writeLimitedNumber(plainData, utfCount, constCount);
