@@ -144,6 +144,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         private int flags;
         private int interfacesCount;
+        private boolean hasSourceFileAttr;
 
         private ByteBuffer buffer;
 
@@ -177,6 +178,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             int predefinedStrings = in.readShortBE();
 
             interfacesCount = in.readSmall_0_3_8_16();
+            hasSourceFileAttr = in.readBoolean();
 
             int size = readClassSize();
 
@@ -231,7 +233,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             int processedUtfCount = 1;
 
             processedUtfCount = extractPredefinedStrings(utfOutput, processedUtfCount, predefinedStrings);
-            if ((flags & Utils.F_HAS_SOURCE_FILE_ATTR) != 0) {
+            if (hasSourceFileAttr) {
                 sourceFileIndex = processedUtfCount;
 
                 utfOutput.write(1);
@@ -463,7 +465,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             int attrCount = readSmallShort3(defDataIn);
             buffer.putShort((short) attrCount);
 
-            if ((flags & Utils.F_HAS_SOURCE_FILE_ATTR) != 0) {
+            if (hasSourceFileAttr) {
                 buffer.putShort((short) (sourceFileIndex + firstUtfIndex));
                 buffer.putInt(2);
                 buffer.putShort((short) (sourceFileIndex + 1 + firstUtfIndex));

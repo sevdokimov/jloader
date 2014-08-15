@@ -28,14 +28,6 @@ public class Utils {
 
     public static final byte MAGIC = (byte) 0xAA;
 
-    /*
-     * Flag bits:
-     * 6 - F_HAS_SOURCE_FILE_ATTR
-     */
-
-
-    public static final int F_HAS_SOURCE_FILE_ATTR = 1 << 6;
-
     public static String fileNameToClassName(String fileName) {
         assert fileName.endsWith(".class") : fileName;
         return fileName.substring(0, fileName.length() - ".class".length());

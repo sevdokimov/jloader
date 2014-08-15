@@ -55,6 +55,7 @@ public class ClassDescriptor {
 
     private int flags = 0;
     private int predefinedUtfFlags = 0;
+    private boolean hasSourceFileAttr;
 
     private final int[] predefinedUtfIndexes = new int[Utils.PREDEFINED_UTF.length];
 
@@ -101,7 +102,7 @@ public class ClassDescriptor {
         if (classNode.sourceFile != null) {
             String sourceFileName = Utils.generateSourceFileName(className);
             if (sourceFileName.equals(classNode.sourceFile)) {
-                flags |= Utils.F_HAS_SOURCE_FILE_ATTR;
+                hasSourceFileAttr = true;
                 generatedStr.add("SourceFile");
                 generatedStr.add(sourceFileName);
             }
@@ -183,6 +184,7 @@ public class ClassDescriptor {
         DataOutputStream compressed = new DataOutputStream(forCompressionDataArray);
 
         plainData.writeSmall_0_3_8_16(classNode.interfaces.size());
+        plainData.writeBoolean(hasSourceFileAttr);
 
         Set<String> packedStr = new LinkedHashSet<String>();
         List<String> notPackedStr = new ArrayList<String>();
@@ -426,7 +428,7 @@ public class ClassDescriptor {
         PackUtils.writeSmallShort3(out, attributes.size());
 
         for (Attribute attribute : attributes) {
-            if ((flags & Utils.F_HAS_SOURCE_FILE_ATTR) != 0 && attribute.getName().equals("SourceFile")) {
+            if (hasSourceFileAttr && attribute.getName().equals("SourceFile")) {
                 continue;
             }
 
