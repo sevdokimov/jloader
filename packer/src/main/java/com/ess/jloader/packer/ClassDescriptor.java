@@ -53,7 +53,7 @@ public class ClassDescriptor {
     private List<ConstClass> constClasses;
     private List<ConstNameAndType> constNameAndType;
 
-    private int predefinedUtfFlags = 0;
+    private boolean[] predefinedUtfFlags = new boolean[Utils.PREDEFINED_UTF.length];
     private boolean hasSourceFileAttr;
 
     private final int[] predefinedUtfIndexes = new int[Utils.PREDEFINED_UTF.length];
@@ -83,14 +83,13 @@ public class ClassDescriptor {
                 int idx = predefinedStr.indexOf(s);
 
                 if (idx >= 0) {
-                    predefinedUtfFlags |= 1 << (Utils.PREDEFINED_UTF.length - idx - 1);
-                    predefinedUtfIndexes[idx] = 1;
+                    predefinedUtfFlags[idx] = true;
                 }
             }
         }
 
         for (int i = 0; i < Utils.PREDEFINED_UTF.length; i++) {
-            if (predefinedUtfIndexes[i] == 1) {
+            if (predefinedUtfFlags[i]) {
                 predefinedUtfIndexes[i] = generatedStr.size();
                 generatedStr.add(Utils.PREDEFINED_UTF[i]);
             }
@@ -279,6 +278,10 @@ public class ClassDescriptor {
             writeUtfIndex(plainData, utfIndex);
         }
 
+        for (boolean b : predefinedUtfFlags) {
+            plainData.writeBoolean(b);
+        }
+
         PackUtils.writeLimitedNumber(plainData, packedStr.size(), utfCount);
 
         HuffmanOutputStream<String> h = ctx.getLiteralsCache().createHuffmanOutput();
@@ -449,9 +452,6 @@ public class ClassDescriptor {
     }
 
     public void writeTo(OutputStream out, byte[] dictionary) throws IOException {
-        DataOutputStream dataOut = new DataOutputStream(out);
-        dataOut.writeShort(predefinedUtfFlags);
-
         plainDataArray.writeTo(out);
 
         Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION, true);

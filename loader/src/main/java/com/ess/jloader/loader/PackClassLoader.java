@@ -173,8 +173,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         }
 
         public byte[] unpack() throws IOException {
-            int predefinedStrings = in.readShortBE();
-
             interfacesCount = in.readSmall_0_3_8_16();
             hasSourceFileAttr = in.readBoolean();
 
@@ -220,8 +218,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 buffer.putShort((short) utfIndex);
             }
 
-            int packedStrCount = readLimitedShort(in, utfCount);
-
             OpenByteOutputStream utfBufferArray = new OpenByteOutputStream();
             DataOutputStream utfOutput = new DataOutputStream(utfBufferArray);
 
@@ -230,7 +226,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             utfOutput.writeUTF(className);
             int processedUtfCount = 1;
 
-            processedUtfCount = extractPredefinedStrings(utfOutput, processedUtfCount, predefinedStrings);
+            processedUtfCount = extractPredefinedStrings(utfOutput, processedUtfCount, in);
             if (hasSourceFileAttr) {
                 sourceFileIndex = processedUtfCount;
 
@@ -241,6 +237,8 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
                 processedUtfCount += 2;
             }
+
+            int packedStrCount = readLimitedShort(in, utfCount);
 
             firstAnonymousNameIndex = processedUtfCount;
             for (int i = 1; i <= anonymousClassCount; i++) {
@@ -334,14 +332,12 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             return size;
         }
 
-        private int extractPredefinedStrings(DataOutputStream utfOutput, int currentUtfIndex, int predefinedStrFlags) throws IOException {
+        private int extractPredefinedStrings(DataOutputStream utfOutput, int currentUtfIndex, BitInputStream predefinedStrFlags) throws IOException {
             int predefinedUtfCount = Utils.PREDEFINED_UTF.length;
             predefinedUtfIndexes = new int[predefinedUtfCount];
 
-            predefinedStrFlags <<= 32 - predefinedUtfCount;
-
             for (int i = 0; i < predefinedUtfCount; i++) {
-                if (predefinedStrFlags < 0) {
+                if (predefinedStrFlags.readBoolean()) {
                     predefinedUtfIndexes[i] = currentUtfIndex + firstUtfIndex;
 
                     currentUtfIndex++;
@@ -349,8 +345,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                     utfOutput.write(1);
                     utfOutput.writeUTF(Utils.PREDEFINED_UTF[i]);
                 }
-
-                predefinedStrFlags <<= 1;
             }
 
             return currentUtfIndex;
