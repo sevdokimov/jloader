@@ -30,12 +30,9 @@ public class Utils {
 
     /*
      * Flag bits:
-     * 4,5 - interface count
      * 6 - F_HAS_SOURCE_FILE_ATTR
      */
 
-
-    public static final int F_INTERFACE_COUNT_SHIFT = 4;
 
     public static final int F_HAS_SOURCE_FILE_ATTR = 1 << 6;
 

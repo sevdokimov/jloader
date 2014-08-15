@@ -61,6 +61,8 @@ public class ClassDescriptor {
     private int anonymousClassCount;
     private int firstAnonymousNameIndex;
 
+    private final ClassNode classNode;
+
     public ClassDescriptor(ClassReader classReader) {
         this.classReader = classReader;
 
@@ -94,18 +96,18 @@ public class ClassDescriptor {
             }
         }
 
-        ClassNode cn = new ClassNode();
-        classReader.accept(cn, 0);
-        if (cn.sourceFile != null) {
+        classNode = new ClassNode();
+        classReader.accept(classNode, 0);
+        if (classNode.sourceFile != null) {
             String sourceFileName = Utils.generateSourceFileName(className);
-            if (sourceFileName.equals(cn.sourceFile)) {
+            if (sourceFileName.equals(classNode.sourceFile)) {
                 flags |= Utils.F_HAS_SOURCE_FILE_ATTR;
                 generatedStr.add("SourceFile");
                 generatedStr.add(sourceFileName);
             }
         }
 
-        anonymousClassCount = PackUtils.evaluateAnonymousClassCount(cn);
+        anonymousClassCount = PackUtils.evaluateAnonymousClassCount(classNode);
         if (anonymousClassCount > 0xFF) throw new InvalidJarException();
         firstAnonymousNameIndex = generatedStr.size();
         for (int i = 1; i <= anonymousClassCount; i++) {
@@ -179,6 +181,8 @@ public class ClassDescriptor {
 
         BitOutputStream plainData = new BitOutputStream(plainDataArray);
         DataOutputStream compressed = new DataOutputStream(forCompressionDataArray);
+
+        plainData.writeSmall_0_3_8_16(classNode.interfaces.size());
 
         Set<String> packedStr = new LinkedHashSet<String>();
         List<String> notPackedStr = new ArrayList<String>();
@@ -341,15 +345,7 @@ public class ClassDescriptor {
     private void processInterfaces(ByteBuffer buffer, DataOutputStream out) throws IOException {
         int interfaceCount = buffer.getShort() & 0xFFFF;
 
-        if (interfaceCount <= 2) {
-            flags |= interfaceCount << Utils.F_INTERFACE_COUNT_SHIFT;
-        }
-        else {
-            if (interfaceCount > 255) throw new InvalidJarException();
-            flags |= 3 << Utils.F_INTERFACE_COUNT_SHIFT;
-
-            out.write(interfaceCount);
-        }
+        assert interfaceCount == classNode.interfaces.size();
 
         for (int i = 0; i < interfaceCount; i++) {
             int classIndex = buffer.getShort();
