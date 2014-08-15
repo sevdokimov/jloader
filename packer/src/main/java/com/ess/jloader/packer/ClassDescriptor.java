@@ -244,16 +244,16 @@ public class ClassDescriptor {
 
         ByteBuffer buffer = ByteBuffer.wrap(classBytes);
 
-        int version = buffer.getInt(4);
-        flags |= ctx.getVersionCache().getVersionIndex(version);
+        writeClassSize(plainData, classBytes.length);
 
-        buffer.position(4 + 4); // skip 0xCAFEBABE, version
+        buffer.getInt(); // Skip 0xCAFEBABE
+
+        int version = buffer.getInt();
+        plainData.writeBits(ctx.getVersionCache().getVersionIndex(version), 3);
 
         if ((buffer.getShort() & 0xFFFF) != constCount) {
             throw new RuntimeException();
         }
-
-        writeClassSize(plainData, classBytes.length);
 
         if (anonymousClassCount > 0) {
             flags |= Utils.F_HAS_ANONYMOUS_CLASSES;

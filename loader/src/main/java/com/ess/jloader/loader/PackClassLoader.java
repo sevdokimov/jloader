@@ -185,7 +185,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             buffer.putInt(0xCAFEBABE);
 
             // Version
-            buffer.putInt(versions[flags & 7]);
+            buffer.putInt(versions[in.readBits(3)]);
 
             if ((flags & Utils.F_HAS_ANONYMOUS_CLASSES) != 0) {
                 anonymousClassCount = in.readSmall_0_1_4_8();
