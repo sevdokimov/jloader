@@ -53,7 +53,6 @@ public class ClassDescriptor {
     private List<ConstClass> constClasses;
     private List<ConstNameAndType> constNameAndType;
 
-    private int flags = 0;
     private int predefinedUtfFlags = 0;
     private boolean hasSourceFileAttr;
 
@@ -451,7 +450,6 @@ public class ClassDescriptor {
 
     public void writeTo(OutputStream out, byte[] dictionary) throws IOException {
         DataOutputStream dataOut = new DataOutputStream(out);
-        dataOut.writeShort(flags);
         dataOut.writeShort(predefinedUtfFlags);
 
         plainDataArray.writeTo(out);

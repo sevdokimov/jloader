@@ -142,7 +142,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         private final String className;
 
-        private int flags;
         private int interfacesCount;
         private boolean hasSourceFileAttr;
 
@@ -174,7 +173,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         }
 
         public byte[] unpack() throws IOException {
-            flags = in.readShortBE();
             int predefinedStrings = in.readShortBE();
 
             interfacesCount = in.readSmall_0_3_8_16();
