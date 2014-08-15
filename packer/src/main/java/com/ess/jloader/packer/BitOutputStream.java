@@ -103,6 +103,18 @@ public class BitOutputStream extends FilterOutputStream implements DataOutput {
         writeBits(x, 8);
     }
 
+    public void writeSmall_3_8(int x) throws IOException {
+        if (x < 7) {
+            writeBits(x, 3);
+            return;
+        }
+        writeBits(7, 3);
+        x -= 7;
+
+        assert x < 0x100;
+        writeByte(x);
+    }
+
     @Override
     public void flush() throws IOException {
 

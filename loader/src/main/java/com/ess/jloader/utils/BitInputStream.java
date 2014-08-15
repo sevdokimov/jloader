@@ -127,6 +127,15 @@ public class BitInputStream extends FilterInputStream implements DataInput {
         return readBits(8) + 1 + (1 << 1) + (1 << 4);
     }
 
+    public int readSmall_3_8() throws IOException {
+        int res = readBits(3);
+        if (res < 7) {
+            return res;
+        }
+
+        return readByte() + 7;
+    }
+
     public int readBit() throws IOException {
         if (remainBits == 0) {
             int value = in.read();
