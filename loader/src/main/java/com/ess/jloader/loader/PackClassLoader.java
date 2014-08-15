@@ -117,7 +117,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         zipFile.close();
     }
 
-    static int readSmallShort3(DataInputStream in) throws IOException {
+    static int readSmallShort3(DataInput in) throws IOException {
         if (CHECK_LIMITS) {
             if (in.readByte() != 0x73) throw new RuntimeException();
         }
@@ -138,7 +138,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         private final InputStream inputStream;
 
-        private DataInputStream in;
+        private BitInputStream in;
 
         private final String className;
 
@@ -167,13 +167,13 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         public Unpacker(InputStream inputStream, String className) {
             this.inputStream = inputStream;
-            this.in = new DataInputStream(inputStream);
+            in = new BitInputStream(inputStream);
             this.className = className;
         }
 
         public byte[] unpack() throws IOException {
-            flags = in.readUnsignedShort();
-            int predefinedStrings = in.readUnsignedShort();
+            flags = in.readShortBE();
+            int predefinedStrings = in.readShortBE();
 
             int size = readClassSize();
 
@@ -188,7 +188,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             buffer.putInt(versions[flags & 7]);
 
             if ((flags & Utils.F_HAS_ANONYMOUS_CLASSES) != 0) {
-                anonymousClassCount = readSmallShort3(in);
+                anonymousClassCount = in.readSmall_0_1_4_8();
             }
 
             // Const count
@@ -249,7 +249,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             }
 
             // Packed utf
-            HuffmanInputStream<byte[]> huffmanInputStream = new HuffmanInputStream<byte[]>(inputStream, packedStrHuffmanTree);
+            HuffmanInputStream<byte[]> huffmanInputStream = new HuffmanInputStream<byte[]>(in, packedStrHuffmanTree);
             for (int i = 0; i < packedStrCount; i++) {
                 utfOutput.write((byte) 1);
                 byte[] str = huffmanInputStream.read();
@@ -552,11 +552,11 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             buffer.putShort(savedPosition + 4, (short) ((buffer.position() - savedPosition - 4 - 2) >>> 1));
         }
 
-        private int readUtfIndex(DataInputStream in) throws IOException {
+        private int readUtfIndex(DataInput in) throws IOException {
             return firstUtfIndex + readLimitedShort(in, utfCount - 1);
         }
 
-        private int readLimitedShort(DataInputStream in, int limit) throws IOException {
+        private int readLimitedShort(DataInput in, int limit) throws IOException {
             if (CHECK_LIMITS) {
                 int storedLimit = in.readUnsignedShort();
                 if (storedLimit != limit) {

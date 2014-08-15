@@ -96,7 +96,6 @@ public class PackFreeMarker {
         assert packedFreeMarker.length() <= 571774;
     }
 
-    @Test
     public void statFreeMarker() throws IOException {
         File freeMarkerJar = TestUtils.getJarByMarker("freemarker/core/Assignment.class");
 
@@ -106,7 +105,6 @@ public class PackFreeMarker {
         printStats(packer);
     }
 
-    @Test
     public void statIdea() throws IOException {
         File freeMarkerJar = new File("/home/user/EAP/idea-IU-138.777/lib/idea.jar");
 
@@ -116,7 +114,6 @@ public class PackFreeMarker {
         printStats(packer);
     }
 
-    @Test
     public void packIdea() throws IOException {
         File srcJar = new File("/home/user/EAP/idea-IU-138.777/lib/idea.jar");
 

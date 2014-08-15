@@ -10,9 +10,7 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.ClassNode;
 
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.zip.Deflater;
@@ -108,13 +106,14 @@ public class ClassDescriptor {
         }
 
         anonymousClassCount = PackUtils.evaluateAnonymousClassCount(cn);
+        if (anonymousClassCount > 0xFF) throw new InvalidJarException();
         firstAnonymousNameIndex = generatedStr.size();
         for (int i = 1; i <= anonymousClassCount; i++) {
             generatedStr.add(className + '$' + i);
         }
     }
 
-    private void writeClassSize(DataOutputStream out, int size) throws IOException {
+    private void writeClassSize(BitOutputStream out, int size) throws IOException {
         if (size < 0x8000) {
             out.writeShort(size);
         }
@@ -178,7 +177,7 @@ public class ClassDescriptor {
         plainDataArray = new OpenByteOutputStream();
         forCompressionDataArray = new OpenByteOutputStream();
 
-        DataOutputStream plainData = new DataOutputStream(plainDataArray);
+        BitOutputStream plainData = new BitOutputStream(plainDataArray);
         DataOutputStream compressed = new DataOutputStream(forCompressionDataArray);
 
         Set<String> packedStr = new LinkedHashSet<String>();
@@ -258,7 +257,7 @@ public class ClassDescriptor {
 
         if (anonymousClassCount > 0) {
             flags |= Utils.F_HAS_ANONYMOUS_CLASSES;
-            PackUtils.writeSmallShort3(plainData, anonymousClassCount);
+            plainData.writeSmall_0_1_4_8(anonymousClassCount);
         }
 
         PackUtils.writeSmallShort3(plainData, constCount);
@@ -285,10 +284,11 @@ public class ClassDescriptor {
         for (String s : packedStr) {
             h.write(s);
         }
-        h.finish();
+
+        plainData.finish();
 
         copyConstTableTail(buffer, constCount - 1 - constClasses.size()
-                - constFields.size() - constInterfaces.size()- constMethods.size()
+                - constFields.size() - constInterfaces.size() - constMethods.size()
                 - constNameAndType.size()
                 - utfCount, compressed);
 
@@ -490,7 +490,7 @@ public class ClassDescriptor {
         buffer.position(buffer.position() + strSize);
     }
 
-    public void writeUtfIndex(DataOutputStream out, int utfIndex) throws IOException {
+    public void writeUtfIndex(DataOutput out, int utfIndex) throws IOException {
         assert utfIndex >= firstUtfIndex;
         PackUtils.writeLimitedNumber(out, utfIndex - firstUtfIndex, allUtf.size() - 1);
     }

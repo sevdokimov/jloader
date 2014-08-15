@@ -37,7 +37,7 @@ public class PackUtils {
     public static void getTable(@NotNull ClassNode classNode) {
     }
 
-    public static void writeSmallShort3(DataOutputStream out, int x) throws IOException {
+    public static void writeSmallShort3(DataOutput out, int x) throws IOException {
         assert x <= 0xFFFF;
 
         if (PackClassLoader.CHECK_LIMITS) {
@@ -62,7 +62,7 @@ public class PackUtils {
         }
     }
 
-    public static void writeLimitedNumber(DataOutputStream out, int x, int limit) throws IOException {
+    public static void writeLimitedNumber(DataOutput out, int x, int limit) throws IOException {
         assert x >= 0;
         assert x <= limit;
 

@@ -1,9 +1,9 @@
 package com.ess.jloader.utils;
 
+import com.ess.jloader.packer.BitOutputStream;
 import com.google.common.collect.Maps;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -17,39 +17,20 @@ public class HuffmanOutputStream<T> {
 
     private final Map<T, boolean[]> pathMap;
 
-    private OutputStream out;
-
-    private int bits;
-    private int curBit;
+    private BitOutputStream out;
 
     public HuffmanOutputStream(Map<T, boolean[]> pathMap) {
         this.pathMap = pathMap;
     }
 
-    public void reset(OutputStream out) {
+    public void reset(BitOutputStream out) {
         this.out = out;
-        curBit = 1;
     }
 
     public void write(T t) throws IOException {
         boolean[] booleans = pathMap.get(t);
         for (boolean aBoolean : booleans) {
-            if (aBoolean) {
-                bits |= curBit;
-            }
-
-            curBit <<= 1;
-            if (curBit == 0x100) {
-                out.write(bits);
-                bits = 0;
-                curBit = 1;
-            }
-        }
-    }
-
-    public void finish() throws IOException {
-        if (curBit > 1) {
-            out.write(bits);
+            out.writeBit(aBoolean);
         }
     }
 
