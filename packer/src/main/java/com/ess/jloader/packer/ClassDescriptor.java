@@ -268,7 +268,7 @@ public class ClassDescriptor {
 
         constCountLimiter.write(plainData, allUtf.size());
 
-        PackUtils.writeSmallShort3(plainData, constClasses.size());
+        utfLimiter.write(plainData, constClasses.size());
         LimitNumberWriter constClassesLimiter = LimitNumberWriter.create(constClasses.size());
 
         PackUtils.writeSmallShort3(plainData, constFields.size());
