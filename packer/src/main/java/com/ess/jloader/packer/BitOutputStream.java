@@ -204,4 +204,8 @@ public class BitOutputStream extends FilterOutputStream implements DataOutput {
     public void writeUTF(String s) throws IOException {
         dataOutput.writeUTF(s);
     }
+
+    public OutputStream getDelegate() {
+        return out;
+    }
 }
