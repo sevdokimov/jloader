@@ -20,8 +20,7 @@ public class DataByteArrayOutputStream extends DataOutputStream {
         return delegate.getBuffer();
     }
 
-    public DataInputStream getDataInputStream() {
-        assert size() == delegate.size();
-        return new DataInputStream(new ByteArrayInputStream(delegate.getBuffer(), 0, delegate.size()));
+    public OpenByteOutputStream getDelegate() {
+        return delegate;
     }
 }
