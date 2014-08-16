@@ -273,8 +273,8 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
             for (int i = 0; i < nameAndTypeCount; i++) {
                 buffer.put((byte) 12); // ClassWriter.NAME_TYPE
-                buffer.putShort((short) readUtfIndex(defDataIn));
-                buffer.putShort((short) readUtfIndex(defDataIn));
+                buffer.putShort((short) readUtfIndex(in));
+                buffer.putShort((short) readUtfIndex(in));
             }
 
             // Generated utf

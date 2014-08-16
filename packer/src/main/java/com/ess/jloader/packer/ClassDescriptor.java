@@ -308,8 +308,8 @@ public class ClassDescriptor {
             int tag = buffer.get();
             assert tag == ConstNameAndType.TAG;
 
-            copyUtfIndex(buffer, compressed, nameAndType.getName());
-            copyUtfIndex(buffer, compressed, nameAndType.getDescr());
+            copyUtfIndex(buffer, plainData, nameAndType.getName());
+            copyUtfIndex(buffer, plainData, nameAndType.getDescr());
         }
 
         for (boolean b : predefinedUtfFlags) {
@@ -505,20 +505,7 @@ public class ClassDescriptor {
         PackUtils.writeLimitedNumber(out, utfIndex - firstUtfIndex, allUtf.size() - 1);
     }
 
-    private void copyUtfIndex(ByteBuffer buffer, DataOutputStream out) throws IOException {
-        copyUtfIndex(buffer, out, null);
-    }
-
     private void copyUtfIndex(ByteBuffer buffer, BitOutputStream out, @Nullable String expectedValue) throws IOException {
-        int utfIndex = buffer.getShort() & 0xFFFF;
-        writeUtfIndex(out, utfIndex);
-
-        if (expectedValue != null) {
-            assert allUtf.get(utfIndex - firstUtfIndex).equals(expectedValue);
-        }
-    }
-
-    private void copyUtfIndex(ByteBuffer buffer, DataOutputStream out, @Nullable String expectedValue) throws IOException {
         int utfIndex = buffer.getShort() & 0xFFFF;
         writeUtfIndex(out, utfIndex);
 
@@ -548,11 +535,6 @@ public class ClassDescriptor {
                 case 18: // ClassWriter.INDY:
                     out.write(buffer.array(), buffer.position(), 4);
                     buffer.position(buffer.position() + 4);
-                    break;
-
-                case 12: // ClassWriter.NAME_TYPE:
-                    copyUtfIndex(buffer, out);
-                    copyUtfIndex(buffer, out);
                     break;
 
                 case 5:// ClassWriter.LONG:
