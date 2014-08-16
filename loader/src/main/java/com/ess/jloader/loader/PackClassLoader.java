@@ -597,15 +597,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             return res;
         }
 
-        private int skipPadding(int pos, int startPosition) {
-            // skips 0 to 3 padding bytes
-            while (((pos - startPosition) & 3) > 0) {
-                pos++;
-            }
-
-            return pos;
-        }
-
         private void patchCode(int start, int end) {
             byte[] array = buffer.array();
             int pos = start;
@@ -648,7 +639,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                         break;
 
                     case InsnTypes.TABL_INSN: {
-                        pos = skipPadding(pos, start);
+                        pos += (4 - ((pos - start) & 3)) & 3; // skips 0 to 3 padding bytes
 
                         pos += 4; // default ref
 
@@ -664,7 +655,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                     }
 
                     case InsnTypes.LOOK_INSN: {
-                        pos = skipPadding(pos, start);
+                        pos += (4 - ((pos - start) & 3)) & 3; // skips 0 to 3 padding bytes
 
                         pos += 4;
 
@@ -675,26 +666,28 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
                     case InsnTypes.ITFMETH_INSN:
                     case InsnTypes.FIELDORMETH_INSN:
-                        if (opcode == 180 /*Opcodes.GETFIELD*/ || opcode == 181 /*Opcodes.PUTFIELD*/
-                                || opcode == 178 /*Opcodes.GETSTATIC*/ || opcode == 179 /*Opcodes.PUTSTATIC*/) {
-                            int fieldIndex = (buffer.getShort(pos) & 0xFFFF) + firstFieldIndex;
-                            buffer.putShort(pos, (short) fieldIndex);
+                        int ref = buffer.getShort(pos) & 0xFFFF;
 
-                            pos += 2;
-                        } else if (opcode == 185 /*Opcodes.INVOKEINTERFACE*/) {
-                            int imethIndex = (buffer.getShort(pos) & 0xFFFF) + firstImethodIndex;
+                        if (opcode == 185 /*Opcodes.INVOKEINTERFACE*/) {
+                            int imethIndex = ref + firstImethodIndex;
                             buffer.putShort(pos, (short) imethIndex);
 
                             pos += 2 + 2;
                         }
-                        else if (opcode == 182/*Opcodes.INVOKEVIRTUAL*/ || opcode == 183/*Opcodes.INVOKESPECIAL*/
-                                || opcode == 184 /*Opcodes.INVOKESTATIC*/) {
-                            int methIndex = (buffer.getShort(pos) & 0xFFFF) + firstMethodIndex;
-                            buffer.putShort(pos, (short) methIndex);
-                            pos += 2;
-                        }
                         else {
-                            throw new UnsupportedOperationException(String.valueOf(opcode));
+                            if (opcode == 180 /*Opcodes.GETFIELD*/ || opcode == 181 /*Opcodes.PUTFIELD*/
+                                    || opcode == 178 /*Opcodes.GETSTATIC*/ || opcode == 179 /*Opcodes.PUTSTATIC*/) {
+                                ref += firstFieldIndex;
+                            } else if (opcode == 182/*Opcodes.INVOKEVIRTUAL*/ || opcode == 183/*Opcodes.INVOKESPECIAL*/
+                                    || opcode == 184 /*Opcodes.INVOKESTATIC*/) {
+                                ref += firstMethodIndex;
+                            }
+                            else {
+                                throw new UnsupportedOperationException(String.valueOf(opcode));
+                            }
+
+                            buffer.putShort(pos, (short) ref);
+                            pos += 2;
                         }
                         break;
 
