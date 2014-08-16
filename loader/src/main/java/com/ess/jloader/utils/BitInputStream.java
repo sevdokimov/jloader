@@ -1,21 +1,30 @@
 package com.ess.jloader.utils;
 
-import com.ess.jloader.loader.PackClassLoader;
-
 import java.io.*;
 
 /**
  * @author Sergey Evdokimov
  */
-public class BitInputStream extends FilterInputStream implements DataInput {
+public class BitInputStream extends InputStream implements DataInput {
 
     private int x;
     private int remainBits;
 
     private final DataInputStream dataIn = new DataInputStream(this);
 
-    public BitInputStream(InputStream in) {
-        super(in);
+    private final byte[] buffer;
+    private final int limit;
+
+    private int pos;
+
+    public BitInputStream(byte[] buffer, int pos, int limit) {
+        this.buffer = buffer;
+        this.limit = limit;
+
+        this.pos = pos;
+
+        assert limit <= buffer.length;
+        assert pos >= 0 && pos <= limit;
     }
 
     @Override
@@ -27,31 +36,23 @@ public class BitInputStream extends FilterInputStream implements DataInput {
     public int read(byte[] b, int off, int len) throws IOException {
         if (len == 0) return 0;
 
-        int read = in.read(b, off, len);
-        if (read < 0) {
-            return -1;
-        }
+        if (pos == limit) return -1;
 
-        if (remainBits == 0) {
-            return read;
-        }
+        int end = off + len;
+        do {
+            x |= (buffer[pos++] & 0xFF) << remainBits;
+            b[off++] = (byte) x;
 
-        int z = x;
-        int end = off + read;
-        for (int i = off; i != end; i++) {
-            z = ((b[i] & 0xFF) << remainBits) | z;
-            b[i] = (byte) z;
-            z >>>= 8;
+            x >>>= 8;
         }
-        x = z;
+        while (off < end && pos < limit);
 
-        return read;
+        return off - (end - len);
     }
 
     public int readBitsSoft(int bitCount) throws IOException {
         while (bitCount > remainBits) {
-            int value = in.read();
-            if (value == -1) {
+            if (pos == limit) {
                 if (remainBits == 0) {
                     return -1;
                 }
@@ -60,7 +61,7 @@ public class BitInputStream extends FilterInputStream implements DataInput {
                 }
             }
 
-            x |= (value << remainBits);
+            x |= ((buffer[pos++] & 0xFF) << remainBits);
             remainBits += 8;
         }
 
@@ -69,19 +70,17 @@ public class BitInputStream extends FilterInputStream implements DataInput {
         remainBits -= bitCount;
 
         return res;
-
     }
 
     public int readBits(int bitCount) throws IOException {
         while (bitCount > remainBits) {
-            int value = in.read();
-            if (value == -1) throw new EOFException();
+            if (pos == limit) throw new EOFException();
 
-            x |= (value << remainBits);
+            x |= ((buffer[pos++] & 0xFF) << remainBits);
             remainBits += 8;
         }
 
-        int res = x & ((1 << bitCount) - 1);  // optimize???
+        int res = x & ((1 << bitCount) - 1);
         x >>>= bitCount;
         remainBits -= bitCount;
 
@@ -138,14 +137,10 @@ public class BitInputStream extends FilterInputStream implements DataInput {
 
     public int readBit() throws IOException {
         if (remainBits == 0) {
-            int value = in.read();
-            if (value == -1) throw new EOFException();
+            if (pos == limit) throw new EOFException();
 
-            int res = value & 1;
-
-            x = value >>> 1;
-            remainBits = 7;
-            return res;
+            x = buffer[pos++] & 0xFF;
+            remainBits = 8;
         }
 
         int res = x & 1;
@@ -183,10 +178,9 @@ public class BitInputStream extends FilterInputStream implements DataInput {
 
     @Override
     public int readUnsignedByte() throws IOException {
-        int value = in.read();
-        if (value == -1) throw new EOFException();
+        if (pos == limit) throw new EOFException();
 
-        x |= (value << remainBits);
+        x |= ((buffer[pos++] & 0xFF) << remainBits);
 
         int res = x & 0xFF;
         x >>>= 8;
@@ -209,15 +203,11 @@ public class BitInputStream extends FilterInputStream implements DataInput {
 
     @Override
     public int readUnsignedShort() throws IOException {
-        int value = in.read();
-        if (value == -1) throw new EOFException();
+        if (pos + 2 > limit) throw new EOFException();
 
-        x |= (value << remainBits);
+        x |= ((buffer[pos++] & 0xFF) << remainBits);
 
-        value = in.read();
-        if (value == -1) throw new EOFException();
-
-        x |= (value << (remainBits + 8));
+        x |= ((buffer[pos++] & 0xFF) << (remainBits + 8));
 
         int res = x & 0xFFFF;
         x >>>= 16;
@@ -232,24 +222,18 @@ public class BitInputStream extends FilterInputStream implements DataInput {
 
     @Override
     public int readInt() throws IOException {
-        int value = in.read();
-        if (value == -1) throw new EOFException();
-        x |= (value << remainBits);
+        if (pos + 4 > limit) throw new EOFException();
 
-        value = in.read();
-        if (value == -1) throw new EOFException();
-        x |= (value << (remainBits + 8));
+        x |= ((buffer[pos++] & 0xFF) << remainBits);
 
-        value = in.read();
-        if (value == -1) throw new EOFException();
-        x |= (value << (remainBits + 16));
+        x |= ((buffer[pos++] & 0xFF) << (remainBits + 8));
+
+        x |= ((buffer[pos++] & 0xFF) << (remainBits + 16));
 
         int res = x & 0xFFFFFF;
         x >>>= 24;
 
-        value = in.read();
-        if (value == -1) throw new EOFException();
-        x |= (value << remainBits);
+        x |= ((buffer[pos++] & 0xFF) << remainBits);
 
         res |= x << 24;
 

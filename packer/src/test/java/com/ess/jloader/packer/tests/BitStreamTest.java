@@ -35,7 +35,7 @@ public class BitStreamTest {
 
     @Test
     public void testEmptyStream() throws IOException {
-        BitInputStream in = new BitInputStream(new ByteArrayInputStream(new byte[0]));
+        BitInputStream in = new BitInputStream(new byte[0], 0, 0);
 
         assert in.read() == -1;
 
@@ -164,7 +164,7 @@ public class BitStreamTest {
 
             OpenByteOutputStream out = (OpenByteOutputStream) this.out;
 
-            return new BitInputStream(new ByteArrayInputStream(out.getBuffer(), 0, out.size()));
+            return new BitInputStream(out.getBuffer(), 0, out.size());
         }
     }
 }

@@ -97,7 +97,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 byte[] plainData = new byte[plainSize];
                 dataInputStream.readFully(plainData);
 
-                BitInputStream in = new BitInputStream(new ByteArrayInputStream(plainData));
+                BitInputStream in = new BitInputStream(plainData, 0, plainSize);
 
                 Inflater inflater = new Inflater(true);
                 inflater.setDictionary(dictionary);
