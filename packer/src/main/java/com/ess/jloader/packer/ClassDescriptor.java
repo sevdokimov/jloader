@@ -286,19 +286,7 @@ public class ClassDescriptor {
             writeUtfIndex(plainData, utfIndex);
         }
 
-        for (boolean b : predefinedUtfFlags) {
-            plainData.writeBoolean(b);
-        }
-
         utfLimiter.write(plainData, packedStr.size());
-
-        HuffmanOutputStream<String> h = ctx.getLiteralsCache().createHuffmanOutput();
-        h.reset(plainData);
-        for (String s : packedStr) {
-            h.write(s);
-        }
-
-        plainData.finish();
 
         copyConstTableTail(buffer, constCount - 1 - constClasses.size()
                 - constFields.size() - constInterfaces.size() - constMethods.size()
@@ -326,12 +314,21 @@ public class ClassDescriptor {
             copyUtfIndex(buffer, compressed, nameAndType.getDescr());
         }
 
+        for (boolean b : predefinedUtfFlags) {
+            plainData.writeBoolean(b);
+        }
+
         for (String s : generatedStr) {
             skipUtfConst(buffer, s);
         }
+
+        HuffmanOutputStream<String> h = ctx.getLiteralsCache().createHuffmanOutput();
+        h.reset(plainData);
         for (String s : packedStr) {
             skipUtfConst(buffer, s);
+            h.write(s);
         }
+
         for (String s : notPackedStr) {
             compressed.writeUTF(s);
             skipUtfConst(buffer, s);
@@ -352,6 +349,8 @@ public class ClassDescriptor {
         processClassAttributes(buffer, compressed);
 
         assert !buffer.hasRemaining();
+
+        plainData.finish();
     }
 
     private void processInterfaces(ByteBuffer buffer, DataOutputStream out) throws IOException {

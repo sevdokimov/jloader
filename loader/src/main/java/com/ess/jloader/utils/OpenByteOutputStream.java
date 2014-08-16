@@ -16,6 +16,11 @@ public class OpenByteOutputStream extends ByteArrayOutputStream {
         super(size);
     }
 
+    public OpenByteOutputStream(byte[] buffer) {
+        super(0);
+        this.buf = buffer;
+    }
+
     public byte[] getBuffer() {
         return buf;
     }
@@ -29,5 +34,9 @@ public class OpenByteOutputStream extends ByteArrayOutputStream {
 
     public void writeTo(ByteBuffer buffer) {
         buffer.put(buf, 0, count);
+    }
+
+    public void setPosition(int position) {
+        count = position;
     }
 }

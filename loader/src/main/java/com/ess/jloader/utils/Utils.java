@@ -1,6 +1,8 @@
 package com.ess.jloader.utils;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -18,6 +20,40 @@ public class Utils {
             "Synthetic",
             "Signature",
     };
+
+
+
+    public static final byte[] PREDEFINED_UTF_BYTES;
+    public static final int[] PREDEFINED_UTF_BYTE_INDEXES;
+
+    public static final byte[] C_SourceFile = toByteArray("SourceFile");
+
+    static {
+        try {
+            // Init predefined bytes
+            PREDEFINED_UTF_BYTE_INDEXES = new int[PREDEFINED_UTF.length + 1];
+
+            int bytesCount = 0;
+            for (int i = 0; i < PREDEFINED_UTF.length; i++) {
+                PREDEFINED_UTF_BYTE_INDEXES[i] = bytesCount;
+
+                bytesCount += 2 + PREDEFINED_UTF[i].length();
+            }
+
+            PREDEFINED_UTF_BYTE_INDEXES[PREDEFINED_UTF.length] = bytesCount;
+
+            PREDEFINED_UTF_BYTES = new byte[bytesCount];
+            DataOutputStream out = new DataOutputStream(new OpenByteOutputStream(PREDEFINED_UTF_BYTES));
+            for (String s : PREDEFINED_UTF) {
+                out.writeUTF(s);
+            }
+
+            assert out.size() == bytesCount;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
     public static final int PS_CODE = 0;
     public static final int PS_EXCEPTIONS = 3;
@@ -48,5 +84,19 @@ public class Utils {
         int position = buffer.position();
         in.readFully(buffer.array(), position, length);
         buffer.position(position + length);
+    }
+
+    public static byte[] toByteArray(String s) {
+        try {
+            int size = s.length() + 2;
+            OpenByteOutputStream byteOut = new OpenByteOutputStream(size);
+            new DataOutputStream(byteOut).writeUTF(s);
+
+            assert byteOut.size() == size;
+
+            return byteOut.getBuffer();
+        } catch (IOException e) {
+            throw new RuntimeException();
+        }
     }
 }
