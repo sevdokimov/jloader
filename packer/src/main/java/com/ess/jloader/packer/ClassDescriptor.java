@@ -4,16 +4,12 @@ import com.ess.jloader.packer.consts.*;
 import com.ess.jloader.utils.*;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.io.ByteStreams;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.ClassNode;
 
-import java.io.DataOutput;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.zip.Deflater;
@@ -30,7 +26,7 @@ public class ClassDescriptor {
 
     private final Collection<AbstractConst> consts;
 
-    public OpenByteOutputStream plainDataArray;
+    public BitOutputStream plainData;
     public OpenByteOutputStream forCompressionDataArray;
 
     private int firstUtfIndex;
@@ -180,10 +176,9 @@ public class ClassDescriptor {
     }
 
     public void pack(CompressionContext ctx) throws IOException {
-        plainDataArray = new OpenByteOutputStream();
+        plainData = new BitOutputStream(new ByteArrayOutputStream());
         forCompressionDataArray = new OpenByteOutputStream();
 
-        BitOutputStream plainData = new BitOutputStream(plainDataArray);
         DataOutputStream compressed = new DataOutputStream(forCompressionDataArray);
 
         plainData.writeBoolean(hasSourceFileAttr);
@@ -299,7 +294,7 @@ public class ClassDescriptor {
 
             int classIndex = buffer.getShort() & 0xFFFF;
             assert constClasses.get(classIndex - 1).getType().equals(ref.getOwner().getInternalName());
-            PackUtils.writeLimitedNumber(compressed, classIndex, constClasses.size());
+            constClassesLimiter.write(plainData, classIndex - 1);
 
             int nameTypeIndex = buffer.getShort() & 0xFFFF;
             assert nameTypeIndex >= firstNameAndTypeIndex && nameTypeIndex < firstNameAndTypeIndex + constNameAndType.size();
@@ -461,6 +456,7 @@ public class ClassDescriptor {
     }
 
     public void writeTo(OutputStream out, byte[] dictionary) throws IOException {
+        ByteArrayOutputStream plainDataArray = (ByteArrayOutputStream) plainData.getDelegate();
         if (plainDataArray.size() > 0xFFFF) throw new InvalidJarException();
 
         new DataOutputStream(out).writeShort(plainDataArray.size());
@@ -508,6 +504,15 @@ public class ClassDescriptor {
 
     private void copyUtfIndex(ByteBuffer buffer, DataOutputStream out) throws IOException {
         copyUtfIndex(buffer, out, null);
+    }
+
+    private void copyUtfIndex(ByteBuffer buffer, BitOutputStream out, @Nullable String expectedValue) throws IOException {
+        int utfIndex = buffer.getShort() & 0xFFFF;
+        writeUtfIndex(out, utfIndex);
+
+        if (expectedValue != null) {
+            assert allUtf.get(utfIndex - firstUtfIndex).equals(expectedValue);
+        }
     }
 
     private void copyUtfIndex(ByteBuffer buffer, DataOutputStream out, @Nullable String expectedValue) throws IOException {
@@ -559,10 +564,9 @@ public class ClassDescriptor {
                     buffer.position(buffer.position() + 3);
                     break;
 
-                case 7: // ClassWriter.CLASS
                 case 8: // ClassWriter.STR
                 case 16: // ClassWriter.MTYPE
-                    copyUtfIndex(buffer, out);
+                    copyUtfIndex(buffer, plainData, null);
                     break;
 
                 default:

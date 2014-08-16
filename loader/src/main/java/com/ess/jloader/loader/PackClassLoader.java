@@ -244,7 +244,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
             int packedStrCount = utfLimiter.read(in);
 
-            skipConstTableTail(defDataIn, constCount - 1 - classCount
+            skipConstTableTail(constCount - 1 - classCount
                             - fieldConstCount - imethodConstCount - methodConstCount
                             - nameAndTypeCount
                             - utfCount);
@@ -253,19 +253,19 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
             for (int i = 0; i < fieldConstCount; i++) {
                 buffer.put((byte) 9);
-                buffer.putShort((short) readLimitedShort(defDataIn, classCount));
+                buffer.putShort((short) (constClassesLimiter.read(in) + 1));
                 buffer.putShort((short) (readLimitedShort(defDataIn, nameAndTypeCount) + firstNameAndType));
             }
 
             for (int i = 0; i < imethodConstCount; i++) {
                 buffer.put((byte) 11);
-                buffer.putShort((short) readLimitedShort(defDataIn, classCount));
+                buffer.putShort((short) (constClassesLimiter.read(in) + 1));
                 buffer.putShort((short) (readLimitedShort(defDataIn, nameAndTypeCount) + firstNameAndType));
             }
 
             for (int i = 0; i < methodConstCount; i++) {
                 buffer.put((byte) 10);
-                buffer.putShort((short) readLimitedShort(defDataIn, classCount));
+                buffer.putShort((short) (constClassesLimiter.read(in) + 1));
                 buffer.putShort((short) (readLimitedShort(defDataIn, nameAndTypeCount) + firstNameAndType));
             }
 
@@ -372,35 +372,35 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             return currentUtfIndex;
         }
 
-        private void skipConstTableTail(DataInputStream in, int count) throws IOException {
+        private void skipConstTableTail(int count) throws IOException {
             ByteBuffer buffer = this.buffer;
             byte[] array = buffer.array();
 
             for (int i = 0; i < count; i++) {
-                int tag = in.read();
+                int tag = defDataIn.read();
                 buffer.put((byte) tag);
 
                 switch (tag) {
                     case 3: // ClassWriter.INT:
                     case 4: // ClassWriter.FLOAT:
                     case 18: // ClassWriter.INDY:
-                        in.readFully(array, buffer.position(), 4);
+                        defDataIn.readFully(array, buffer.position(), 4);
                         buffer.position(buffer.position() + 4);
                         break;
 
                     case 5:// ClassWriter.LONG:
                     case 6: // ClassWriter.DOUBLE:
-                        in.readFully(array, buffer.position(), 8);
+                        defDataIn.readFully(array, buffer.position(), 8);
                         buffer.position(buffer.position() + 8);
                         ++i;
                         break;
 
                     case 15: // ClassWriter.HANDLE:
-                        in.readFully(array, buffer.position(), 3);
+                        if (true) throw new UnsupportedOperationException();
+                        defDataIn.readFully(array, buffer.position(), 3);
                         buffer.position(buffer.position() + 3);
                         break;
 
-                    case 7: // ClassWriter.CLASS
                     case 8: // ClassWriter.STR
                     case 16: // ClassWriter.MTYPE
                         buffer.putShort((short) (readUtfIndex(in)));
