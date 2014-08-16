@@ -20,7 +20,7 @@ import java.util.zip.DeflaterOutputStream;
 */
 public class ClassDescriptor {
 
-    public final ClassReader classReader;
+    private final ClassReader classReader;
 
     private final String className;
 

@@ -35,7 +35,7 @@ public class JarPacker {
     private final Collection<ClassReader> classReaders = Collections2.transform(classMap.values(), new Function<ClassDescriptor, ClassReader>() {
         @Override
         public ClassReader apply(ClassDescriptor classDescriptor) {
-            return classDescriptor.classReader;
+            return classDescriptor.getClassReader();
         }
     });
 
