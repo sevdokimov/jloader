@@ -54,6 +54,7 @@ public class ClassDescriptor {
     private Map<String, Integer> utf2index;
 
     private List<ConstClass> constClasses;
+    private LimitNumberWriter constClassesLimiter;
     private List<ConstNameAndType> constNameAndType;
 
     private boolean[] predefinedUtfFlags = new boolean[Utils.PREDEFINED_UTF.length];
@@ -185,7 +186,6 @@ public class ClassDescriptor {
         BitOutputStream plainData = new BitOutputStream(plainDataArray);
         DataOutputStream compressed = new DataOutputStream(forCompressionDataArray);
 
-        plainData.writeSmall_0_3_8_16(classNode.interfaces.size());
         plainData.writeBoolean(hasSourceFileAttr);
 
         Set<String> packedStr = new LinkedHashSet<String>();
@@ -270,7 +270,7 @@ public class ClassDescriptor {
         constCountLimiter.write(plainData, allUtf.size());
 
         utfLimiter.write(plainData, constClasses.size());
-        LimitNumberWriter constClassesLimiter = LimitNumberWriter.create(constClasses.size());
+        constClassesLimiter = LimitNumberWriter.create(constClasses.size() - 1);
 
         PackUtils.writeSmallShort3(plainData, constFields.size());
         PackUtils.writeSmallShort3(plainData, constInterfaces.size());
@@ -343,7 +343,7 @@ public class ClassDescriptor {
         int superClassIndex = buffer.getShort();
         if (superClassIndex != 2) throw new RuntimeException(String.valueOf(thisClassIndex));
 
-        processInterfaces(buffer, compressed);
+        processInterfaces(buffer, plainData);
         processFields(buffer, compressed);
         processMethods(buffer, compressed);
         processClassAttributes(buffer, compressed);
@@ -353,14 +353,16 @@ public class ClassDescriptor {
         plainData.finish();
     }
 
-    private void processInterfaces(ByteBuffer buffer, DataOutputStream out) throws IOException {
+    private void processInterfaces(ByteBuffer buffer, BitOutputStream plainData) throws IOException {
         int interfaceCount = buffer.getShort() & 0xFFFF;
 
         assert interfaceCount == classNode.interfaces.size();
 
+        plainData.writeSmall_0_3_8_16(interfaceCount);
+
         for (int i = 0; i < interfaceCount; i++) {
             int classIndex = buffer.getShort();
-            PackUtils.writeLimitedNumber(out, classIndex - 3, constClasses.size() - 1);
+            constClassesLimiter.write(plainData, classIndex - 1);
         }
     }
 

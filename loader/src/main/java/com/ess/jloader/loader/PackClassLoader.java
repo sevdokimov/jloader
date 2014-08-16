@@ -154,7 +154,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         private final String className;
 
-        private int interfacesCount;
         private boolean hasSourceFileAttr;
 
         private ByteBuffer buffer;
@@ -166,6 +165,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         private int firstUtfIndex;
 
         private int classCount;
+        private LimitNumberReader constClassesLimiter;
 
         private int fieldConstCount;
         private int firstFieldIndex;
@@ -190,7 +190,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         }
 
         public byte[] unpack() throws IOException {
-            interfacesCount = in.readSmall_0_3_8_16();
             hasSourceFileAttr = in.readBoolean();
 
             int size = readClassSize();
@@ -221,6 +220,8 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             firstUtfIndex = constCount - utfCount;
 
             classCount = utfLimiter.read(in);
+            constClassesLimiter = new LimitNumberReader(classCount - 1);
+
             fieldConstCount = readSmallShort3(in);
             imethodConstCount = readSmallShort3(in);
             methodConstCount = readSmallShort3(in);
@@ -325,7 +326,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             buffer.putShort((short) 2); // super class name index
 
             // Process interfaces
-            processInterfaces(defDataIn);
+            processInterfaces();
 
             processFields(defDataIn);
             processMethods(defDataIn);
@@ -411,12 +412,12 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             }
         }
 
-        private void processInterfaces(DataInputStream defDataIn) throws IOException {
-            int interfaceCount = interfacesCount;
+        private void processInterfaces() throws IOException {
+            int interfaceCount = in.readSmall_0_3_8_16();
             buffer.putShort((short) interfaceCount);
 
             for (int i = 0; i < interfaceCount; i++) {
-                int classIndex = readLimitedShort(defDataIn, classCount - 1) + 3;
+                int classIndex = constClassesLimiter.read(in) + 1;
                 buffer.putShort((short) classIndex);
             }
         }
