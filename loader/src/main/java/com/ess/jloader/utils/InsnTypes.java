@@ -95,6 +95,7 @@ public class InsnTypes {
      */
     public static final int WIDE_INSN = 17;
 
+    public static final int UNKNOWN_INSN = 18;
 
     public static final byte[] TYPE;
 
@@ -103,13 +104,18 @@ public class InsnTypes {
      */
     static {
         int i;
-        byte[] b = new byte[220];
+        byte[] b = new byte[256];
         String s = "AAAAAAAAAAAAAAAABCLMMDDDDDEEEEEEEEEEEEEEEEEEEEAAAAAAAADD"
                 + "DDDEEEEEEEEEEEEEEEEEEEEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
                 + "AAAAAAAAAAAAAAAAANAAAAAAAAAAAAAAAAAAAAJJJJJJJJJJJJJJJJDOPAA"
                 + "AAAAGGGGGGGHIFBFAAFFAARQJJKKJJJJJJJJJJJJJJJJJJ";
         for (i = 0; i < b.length; ++i) {
-            b[i] = (byte) (s.charAt(i) - 'A');
+            if (i < s.length()) {
+                b[i] = (byte) (s.charAt(i) - 'A');
+            }
+            else {
+                b[i] = UNKNOWN_INSN;
+            }
         }
         TYPE = b;
     }

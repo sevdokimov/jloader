@@ -495,11 +495,13 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
             buffer.position(lengthPosition + 4 + 4);
 
-            int codeLength = defDataIn.readInt();
-            buffer.putInt(codeLength);
-            Utils.read(defDataIn, buffer, codeLength);
+            int codeLengthPosition = buffer.position();
+            buffer.position(buffer.position() + 4);
 
-            patchCode(buffer.position() - codeLength, buffer.position());
+            readCode();
+
+            int codeLength = buffer.position() - codeLengthPosition - 4;
+            buffer.putInt(codeLengthPosition, codeLength);
 
             int exceptionTableLength = defDataIn.readUnsignedShort();
             buffer.putShort((short) exceptionTableLength);
@@ -597,14 +599,16 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             return res;
         }
 
-        private void patchCode(int start, int end) {
+        private void readCode() throws IOException {
             byte[] array = buffer.array();
-            int pos = start;
+            int pos = buffer.position();
 
-            while (pos < end) {
+            loop:
+            while (true) {
 
                 // visits the instruction at this offset
-                int opcode = array[pos++] & 0xFF;
+                int opcode = defDataIn.read();
+                array[pos++] = (byte) opcode;
 
                 switch (InsnTypes.TYPE[opcode]) {
                     case InsnTypes.NOARG_INSN:
@@ -614,7 +618,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                     case InsnTypes.VAR_INSN:
                     case InsnTypes.SBYTE_INSN:
                     case InsnTypes.LDC_INSN:
-                        pos++;
+                        array[pos++] = (byte) defDataIn.read();
                         break;
 
                     case InsnTypes.LABEL_INSN:
@@ -622,57 +626,78 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                     case InsnTypes.LDCW_INSN:
                     case InsnTypes.TYPE_INSN:
                     case InsnTypes.IINC_INSN:
+                        defDataIn.readFully(array, pos, 2);
                         pos += 2;
                         break;
 
                     case InsnTypes.LABELW_INSN:
+                        defDataIn.readFully(array, pos, 4);
                         pos += 4;
                         break;
 
                     case InsnTypes.WIDE_INSN:
-                        opcode = array[pos++] & 0xFF;
+                        opcode = defDataIn.read();
+                        array[pos++] = (byte) opcode;
+
+                        int len;
                         if (opcode == 132 /*Opcodes.IINC*/) {
-                            pos += 4;
+                            len = 4;
                         } else {
-                            pos += 2;
+                            len = 2;
                         }
+                        pos += len;
+
+                        defDataIn.readFully(array, pos, len);
                         break;
 
                     case InsnTypes.TABL_INSN: {
-                        pos += (4 - ((pos - start) & 3)) & 3; // skips 0 to 3 padding bytes
+                        pos += (4 - ((pos - buffer.position()) & 3)) & 3; // skips 0 to 3 padding bytes
 
-                        pos += 4; // default ref
-
-                        int min = buffer.getInt(pos);
+                        defDataIn.readFully(array, pos, 4); // default ref
                         pos += 4;
 
-                        int max = buffer.getInt(pos);
+                        int min = defDataIn.readInt();
+                        buffer.putInt(pos, min);
+                        pos += 4;
+
+                        int max = defDataIn.readInt();
+                        buffer.putInt(pos, max);
                         pos += 4;
                         assert min <= max;
 
-                        pos += (max - min + 1)*4;
+                        len = (max - min + 1)*4;
+                        defDataIn.readFully(array, pos, len);
+                        pos += len;
                         break;
                     }
 
                     case InsnTypes.LOOK_INSN: {
-                        pos += (4 - ((pos - start) & 3)) & 3; // skips 0 to 3 padding bytes
+                        pos += (4 - ((pos - buffer.position()) & 3)) & 3; // skips 0 to 3 padding bytes
 
+                        defDataIn.readFully(array, pos, 4); // default ref
                         pos += 4;
 
-                        int len = buffer.getInt(pos);
-                        pos += 4 + 8 * len;
+                        len = defDataIn.readInt();
+                        buffer.putInt(pos, len);
+                        pos += 4;
+
+                        defDataIn.readFully(array, pos, 8 * len);
+
+                        pos += 8 * len;
                         break;
                     }
 
                     case InsnTypes.ITFMETH_INSN:
                     case InsnTypes.FIELDORMETH_INSN:
-                        int ref = buffer.getShort(pos) & 0xFFFF;
+                        int ref = defDataIn.readUnsignedShort();
 
                         if (opcode == 185 /*Opcodes.INVOKEINTERFACE*/) {
                             int imethIndex = ref + firstImethodIndex;
                             buffer.putShort(pos, (short) imethIndex);
+                            pos += 2;
 
-                            pos += 2 + 2;
+                            array[pos++] = (byte) defDataIn.read();
+                            pos++; // put 0
                         }
                         else {
                             if (opcode == 180 /*Opcodes.GETFIELD*/ || opcode == 181 /*Opcodes.PUTFIELD*/
@@ -696,15 +721,24 @@ public class PackClassLoader extends ClassLoader implements Closeable {
     //                }
 
                     case InsnTypes.MANA_INSN:
+                        defDataIn.readFully(array, pos, 3);
                         pos += 3;
                         break;
+
+                    case InsnTypes.UNKNOWN_INSN:
+                        if (opcode == 255) {
+                            pos--; // remove end of code marker
+                            break loop;
+                        }
+
+                        throw new UnsupportedOperationException(String.valueOf(opcode));
 
                     default:
                         throw new UnsupportedOperationException(String.valueOf(opcode));
                 }
             }
 
-            assert pos == end;
+            buffer.position(pos);
         }
     }
 }

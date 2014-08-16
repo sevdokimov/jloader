@@ -84,6 +84,12 @@ public class PackUtils {
         }
     }
 
+    public static void write(OutputStream out, ByteBuffer codeBuffer, int len) throws IOException {
+        int position = codeBuffer.position();
+        out.write(codeBuffer.array(), position, len);
+        codeBuffer.position(position + len);
+    }
+
     private static class Package {
         private List<String> classes = new ArrayList<String>();
 

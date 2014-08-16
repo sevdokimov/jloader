@@ -55,8 +55,6 @@ public class AttributeCode extends Attribute {
         attributes = AttributeUtils.readAllAttributes(AttributeType.CODE, descriptor, buffer);
 
         assert buffer.position() - savedPos == length;
-
-        patchCode(descriptor);
     }
 
     @Override
@@ -64,8 +62,7 @@ public class AttributeCode extends Attribute {
         out.writeShort(maxStack);
         out.writeShort(maxLocals);
 
-        out.writeInt(code.length);
-        out.write(code);
+        writeCode(out, descriptor);
 
         out.writeShort(exceptionTable.size());
         for (ExceptionRecord record : exceptionTable) {
@@ -89,13 +86,14 @@ public class AttributeCode extends Attribute {
         }
     }
 
-    private void patchCode(ClassDescriptor descriptor) {
+    private void writeCode(DataOutputStream out, ClassDescriptor descriptor) throws IOException {
         ByteBuffer codeBuffer = ByteBuffer.wrap(code);
 
         while (codeBuffer.hasRemaining()) {
 
             // visits the instruction at this offset
             int opcode = codeBuffer.get() & 0xFF;
+            out.write(opcode);
 
             switch (InsnTypes.TYPE[opcode]) {
                 case InsnTypes.NOARG_INSN:
@@ -105,7 +103,7 @@ public class AttributeCode extends Attribute {
                 case InsnTypes.VAR_INSN:
                 case InsnTypes.SBYTE_INSN:
                 case InsnTypes.LDC_INSN:
-                    codeBuffer.get();
+                    out.write(codeBuffer.get());
                     break;
 
                 case InsnTypes.LABEL_INSN:
@@ -113,19 +111,21 @@ public class AttributeCode extends Attribute {
                 case InsnTypes.LDCW_INSN:
                 case InsnTypes.TYPE_INSN:
                 case InsnTypes.IINC_INSN:
-                    codeBuffer.getShort();
+                    PackUtils.write(out, codeBuffer, 2);
                     break;
 
                 case InsnTypes.LABELW_INSN:
-                    codeBuffer.getInt();
+                    PackUtils.write(out, codeBuffer, 4);
                     break;
 
                 case InsnTypes.WIDE_INSN:
                     opcode = codeBuffer.get() & 0xFF;
+                    out.write(opcode);
+
                     if (opcode == Opcodes.IINC) {
-                        codeBuffer.getInt();
+                        PackUtils.write(out, codeBuffer, 4);
                     } else {
-                        codeBuffer.getShort();
+                        PackUtils.write(out, codeBuffer, 2);
                     }
                     break;
 
@@ -134,14 +134,19 @@ public class AttributeCode extends Attribute {
 
                     int defaultLabel = codeBuffer.getInt(); // default ref
                     assert defaultLabel >= 0 && defaultLabel < code.length;
+                    out.writeInt(defaultLabel);
 
                     int min = codeBuffer.getInt();
+                    out.writeInt(min);
+
                     int max = codeBuffer.getInt();
                     assert min <= max;
+                    out.writeInt(max);
 
                     for (int i = 0; i < max - min + 1; i++) {
                         int label = codeBuffer.getInt();
                         assert label >= 0 && label < code.length;
+                        out.writeInt(label);
                     }
                     break;
                 }
@@ -149,28 +154,34 @@ public class AttributeCode extends Attribute {
                 case InsnTypes.LOOK_INSN: {
                     skipPadding(codeBuffer);
 
-                    codeBuffer.getInt();
+                    PackUtils.write(out, codeBuffer, 4);
+
                     int len = codeBuffer.getInt();
-                    codeBuffer.position(codeBuffer.position() + 8 * len);
+                    out.writeInt(len);
+
+                    PackUtils.write(out, codeBuffer, 8 * len);
                     break;
                 }
 
                 case InsnTypes.ITFMETH_INSN:
                 case InsnTypes.FIELDORMETH_INSN:
+                    int ref = codeBuffer.getShort() & 0xFFFF;
                     if (opcode == Opcodes.GETFIELD || opcode == Opcodes.PUTFIELD
                             || opcode == Opcodes.GETSTATIC || opcode == Opcodes.PUTSTATIC) {
-                        int fieldIndex = descriptor.formatFiledIndex(codeBuffer.getShort() & 0xFFFF);
-                        codeBuffer.putShort(codeBuffer.position() - 2, (short) fieldIndex);
-                    } else if (opcode == Opcodes.INVOKEINTERFACE) {
-                        int imethIndex = descriptor.formatIMethodIndex(codeBuffer.getShort() & 0xFFFF);
-                        codeBuffer.putShort(codeBuffer.position() - 2, (short) imethIndex);
 
-                        codeBuffer.getShort();
+                        int fieldIndex = descriptor.formatFiledIndex(ref);
+                        out.writeShort(fieldIndex);
+                    } else if (opcode == Opcodes.INVOKEINTERFACE) {
+                        int imethIndex = descriptor.formatIMethodIndex(ref);
+                        out.writeShort(imethIndex);
+
+                        out.write(codeBuffer.get());
+                        if (codeBuffer.get() != 0) throw new InvalidJarException();
                     }
                     else if (opcode == Opcodes.INVOKEVIRTUAL || opcode == Opcodes.INVOKESPECIAL
                             || opcode == Opcodes.INVOKESTATIC) {
-                        int methIndex = descriptor.formatMethodIndex(codeBuffer.getShort() & 0xFFFF);
-                        codeBuffer.putShort(codeBuffer.position() - 2, (short) methIndex);
+                        int methIndex = descriptor.formatMethodIndex(ref);
+                        out.writeShort(methIndex);
                     }
                     else {
                         throw new UnsupportedOperationException(String.valueOf(opcode));
@@ -182,14 +193,15 @@ public class AttributeCode extends Attribute {
 //                }
 
                 case InsnTypes.MANA_INSN:
-                    codeBuffer.getShort();
-                    codeBuffer.get();
+                    PackUtils.write(out, codeBuffer, 3);
                     break;
 
                 default:
                     throw new UnsupportedOperationException(String.valueOf(opcode));
             }
         }
+
+        out.write(0xFF); // end of code marker.
     }
 
     public static final AttributeFactory FACTORY = new AttributeFactory() {
