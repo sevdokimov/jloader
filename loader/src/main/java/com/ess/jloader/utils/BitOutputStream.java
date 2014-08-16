@@ -1,4 +1,4 @@
-package com.ess.jloader.packer;
+package com.ess.jloader.utils;
 
 import com.ess.jloader.loader.PackClassLoader;
 

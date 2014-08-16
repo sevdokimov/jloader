@@ -1,6 +1,7 @@
 package com.ess.jloader.packer;
 
 import com.ess.jloader.utils.InsnTypes;
+import com.ess.jloader.utils.Utils;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Opcodes;
 
@@ -59,18 +60,18 @@ public class AttributeCode extends Attribute {
 
     @Override
     public void writeTo(DataOutputStream out, ClassDescriptor descriptor) throws IOException {
-        PackUtils.writeSmallShort3(out, maxStack);
-        PackUtils.writeSmallShort3(out, maxLocals);
+        Utils.writeSmallShort3(out, maxStack);
+        Utils.writeSmallShort3(out, maxLocals);
 
         writeCode(out, descriptor);
 
-        PackUtils.writeSmallShort3(out, exceptionTable.size());
+        Utils.writeSmallShort3(out, exceptionTable.size());
 
         for (ExceptionRecord record : exceptionTable) {
             record.writeTo(out);
         }
 
-        PackUtils.writeSmallShort3(out, attributes.size());
+        Utils.writeSmallShort3(out, attributes.size());
         for (Attribute attribute : attributes) {
             descriptor.writeUtfIndex(out, descriptor.getIndexByUtf(attribute.getName()));
             assert attribute instanceof UnknownAttribute;

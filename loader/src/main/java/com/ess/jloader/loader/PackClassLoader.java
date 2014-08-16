@@ -14,8 +14,6 @@ import java.util.zip.*;
  */
 public class PackClassLoader extends ClassLoader implements Closeable {
 
-    public static final boolean CHECK_LIMITS = false;
-
     public static final String METADATA_ENTRY_NAME = "META-INF/literals.data";
 
     private final HuffmanUtils.TreeElement packedStrHuffmanTree;
@@ -62,7 +60,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             // Build Huffman tree
             PriorityQueue<HuffmanUtils.TreeElement> queue = new PriorityQueue<HuffmanUtils.TreeElement>();
             for (int i = 0; i < packedStringsCount; i++) {
-                int count = readSmallShort3(inputStream);
+                int count = Utils.readSmallShort3(inputStream);
                 queue.add(new HuffmanUtils.Leaf(count, packedStrings[i]));
             }
             packedStrHuffmanTree = HuffmanUtils.buildHuffmanTree(queue);
@@ -132,23 +130,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         zipFile.close();
     }
 
-    static int readSmallShort3(DataInput in) throws IOException {
-        if (CHECK_LIMITS) {
-            if (in.readByte() != 0x73) throw new RuntimeException();
-        }
-
-        int x = in.readUnsignedByte();
-        if (x <= 251) {
-            return x;
-        }
-
-        if (x == 255) {
-            return in.readUnsignedShort();
-        }
-
-        return (((x - 251) << 8) + in.readUnsignedByte()) - 4;
-    }
-
     private class Unpacker {
 
         private final DataInputStream defDataIn;
@@ -208,7 +189,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             anonymousClassCount = in.readSmall_0_3_8_16();
 
             // Const count
-            int constCount = readSmallShort3(in);
+            int constCount = Utils.readSmallShort3(in);
             buffer.putShort((short) constCount);
 
             LimitNumberReader constCountLimiter = new LimitNumberReader(constCount);
@@ -221,11 +202,11 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             classCount = utfLimiter.read(in);
             constClassesLimiter = new LimitNumberReader(classCount - 1);
 
-            fieldConstCount = readSmallShort3(in);
-            imethodConstCount = readSmallShort3(in);
-            methodConstCount = readSmallShort3(in);
+            fieldConstCount = Utils.readSmallShort3(in);
+            imethodConstCount = Utils.readSmallShort3(in);
+            methodConstCount = Utils.readSmallShort3(in);
 
-            int nameAndTypeCount = readSmallShort3(in);
+            int nameAndTypeCount = Utils.readSmallShort3(in);
 
             firstMethodIndex = firstUtfIndex - nameAndTypeCount - methodConstCount;
             firstImethodIndex = firstMethodIndex - imethodConstCount;
@@ -277,7 +258,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             generatedStrIndex = firstUtfIndex;
             generatedStrDataOutput = new DataOutputStream(new OpenByteOutputStream(array, buffer.position()));
 
-            int generatedStrSize = readSmallShort3(in);
+            int generatedStrSize = Utils.readSmallShort3(in);
 
             buffer.position(buffer.position() + generatedStrSize);
 
@@ -423,7 +404,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         }
 
         private void processFields() throws IOException {
-            int fieldCount = readSmallShort3(defDataIn);
+            int fieldCount = Utils.readSmallShort3(defDataIn);
             buffer.putShort((short) fieldCount);
 
             for (int i = 0; i < fieldCount; i++) {
@@ -436,7 +417,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 int descrIndex = readUtfIndexPlain();
                 buffer.putShort((short) descrIndex);
 
-                int attrCount = readSmallShort3(defDataIn);
+                int attrCount = Utils.readSmallShort3(defDataIn);
                 buffer.putShort((short) attrCount);
 
                 for (int j = 0; j < attrCount; j++) {
@@ -446,7 +427,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         }
 
         private void processMethods() throws IOException {
-            int methodCount = readSmallShort3(defDataIn);
+            int methodCount = Utils.readSmallShort3(defDataIn);
             buffer.putShort((short) methodCount);
 
             for (int i = 0; i < methodCount; i++) {
@@ -459,7 +440,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 int descrIndex = readUtfIndexPlain();
                 buffer.putShort((short) descrIndex);
 
-                int attrCount = readSmallShort3(defDataIn);
+                int attrCount = Utils.readSmallShort3(defDataIn);
                 buffer.putShort((short) attrCount);
 
                 if ((accessFlags & (0x00000400 /*Modifier.ABSTRACT*/ | 0x00000100 /*Modifier.NATIVE*/)) == 0) {
@@ -475,7 +456,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         }
 
         private void processClassAttr() throws IOException {
-            int attrCount = readSmallShort3(defDataIn);
+            int attrCount = Utils.readSmallShort3(defDataIn);
             buffer.putShort((short) attrCount);
 
             if (hasSourceFileAttr) {
@@ -495,10 +476,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             int lengthPosition = buffer.position();
             buffer.position(lengthPosition + 4);
 
-            int maxStack = readSmallShort3(defDataIn);
+            int maxStack = Utils.readSmallShort3(defDataIn);
             buffer.putShort((short) maxStack);
 
-            int maxLocals = readSmallShort3(defDataIn);
+            int maxLocals = Utils.readSmallShort3(defDataIn);
             buffer.putShort((short) maxLocals);
 
             buffer.position(buffer.position() + 4); // this is a place to store code length
@@ -508,11 +489,11 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             int codeLength = buffer.position() - lengthPosition - 4 - 2 - 2 - 4;
             buffer.putInt(lengthPosition + 4 + 2 + 2, codeLength);
 
-            int exceptionTableLength = readSmallShort3(defDataIn);
+            int exceptionTableLength = Utils.readSmallShort3(defDataIn);
             buffer.putShort((short) exceptionTableLength);
             Utils.read(defDataIn, buffer, exceptionTableLength * 4*2);
 
-            int attrCount = readSmallShort3(defDataIn);
+            int attrCount = Utils.readSmallShort3(defDataIn);
             buffer.putShort((short) attrCount);
             for (int i = 0; i < attrCount; i++) {
                 processAttr();
@@ -559,7 +540,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             buffer.position(savedPosition + 4 + 2);
 
             do {
-                int classIndex = readLimitedShort(defDataIn, classCount);
+                int classIndex = Utils.readLimitedShort(defDataIn, classCount);
                 if (classIndex == 0) break;
 
                 buffer.putShort((short) classIndex);
@@ -570,38 +551,11 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         }
 
         private int readUtfIndexDef() throws IOException {
-            return firstUtfIndex + readLimitedShort(defDataIn, utfCount - 1);
+            return firstUtfIndex + Utils.readLimitedShort(defDataIn, utfCount - 1);
         }
 
         private int readUtfIndexPlain() throws IOException {
             return firstUtfIndex + utfLimiter.read(in);
-        }
-
-        private int readLimitedShort(DataInput in, int limit) throws IOException {
-            if (CHECK_LIMITS) {
-                int storedLimit = in.readUnsignedShort();
-                if (storedLimit != limit) {
-                    throw new RuntimeException();
-                }
-            }
-
-            int res;
-            if (limit < 256) {
-                if (limit == 0) {
-                    return 0;
-                }
-                res = in.readUnsignedByte();
-            }
-            else if (limit < 256 * 3) {
-                res = readSmallShort3(in);
-            }
-            else {
-                res = in.readUnsignedShort();
-            }
-
-            assert res <= limit;
-
-            return res;
         }
 
         private void readCode() throws IOException {

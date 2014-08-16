@@ -1,6 +1,5 @@
 package com.ess.jloader.utils;
 
-import com.ess.jloader.packer.BitOutputStream;
 import com.google.common.collect.Maps;
 
 import java.io.IOException;

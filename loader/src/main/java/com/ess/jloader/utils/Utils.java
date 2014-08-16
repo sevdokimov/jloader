@@ -1,15 +1,14 @@
 package com.ess.jloader.utils;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.ByteBuffer;
 
 /**
  * @author Sergey Evdokimov
  */
 public class Utils {
+
+    public static final boolean CHECK_LIMITS = false;
 
     public static final String[] PREDEFINED_UTF = {
             "Code",
@@ -99,4 +98,96 @@ public class Utils {
             throw new RuntimeException();
         }
     }
+
+    public static int readLimitedShort(DataInput in, int limit) throws IOException {
+        if (CHECK_LIMITS) {
+            int storedLimit = in.readUnsignedShort();
+            if (storedLimit != limit) {
+                throw new RuntimeException();
+            }
+        }
+
+        int res;
+        if (limit < 256) {
+            if (limit == 0) {
+                return 0;
+            }
+            res = in.readUnsignedByte();
+        }
+        else if (limit < 256 * 3) {
+            res = readSmallShort3(in);
+        }
+        else {
+            res = in.readUnsignedShort();
+        }
+
+        assert res <= limit;
+
+        return res;
+    }
+
+    public static int readSmallShort3(DataInput in) throws IOException {
+        if (CHECK_LIMITS) {
+            if (in.readByte() != 0x73) throw new RuntimeException();
+        }
+
+        int x = in.readUnsignedByte();
+        if (x <= 251) {
+            return x;
+        }
+
+        if (x == 255) {
+            return in.readUnsignedShort();
+        }
+
+        return (((x - 251) << 8) + in.readUnsignedByte()) - 4;
+    }
+
+    public static void writeLimitedNumber(DataOutput out, int x, int limit) throws IOException {
+        assert x >= 0;
+        assert x <= limit;
+
+        if (CHECK_LIMITS) {
+            out.writeShort(limit);
+        }
+
+        if (limit == 0) {
+            // data no needed
+        }
+        else if (limit < 256) {
+            out.write(x);
+        }
+        else if (limit < 256*3) {
+            writeSmallShort3(out, x);
+        }
+        else {
+            out.writeShort(x);
+        }
+    }
+
+    public static void writeSmallShort3(DataOutput out, int x) throws IOException {
+        assert x <= 0xFFFF;
+
+        if (CHECK_LIMITS) {
+            out.writeByte(0x73);
+        }
+
+        if (x <= 251) {
+            out.write(x);
+        }
+        else {
+            int z = x + 4;
+            int d = 251 + (z >> 8);
+
+            if (d < 255) {
+                out.write(d);
+                out.write(z);
+            }
+            else {
+                out.write(255);
+                out.writeShort(x);
+            }
+        }
+    }
+
 }

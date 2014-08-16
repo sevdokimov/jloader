@@ -260,17 +260,17 @@ public class ClassDescriptor {
 
         plainData.writeSmall_0_3_8_16(anonymousClassCount);
 
-        PackUtils.writeSmallShort3(plainData, constCount);
+        Utils.writeSmallShort3(plainData, constCount);
 
         constCountLimiter.write(plainData, allUtf.size());
 
         utfLimiter.write(plainData, constClasses.size());
         constClassesLimiter = LimitNumberWriter.create(constClasses.size() - 1);
 
-        PackUtils.writeSmallShort3(plainData, constFields.size());
-        PackUtils.writeSmallShort3(plainData, constInterfaces.size());
-        PackUtils.writeSmallShort3(plainData, constMethods.size());
-        PackUtils.writeSmallShort3(plainData, constNameAndType.size());
+        Utils.writeSmallShort3(plainData, constFields.size());
+        Utils.writeSmallShort3(plainData, constInterfaces.size());
+        Utils.writeSmallShort3(plainData, constMethods.size());
+        Utils.writeSmallShort3(plainData, constNameAndType.size());
 
         skipClassConst(buffer, className);
 
@@ -314,7 +314,7 @@ public class ClassDescriptor {
         for (String s : generatedStr) {
             skipUtfConst(buffer, s);
         }
-        PackUtils.writeSmallShort3(plainData, buffer.position() - generatedStrPosition);
+        Utils.writeSmallShort3(plainData, buffer.position() - generatedStrPosition);
 
         for (boolean b : predefinedUtfFlags) {
             plainData.writeBoolean(b);
@@ -376,7 +376,7 @@ public class ClassDescriptor {
 
     private void processFields(ByteBuffer buffer, DataOutputStream out) throws IOException {
         int fieldCount = buffer.getShort() & 0xFFFF;
-        PackUtils.writeSmallShort3(out, fieldCount);
+        Utils.writeSmallShort3(out, fieldCount);
 
         for (int i = 0; i < fieldCount; i++) {
             short accessFlags = buffer.getShort();
@@ -390,7 +390,7 @@ public class ClassDescriptor {
 
             List<Attribute> attributes = AttributeUtils.readAllAttributes(AttributeType.FIELD, this, buffer);
 
-            PackUtils.writeSmallShort3(out, attributes.size());
+            Utils.writeSmallShort3(out, attributes.size());
 
             for (Attribute attribute : attributes) {
                 writeUtfIndex(out, getIndexByUtf(attribute.getName()));
@@ -401,7 +401,7 @@ public class ClassDescriptor {
 
     private void processMethods(ByteBuffer buffer, DataOutputStream out) throws IOException {
         int methodCount = buffer.getShort() & 0xFFFF;
-        PackUtils.writeSmallShort3(out, methodCount);
+        Utils.writeSmallShort3(out, methodCount);
 
         for (int i = 0; i < methodCount; i++) {
             int accessFlags = buffer.getShort();
@@ -415,7 +415,7 @@ public class ClassDescriptor {
 
             List<Attribute> attributes = AttributeUtils.readAllAttributes(AttributeType.METHOD, this, buffer);
 
-            PackUtils.writeSmallShort3(out, attributes.size());
+            Utils.writeSmallShort3(out, attributes.size());
 
             if (!Modifier.isNative(accessFlags) && !Modifier.isAbstract(accessFlags)) {
                 Attribute code = AttributeUtils.removeAttributeByName(attributes, "Code");
@@ -436,7 +436,7 @@ public class ClassDescriptor {
     private void processClassAttributes(ByteBuffer buffer, DataOutputStream out) throws IOException {
         List<Attribute> attributes = AttributeUtils.readAllAttributes(AttributeType.CLASS, this, buffer);
 
-        PackUtils.writeSmallShort3(out, attributes.size());
+        Utils.writeSmallShort3(out, attributes.size());
 
         for (Attribute attribute : attributes) {
             if (hasSourceFileAttr && attribute.getName().equals("SourceFile")) {
@@ -504,7 +504,7 @@ public class ClassDescriptor {
 
     public void writeUtfIndex(DataOutput out, int utfIndex) throws IOException {
         assert utfIndex >= firstUtfIndex;
-        PackUtils.writeLimitedNumber(out, utfIndex - firstUtfIndex, allUtf.size() - 1);
+        Utils.writeLimitedNumber(out, utfIndex - firstUtfIndex, allUtf.size() - 1);
     }
 
     private void copyUtfIndex(ByteBuffer buffer, BitOutputStream out, @Nullable String expectedValue) throws IOException {
@@ -527,9 +527,9 @@ public class ClassDescriptor {
                 case 10: // ClassWriter.METH:
                 case 11: // ClassWriter.IMETH:
                     int classIndex = buffer.getShort();
-                    PackUtils.writeLimitedNumber(out, classIndex - 1, constClasses.size() - 1);
+                    Utils.writeLimitedNumber(out, classIndex - 1, constClasses.size() - 1);
                     int nameTypeIndex = buffer.getShort();
-                    PackUtils.writeLimitedNumber(out, nameTypeIndex - firstNameAndTypeIndex, constNameAndType.size() - 1);
+                    Utils.writeLimitedNumber(out, nameTypeIndex - firstNameAndTypeIndex, constNameAndType.size() - 1);
                     break;
 
                 case 3: // ClassWriter.INT:

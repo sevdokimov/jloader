@@ -34,56 +34,6 @@ public class PackUtils {
 
     }
 
-    public static void getTable(@NotNull ClassNode classNode) {
-    }
-
-    public static void writeSmallShort3(DataOutput out, int x) throws IOException {
-        assert x <= 0xFFFF;
-
-        if (PackClassLoader.CHECK_LIMITS) {
-            out.writeByte(0x73);
-        }
-
-        if (x <= 251) {
-            out.write(x);
-        }
-        else {
-            int z = x + 4;
-            int d = 251 + (z >> 8);
-
-            if (d < 255) {
-                out.write(d);
-                out.write(z);
-            }
-            else {
-                out.write(255);
-                out.writeShort(x);
-            }
-        }
-    }
-
-    public static void writeLimitedNumber(DataOutput out, int x, int limit) throws IOException {
-        assert x >= 0;
-        assert x <= limit;
-
-        if (PackClassLoader.CHECK_LIMITS) {
-            out.writeShort(limit);
-        }
-
-        if (limit == 0) {
-            // data no needed
-        }
-        else if (limit < 256) {
-            out.write(x);
-        }
-        else if (limit < 256*3) {
-            writeSmallShort3(out, x);
-        }
-        else {
-            out.writeShort(x);
-        }
-    }
-
     public static void write(OutputStream out, ByteBuffer codeBuffer, int len) throws IOException {
         int position = codeBuffer.position();
         out.write(codeBuffer.array(), position, len);

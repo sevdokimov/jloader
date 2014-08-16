@@ -3,11 +3,11 @@ package com.ess.jloader.packer;
 import com.ess.jloader.packer.consts.AbstractConst;
 import com.ess.jloader.packer.consts.ConstUtf;
 import com.ess.jloader.utils.HuffmanOutputStream;
+import com.ess.jloader.utils.Utils;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.TestOnly;
-import org.objectweb.asm.ClassReader;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -99,7 +99,7 @@ public class LiteralsCache {
             if (integer > 0xFFFF) {
                 throw new InvalidJarException();
             }
-            PackUtils.writeSmallShort3(out, integer);
+            Utils.writeSmallShort3(out, integer);
         }
     }
 }

@@ -1,6 +1,6 @@
 package com.ess.jloader.packer.tests;
 
-import com.ess.jloader.packer.BitOutputStream;
+import com.ess.jloader.utils.BitOutputStream;
 import com.ess.jloader.utils.BitInputStream;
 import com.ess.jloader.utils.OpenByteOutputStream;
 import com.google.common.base.Throwables;

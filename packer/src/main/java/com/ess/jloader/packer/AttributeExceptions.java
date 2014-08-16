@@ -1,5 +1,6 @@
 package com.ess.jloader.packer;
 
+import com.ess.jloader.utils.Utils;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.DataOutputStream;
@@ -40,10 +41,10 @@ public class AttributeExceptions extends Attribute {
         Arrays.sort(m);
 
         for (Integer x : m) {
-            PackUtils.writeLimitedNumber(out, x, descriptor.getConstClasses().size());
+            Utils.writeLimitedNumber(out, x, descriptor.getConstClasses().size());
         }
 
-        PackUtils.writeLimitedNumber(out, 0, descriptor.getConstClasses().size());
+        Utils.writeLimitedNumber(out, 0, descriptor.getConstClasses().size());
     }
 
     public static final AttributeFactory FACTORY = new AttributeFactory() {

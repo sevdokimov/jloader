@@ -1,5 +1,7 @@
 package com.ess.jloader.packer;
 
+import com.ess.jloader.utils.BitOutputStream;
+
 import java.io.IOException;
 
 /**
