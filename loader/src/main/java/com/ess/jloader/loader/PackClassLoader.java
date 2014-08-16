@@ -182,7 +182,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         public Unpacker(BitInputStream in, InputStream defIn, String className) {
             this.in = in;
             this.defIn = defIn;
-            this.defDataIn = new DataInputStream(defIn);
+            this.defDataIn = new DataInputStream(new BufferedInputStream(defIn));
 
             this.className = className;
         }
