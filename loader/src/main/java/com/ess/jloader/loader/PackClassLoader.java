@@ -427,10 +427,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 short accessFlags = defDataIn.readShort();
                 buffer.putShort(accessFlags);
 
-                int nameIndex = readUtfIndexDef();
+                int nameIndex = readUtfIndexPlain();
                 buffer.putShort((short) nameIndex);
 
-                int descrIndex = readUtfIndexDef();
+                int descrIndex = readUtfIndexPlain();
                 buffer.putShort((short) descrIndex);
 
                 int attrCount = readSmallShort3(defDataIn);
@@ -450,10 +450,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 int accessFlags = defDataIn.readShort();
                 buffer.putShort((short) accessFlags);
 
-                int nameIndex = readUtfIndexDef();
+                int nameIndex = readUtfIndexPlain();
                 buffer.putShort((short) nameIndex);
 
-                int descrIndex = readUtfIndexDef();
+                int descrIndex = readUtfIndexPlain();
                 buffer.putShort((short) descrIndex);
 
                 int attrCount = readSmallShort3(defDataIn);

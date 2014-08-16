@@ -341,7 +341,7 @@ public class ClassDescriptor {
         int superClassIndex = buffer.getShort();
         if (superClassIndex != 2) throw new RuntimeException(String.valueOf(thisClassIndex));
 
-        processInterfaces(buffer, plainData);
+        processInterfaces(buffer);
         processFields(buffer, compressed);
         processMethods(buffer, compressed);
         processClassAttributes(buffer, compressed);
@@ -351,7 +351,7 @@ public class ClassDescriptor {
         plainData.finish();
     }
 
-    private void processInterfaces(ByteBuffer buffer, BitOutputStream plainData) throws IOException {
+    private void processInterfaces(ByteBuffer buffer) throws IOException {
         int interfaceCount = buffer.getShort() & 0xFFFF;
 
         assert interfaceCount == classNode.interfaces.size();
@@ -381,10 +381,10 @@ public class ClassDescriptor {
             out.writeShort(accessFlags);
 
             int nameIndex = buffer.getShort() & 0xFFFF;
-            writeUtfIndex(out, nameIndex);
+            writeUtfIndex(plainData, nameIndex);
 
             int descrIndex = buffer.getShort() & 0xFFFF;
-            writeUtfIndex(out, descrIndex);
+            writeUtfIndex(plainData, descrIndex);
 
             List<Attribute> attributes = AttributeUtils.readAllAttributes(AttributeType.FIELD, this, buffer);
 
@@ -406,10 +406,10 @@ public class ClassDescriptor {
             out.writeShort(accessFlags);
 
             int nameIndex = buffer.getShort() & 0xFFFF;
-            writeUtfIndex(out, nameIndex);
+            writeUtfIndex(plainData, nameIndex);
 
             int descrIndex = buffer.getShort() & 0xFFFF;
-            writeUtfIndex(out, descrIndex);
+            writeUtfIndex(plainData, descrIndex);
 
             List<Attribute> attributes = AttributeUtils.readAllAttributes(AttributeType.METHOD, this, buffer);
 
