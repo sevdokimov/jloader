@@ -317,8 +317,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 buffer.put((byte) 1);
                 int utfSize = defDataIn.readUnsignedShort();
                 buffer.putShort((short) utfSize);
-                defDataIn.readFully(array, buffer.position(), utfSize);
-                buffer.position(buffer.position() + utfSize);
+                Utils.read(defDataIn, buffer, utfSize);
             }
 
             int accessFlags = defDataIn.readShort();
@@ -386,21 +385,18 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                     case 3: // ClassWriter.INT:
                     case 4: // ClassWriter.FLOAT:
                     case 18: // ClassWriter.INDY:
-                        defDataIn.readFully(array, buffer.position(), 4);
-                        buffer.position(buffer.position() + 4);
+                        Utils.read(defDataIn, buffer, 4);
                         break;
 
                     case 5:// ClassWriter.LONG:
                     case 6: // ClassWriter.DOUBLE:
-                        defDataIn.readFully(array, buffer.position(), 8);
-                        buffer.position(buffer.position() + 8);
+                        Utils.read(defDataIn, buffer, 8);
                         ++i;
                         break;
 
                     case 15: // ClassWriter.HANDLE:
                         if (true) throw new UnsupportedOperationException();
-                        defDataIn.readFully(array, buffer.position(), 3);
-                        buffer.position(buffer.position() + 3);
+                        Utils.read(defDataIn, buffer, 3);
                         break;
 
                     case 8: // ClassWriter.STR
