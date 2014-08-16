@@ -499,7 +499,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             buffer.putInt(codeLength);
             Utils.read(defDataIn, buffer, codeLength);
 
-            patchCode(ByteBuffer.wrap(buffer.array(), buffer.position() - codeLength, codeLength));
+            patchCode(buffer.position() - codeLength, buffer.position());
 
             int exceptionTableLength = defDataIn.readUnsignedShort();
             buffer.putShort((short) exceptionTableLength);
@@ -597,22 +597,23 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             return res;
         }
 
-        private void skipPadding(ByteBuffer codeBuffer, int startPosition) {
+        private int skipPadding(int pos, int startPosition) {
             // skips 0 to 3 padding bytes
-            while (((codeBuffer.position() - startPosition) & 3) > 0) {
-                if (codeBuffer.get() != 0) {
-                    throw new RuntimeException();
-                }
+            while (((pos - startPosition) & 3) > 0) {
+                pos++;
             }
+
+            return pos;
         }
 
-        private void patchCode(ByteBuffer codeBuffer) {
-            int startPosition = codeBuffer.position();
+        private void patchCode(int start, int end) {
+            byte[] array = buffer.array();
+            int pos = start;
 
-            while (codeBuffer.hasRemaining()) {
+            while (pos < end) {
 
                 // visits the instruction at this offset
-                int opcode = codeBuffer.get() & 0xFF;
+                int opcode = array[pos++] & 0xFF;
 
                 switch (InsnTypes.TYPE[opcode]) {
                     case InsnTypes.NOARG_INSN:
@@ -622,7 +623,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                     case InsnTypes.VAR_INSN:
                     case InsnTypes.SBYTE_INSN:
                     case InsnTypes.LDC_INSN:
-                        codeBuffer.get();
+                        pos++;
                         break;
 
                     case InsnTypes.LABEL_INSN:
@@ -630,44 +631,45 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                     case InsnTypes.LDCW_INSN:
                     case InsnTypes.TYPE_INSN:
                     case InsnTypes.IINC_INSN:
-                        codeBuffer.getShort();
+                        pos += 2;
                         break;
 
                     case InsnTypes.LABELW_INSN:
-                        codeBuffer.getInt();
+                        pos += 4;
                         break;
 
                     case InsnTypes.WIDE_INSN:
-                        opcode = codeBuffer.get() & 0xFF;
+                        opcode = array[pos++] & 0xFF;
                         if (opcode == 132 /*Opcodes.IINC*/) {
-                            codeBuffer.getInt();
+                            pos += 4;
                         } else {
-                            codeBuffer.getShort();
+                            pos += 2;
                         }
                         break;
 
                     case InsnTypes.TABL_INSN: {
-                        skipPadding(codeBuffer, startPosition);
+                        pos = skipPadding(pos, start);
 
-                        codeBuffer.getInt(); // default ref
+                        pos += 4; // default ref
 
-                        int min = codeBuffer.getInt();
-                        int max = codeBuffer.getInt();
+                        int min = buffer.getInt(pos);
+                        pos += 4;
+
+                        int max = buffer.getInt(pos);
+                        pos += 4;
                         assert min <= max;
 
-                        codeBuffer.position(codeBuffer.position() + (max - min + 1)*4);
-
+                        pos += (max - min + 1)*4;
                         break;
                     }
 
                     case InsnTypes.LOOK_INSN: {
-                        skipPadding(codeBuffer, startPosition);
+                        pos = skipPadding(pos, start);
 
-                        int defaultLabel = codeBuffer.getInt();
-                        assert defaultLabel >= 0 && defaultLabel < codeBuffer.limit();
+                        pos += 4;
 
-                        int len = codeBuffer.getInt();
-                        codeBuffer.position(codeBuffer.position() + 8 * len);
+                        int len = buffer.getInt(pos);
+                        pos += 4 + 8 * len;
                         break;
                     }
 
@@ -675,18 +677,21 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                     case InsnTypes.FIELDORMETH_INSN:
                         if (opcode == 180 /*Opcodes.GETFIELD*/ || opcode == 181 /*Opcodes.PUTFIELD*/
                                 || opcode == 178 /*Opcodes.GETSTATIC*/ || opcode == 179 /*Opcodes.PUTSTATIC*/) {
-                            int fieldIndex = (codeBuffer.getShort() & 0xFFFF) + firstFieldIndex;
-                            codeBuffer.putShort(codeBuffer.position() - 2, (short) fieldIndex);
-                        } else if (opcode == 185 /*Opcodes.INVOKEINTERFACE*/) {
-                            int imethIndex = (codeBuffer.getShort() & 0xFFFF) + firstImethodIndex;
-                            codeBuffer.putShort(codeBuffer.position() - 2, (short) imethIndex);
+                            int fieldIndex = (buffer.getShort(pos) & 0xFFFF) + firstFieldIndex;
+                            buffer.putShort(pos, (short) fieldIndex);
 
-                            codeBuffer.getShort();
+                            pos += 2;
+                        } else if (opcode == 185 /*Opcodes.INVOKEINTERFACE*/) {
+                            int imethIndex = (buffer.getShort(pos) & 0xFFFF) + firstImethodIndex;
+                            buffer.putShort(pos, (short) imethIndex);
+
+                            pos += 2 + 2;
                         }
                         else if (opcode == 182/*Opcodes.INVOKEVIRTUAL*/ || opcode == 183/*Opcodes.INVOKESPECIAL*/
                                 || opcode == 184 /*Opcodes.INVOKESTATIC*/) {
-                            int methIndex = (codeBuffer.getShort() & 0xFFFF) + firstMethodIndex;
-                            codeBuffer.putShort(codeBuffer.position() - 2, (short) methIndex);
+                            int methIndex = (buffer.getShort(pos) & 0xFFFF) + firstMethodIndex;
+                            buffer.putShort(pos, (short) methIndex);
+                            pos += 2;
                         }
                         else {
                             throw new UnsupportedOperationException(String.valueOf(opcode));
@@ -698,8 +703,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
     //                }
 
                     case InsnTypes.MANA_INSN:
-                        codeBuffer.getShort();
-                        codeBuffer.get();
+                        pos += 3;
                         break;
 
                     default:
@@ -707,6 +711,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 }
             }
 
+            assert pos == end;
         }
     }
 }
