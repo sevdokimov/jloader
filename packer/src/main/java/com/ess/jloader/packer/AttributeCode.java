@@ -59,12 +59,13 @@ public class AttributeCode extends Attribute {
 
     @Override
     public void writeTo(DataOutputStream out, ClassDescriptor descriptor) throws IOException {
-        out.writeShort(maxStack);
-        out.writeShort(maxLocals);
+        PackUtils.writeSmallShort3(out, maxStack);
+        PackUtils.writeSmallShort3(out, maxLocals);
 
         writeCode(out, descriptor);
 
-        out.writeShort(exceptionTable.size());
+        PackUtils.writeSmallShort3(out, exceptionTable.size());
+
         for (ExceptionRecord record : exceptionTable) {
             record.writeTo(out);
         }

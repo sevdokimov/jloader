@@ -490,20 +490,22 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         private void processCodeAttr() throws IOException {
             int lengthPosition = buffer.position();
+            buffer.position(lengthPosition + 4);
 
-            defDataIn.readFully(buffer.array(), lengthPosition + 4, 4); // read max_stack & max_locals
+            int maxStack = readSmallShort3(defDataIn);
+            buffer.putShort((short) maxStack);
 
-            buffer.position(lengthPosition + 4 + 4);
+            int maxLocals = readSmallShort3(defDataIn);
+            buffer.putShort((short) maxLocals);
 
-            int codeLengthPosition = buffer.position();
-            buffer.position(buffer.position() + 4);
+            buffer.position(buffer.position() + 4); // this is a place to store code length
 
             readCode();
 
-            int codeLength = buffer.position() - codeLengthPosition - 4;
-            buffer.putInt(codeLengthPosition, codeLength);
+            int codeLength = buffer.position() - lengthPosition - 4 - 2 - 2 - 4;
+            buffer.putInt(lengthPosition + 4 + 2 + 2, codeLength);
 
-            int exceptionTableLength = defDataIn.readUnsignedShort();
+            int exceptionTableLength = readSmallShort3(defDataIn);
             buffer.putShort((short) exceptionTableLength);
             Utils.read(defDataIn, buffer, exceptionTableLength * 4*2);
 
