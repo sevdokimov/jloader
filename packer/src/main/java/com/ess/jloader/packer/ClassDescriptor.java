@@ -281,8 +281,6 @@ public class ClassDescriptor {
             writeUtfIndex(plainData, utfIndex);
         }
 
-        utfLimiter.write(plainData, packedStr.size());
-
         copyConstTableTail(buffer, constCount - 1 - constClasses.size()
                 - constFields.size() - constInterfaces.size() - constMethods.size()
                 - constNameAndType.size()
@@ -312,14 +310,17 @@ public class ClassDescriptor {
             copyUtfIndex(buffer, plainData, nameAndType.getDescr());
         }
 
+        int generatedStrPosition = buffer.position();
+        for (String s : generatedStr) {
+            skipUtfConst(buffer, s);
+        }
+        PackUtils.writeSmallShort3(plainData, buffer.position() - generatedStrPosition);
+
         for (boolean b : predefinedUtfFlags) {
             plainData.writeBoolean(b);
         }
 
-        for (String s : generatedStr) {
-            skipUtfConst(buffer, s);
-        }
-
+        utfLimiter.write(plainData, packedStr.size());
         HuffmanOutputStream<String> h = ctx.getLiteralsCache().createHuffmanOutput();
         h.reset(plainData);
         for (String s : packedStr) {
@@ -327,6 +328,7 @@ public class ClassDescriptor {
             h.write(s);
         }
 
+        utfLimiter.write(plainData, notPackedStr.size());
         for (String s : notPackedStr) {
             compressed.writeUTF(s);
             skipUtfConst(buffer, s);

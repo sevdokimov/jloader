@@ -17,8 +17,13 @@ public class OpenByteOutputStream extends ByteArrayOutputStream {
     }
 
     public OpenByteOutputStream(byte[] buffer) {
+        this(buffer, 0);
+    }
+
+    public OpenByteOutputStream(byte[] buffer, int position) {
         super(0);
         this.buf = buffer;
+        count = position;
     }
 
     public byte[] getBuffer() {

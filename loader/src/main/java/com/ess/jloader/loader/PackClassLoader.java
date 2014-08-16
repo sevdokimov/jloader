@@ -160,8 +160,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         private boolean hasSourceFileAttr;
 
         private ByteBuffer buffer;
-        private OpenByteOutputStream bufferByteOutput;
-        private DataOutputStream bufferDataOutput;
 
         private int utfCount;
         private LimitNumberReader utfLimiter;
@@ -184,6 +182,9 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         private int anonymousClassCount;
         private int firstAnonymousNameIndex;
 
+        private int generatedStrIndex;
+        private DataOutputStream generatedStrDataOutput;
+
         public Unpacker(BitInputStream in, InputStream defIn, String className) {
             this.in = in;
             this.defDataIn = new DataInputStream(new BufferedInputStream(defIn));
@@ -197,8 +198,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             ByteBuffer buffer = ByteBuffer.allocate(readClassSize());
             this.buffer = buffer;
             byte[] array = buffer.array();
-            bufferByteOutput = new OpenByteOutputStream(array);
-            bufferDataOutput = new DataOutputStream(bufferByteOutput);
 
             // Magic
             buffer.putInt(0xCAFEBABE);
@@ -242,8 +241,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 buffer.putShort((short) utfIndex);
             }
 
-            int packedStrCount = utfLimiter.read(in);
-
             skipConstTableTail(constCount - 1 - classCount
                             - fieldConstCount - imethodConstCount - methodConstCount
                             - nameAndTypeCount
@@ -277,33 +274,31 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 buffer.putShort((short) readUtfIndexPlain());
             }
 
-            // Generated utf
-            buffer.put((byte) 1);
-            putUtf(className);
-            int processedUtfCount = 1;
+            generatedStrIndex = firstUtfIndex;
+            generatedStrDataOutput = new DataOutputStream(new OpenByteOutputStream(array, buffer.position()));
 
-            processedUtfCount = extractPredefinedStrings(processedUtfCount);
+            int generatedStrSize = readSmallShort3(in);
+
+            buffer.position(buffer.position() + generatedStrSize);
+
+            // Generated utf
+            putGeneratedStr(className);
+
+            extractPredefinedStrings();
 
             if (hasSourceFileAttr) {
-                sourceFileIndex = processedUtfCount;
-
-                buffer.put((byte) 1);
-                buffer.put(Utils.C_SourceFile);
-                buffer.put((byte) 1);
-                putUtf(Utils.generateSourceFileName(className));
-
-                processedUtfCount += 2;
+                sourceFileIndex = putGeneratedStr(Utils.C_SourceFile);
+                putGeneratedStr(Utils.generateSourceFileName(className));
             }
 
-            firstAnonymousNameIndex = processedUtfCount;
+            firstAnonymousNameIndex = generatedStrIndex;
             for (int i = 1; i <= anonymousClassCount; i++) {
-                buffer.put((byte) 1);
-                putUtf(className + '$' + i);
-
-                processedUtfCount++;
+                putGeneratedStr(className + '$' + i);
             }
 
             // Packed utf
+            int packedStrCount = utfLimiter.read(in);
+
             HuffmanInputStream<byte[]> huffmanInputStream = new HuffmanInputStream<byte[]>(in, packedStrHuffmanTree);
             for (int i = 0; i < packedStrCount; i++) {
                 buffer.put((byte) 1);
@@ -311,9 +306,9 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 buffer.putShort((short) str.length);
                 buffer.put(str);
             }
-            processedUtfCount += packedStrCount;
 
-            for (int i = utfCount - processedUtfCount; --i >= 0; ) {
+            int notPackedStrCount = utfLimiter.read(in);
+            for (int i = 0; i < notPackedStrCount; i++) {
                 buffer.put((byte) 1);
                 int utfSize = defDataIn.readUnsignedShort();
                 buffer.putShort((short) utfSize);
@@ -335,14 +330,28 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
             assert !buffer.hasRemaining() : className;
 
+            assert generatedStrDataOutput.size() == generatedStrSize;
+            assert generatedStrIndex == firstUtfIndex + utfCount - packedStrCount - notPackedStrCount;
+
             return array;
         }
 
-        private void putUtf(String s) throws IOException {
-            bufferByteOutput.setPosition(buffer.position());
-            bufferDataOutput.writeUTF(s);
+        private int putGeneratedStr(String s) throws IOException {
+            generatedStrDataOutput.write(1);
+            generatedStrDataOutput.writeUTF(s);
 
-            buffer.position(bufferByteOutput.size());
+            return generatedStrIndex++;
+        }
+
+        private int putGeneratedStr(byte[] bytes) throws IOException {
+            return putGeneratedStr(bytes, 0, bytes.length);
+        }
+
+        private int putGeneratedStr(byte[] bytes, int offset, int len) throws IOException {
+            generatedStrDataOutput.write(1);
+            generatedStrDataOutput.write(bytes, offset, len);
+
+            return generatedStrIndex++;
         }
 
         private int readClassSize() throws IOException {
@@ -354,23 +363,17 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             return size;
         }
 
-        private int extractPredefinedStrings(int currentUtfIndex) throws IOException {
+        private void extractPredefinedStrings() throws IOException {
             int predefinedUtfCount = Utils.PREDEFINED_UTF.length;
             predefinedUtfIndexes = new int[predefinedUtfCount];
 
             for (int i = 0; i < predefinedUtfCount; i++) {
                 if (in.readBoolean()) {
-                    predefinedUtfIndexes[i] = currentUtfIndex + firstUtfIndex;
-
-                    currentUtfIndex++;
-
-                    buffer.put((byte) 1);
                     int utfStart = Utils.PREDEFINED_UTF_BYTE_INDEXES[i];
-                    buffer.put(Utils.PREDEFINED_UTF_BYTES, utfStart, Utils.PREDEFINED_UTF_BYTE_INDEXES[i + 1] - utfStart);
+                    int utfLen = Utils.PREDEFINED_UTF_BYTE_INDEXES[i + 1] - utfStart;
+                    predefinedUtfIndexes[i] = putGeneratedStr(Utils.PREDEFINED_UTF_BYTES, utfStart, utfLen);
                 }
             }
-
-            return currentUtfIndex;
         }
 
         private void skipConstTableTail(int count) throws IOException {
@@ -476,9 +479,9 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             buffer.putShort((short) attrCount);
 
             if (hasSourceFileAttr) {
-                buffer.putShort((short) (sourceFileIndex + firstUtfIndex));
+                buffer.putShort((short) (sourceFileIndex));
                 buffer.putInt(2);
-                buffer.putShort((short) (sourceFileIndex + 1 + firstUtfIndex));
+                buffer.putShort((short) (sourceFileIndex + 1));
 
                 attrCount--;
             }
