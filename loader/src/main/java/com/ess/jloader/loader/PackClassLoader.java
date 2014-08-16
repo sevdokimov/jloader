@@ -82,9 +82,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         }
     }
 
-    @Override
-    protected Class<?> findClass(String name) throws ClassNotFoundException {
-        String jvmClassName = name.replace('.', '/');
+    public byte[] unpackClass(String jvmClassName) throws ClassNotFoundException {
         String classFileName = jvmClassName.concat(".c");
 
         try {
@@ -107,15 +105,21 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
                 Unpacker unpacker = new Unpacker(in, defIn, jvmClassName);
 
-                byte[] bytes = unpacker.unpack();
-
-                return defineClass(name, bytes, 0, bytes.length);
+                return unpacker.unpack();
             } finally {
                 inputStream.close();
             }
         } catch (IOException e) {
             throw new ClassNotFoundException("", e);
         }
+    }
+
+    @Override
+    protected Class<?> findClass(String name) throws ClassNotFoundException {
+        String jvmClassName = name.replace('.', '/');
+
+        byte[] classData = unpackClass(jvmClassName);
+        return defineClass(name, classData, 0, classData.length);
     }
 
     @Override
