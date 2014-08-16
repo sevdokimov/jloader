@@ -94,7 +94,18 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             InputStream inputStream = zipFile.getInputStream(entry);
 
             try {
-                Unpacker unpacker = new Unpacker(new BufferedInputStream(inputStream), jvmClassName);
+                DataInputStream dataInputStream = new DataInputStream(inputStream);
+                int plainSize = dataInputStream.readUnsignedShort();
+                byte[] plainData = new byte[plainSize];
+                dataInputStream.readFully(plainData);
+
+                BitInputStream in = new BitInputStream(new ByteArrayInputStream(plainData));
+
+                Inflater inflater = new Inflater(true);
+                inflater.setDictionary(dictionary);
+                InflaterInputStream defIn = new InflaterInputStream(new BufferedInputStream(inputStream), inflater);
+
+                Unpacker unpacker = new Unpacker(in, defIn, jvmClassName);
 
                 byte[] bytes = unpacker.unpack();
 
@@ -136,7 +147,8 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
     private class Unpacker {
 
-        private final InputStream inputStream;
+        private final InputStream defIn;
+        private final DataInputStream defDataIn;
 
         private BitInputStream in;
 
@@ -167,9 +179,11 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         private int anonymousClassCount;
         private int firstAnonymousNameIndex;
 
-        public Unpacker(InputStream inputStream, String className) {
-            this.inputStream = inputStream;
-            in = new BitInputStream(inputStream);
+        public Unpacker(BitInputStream in, InputStream defIn, String className) {
+            this.in = in;
+            this.defIn = defIn;
+            this.defDataIn = new DataInputStream(defIn);
+
             this.className = className;
         }
 
@@ -261,12 +275,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 utfOutput.write(str);
             }
             processedUtfCount += packedStrCount;
-
-            // Compressed data
-            Inflater inflater = new Inflater(true);
-            inflater.setDictionary(dictionary);
-            InflaterInputStream defIn = new InflaterInputStream(inputStream, inflater);
-            DataInputStream defDataIn = new DataInputStream(new BufferedInputStream(defIn));
 
             skipConstTableTail(defDataIn, constCount - 1 - classCount
                             - fieldConstCount - imethodConstCount - methodConstCount

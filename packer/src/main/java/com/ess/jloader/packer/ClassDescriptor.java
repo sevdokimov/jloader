@@ -4,6 +4,7 @@ import com.ess.jloader.packer.consts.*;
 import com.ess.jloader.utils.*;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.io.ByteStreams;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -459,6 +460,10 @@ public class ClassDescriptor {
     }
 
     public void writeTo(OutputStream out, byte[] dictionary) throws IOException {
+        if (plainDataArray.size() > 0xFFFF) throw new InvalidJarException();
+
+        new DataOutputStream(out).writeShort(plainDataArray.size());
+
         plainDataArray.writeTo(out);
 
         Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION, true);
