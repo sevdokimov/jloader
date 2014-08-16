@@ -89,19 +89,6 @@ public class JarPacker {
         }
     }
 
-    private void truncClassExtension(JarEntry entry) {
-        String oldName = entry.getName();
-        if (oldName.endsWith(".class")) {
-            try {
-                Field nameField = ZipEntry.class.getDeclaredField("name");
-                nameField.setAccessible(true);
-                nameField.set(entry, oldName.substring(0, oldName.length() - ".class".length() + ".c".length()));
-            } catch (Exception e) {
-                Throwables.propagate(e);
-            }
-        }
-    }
-
     private void writeMetadata(ZipOutputStream zipOut, CompressionContext ctx, byte[] dictionary) throws IOException {
         DataOutputStream zipDataOutput = new DataOutputStream(zipOut);
 
@@ -152,8 +139,6 @@ public class JarPacker {
             JarEntry jarEntry = entry.getValue();
 
             jarEntry.setCompressedSize(-1);
-
-            truncClassExtension(jarEntry);
 
             if (!jarEntry.isDirectory()) {
                 byte[] resourceContent = resourceMap.get(jarEntry.getName());

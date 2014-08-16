@@ -83,7 +83,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
     }
 
     public byte[] unpackClass(String jvmClassName) throws ClassNotFoundException {
-        String classFileName = jvmClassName.concat(".c");
+        String classFileName = jvmClassName.concat(".class");
 
         try {
             ZipEntry entry = zipFile.getEntry(classFileName);
