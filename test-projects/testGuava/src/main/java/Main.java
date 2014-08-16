@@ -9,6 +9,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -55,6 +56,10 @@ public class Main {
         } finally {
             zIn.close();
         }
+
+        Random rnd = new Random(4928457745344234835L);
+
+        Collections.shuffle(classes, rnd);
 
         ClassLoader loader = Thread.currentThread().getContextClassLoader();
         for (String aClass : classes) {
