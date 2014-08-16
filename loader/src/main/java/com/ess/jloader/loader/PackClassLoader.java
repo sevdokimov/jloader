@@ -31,7 +31,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
     public PackClassLoader(ClassLoader parent, File packFile) throws IOException {
         super(parent);
 
-        delegateClassLoader = new URLClassLoader(new URL[]{packFile.toURI().toURL()});
+        delegateClassLoader = new URLClassLoader(new URL[]{packFile.toURI().toURL()}, null);
 
         zipFile = new ZipFile(packFile);
 
