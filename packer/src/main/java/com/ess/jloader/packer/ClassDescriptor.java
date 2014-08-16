@@ -288,6 +288,8 @@ public class ClassDescriptor {
                 - constNameAndType.size()
                 - allUtf.size(), compressed);
 
+        LimitNumberWriter nameAndTypeLimiter = LimitNumberWriter.create(constNameAndType.size() - 1);
+
         for (ConstAbstractRef ref : Iterables.concat(constFields, constInterfaces, constMethods)) {
             int tag = buffer.get();
             assert tag == ref.getTag();
@@ -298,7 +300,8 @@ public class ClassDescriptor {
 
             int nameTypeIndex = buffer.getShort() & 0xFFFF;
             assert nameTypeIndex >= firstNameAndTypeIndex && nameTypeIndex < firstNameAndTypeIndex + constNameAndType.size();
-            PackUtils.writeLimitedNumber(compressed, nameTypeIndex - firstNameAndTypeIndex, constNameAndType.size());
+
+            nameAndTypeLimiter.write(plainData, nameTypeIndex - firstNameAndTypeIndex);
         }
 
         for (ConstNameAndType nameAndType : constNameAndType) {

@@ -251,22 +251,24 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
             int firstNameAndType = firstUtfIndex - nameAndTypeCount;
 
+            LimitNumberReader nameAndTypeLimiter = new LimitNumberReader(nameAndTypeCount - 1);
+
             for (int i = 0; i < fieldConstCount; i++) {
                 buffer.put((byte) 9);
                 buffer.putShort((short) (constClassesLimiter.read(in) + 1));
-                buffer.putShort((short) (readLimitedShort(defDataIn, nameAndTypeCount) + firstNameAndType));
+                buffer.putShort((short) (nameAndTypeLimiter.read(in) + firstNameAndType));
             }
 
             for (int i = 0; i < imethodConstCount; i++) {
                 buffer.put((byte) 11);
                 buffer.putShort((short) (constClassesLimiter.read(in) + 1));
-                buffer.putShort((short) (readLimitedShort(defDataIn, nameAndTypeCount) + firstNameAndType));
+                buffer.putShort((short) (nameAndTypeLimiter.read(in) + firstNameAndType));
             }
 
             for (int i = 0; i < methodConstCount; i++) {
                 buffer.put((byte) 10);
                 buffer.putShort((short) (constClassesLimiter.read(in) + 1));
-                buffer.putShort((short) (readLimitedShort(defDataIn, nameAndTypeCount) + firstNameAndType));
+                buffer.putShort((short) (nameAndTypeLimiter.read(in) + firstNameAndType));
             }
 
             for (int i = 0; i < nameAndTypeCount; i++) {
