@@ -29,29 +29,31 @@ public class ClassDescriptor {
     public BitOutputStream plainData;
     public OpenByteOutputStream forCompressionDataArray;
 
-    private int firstUtfIndex;
-    private int firstNameAndTypeIndex;
     private int constCount;
-    private LimitNumberWriter constCountLimiter;
 
-    private int firstFieldIndex;
+    private ConstIndexInterval classesInterval;
+    private List<ConstClass> constClasses;
+
+    private ConstIndexInterval fieldInterval;
     private List<ConstField> constFields;
 
-    private int firstMethodIndex;
+    private ConstIndexInterval imethodInterval;
+    private List<ConstInterface> constInterfaces;
+
+    private ConstIndexInterval methodInterval;
     private List<ConstMethod> constMethods;
 
-    private int firstIMethodIndex;
-    private List<ConstInterface> constInterfaces;
+    private ConstIndexInterval nameAndTypeInterval;
+    private List<ConstNameAndType> constNameAndType;
+
+    private ConstIndexInterval utfInterval;
+
+    private List<String> allUtf;
+    private Map<String, Integer> utf2index;
+
 
     private final Set<String> generatedStr;
 
-    private List<String> allUtf;
-    private LimitNumberWriter utfLimiter;
-    private Map<String, Integer> utf2index;
-
-    private List<ConstClass> constClasses;
-    private LimitNumberWriter constClassesLimiter;
-    private List<ConstNameAndType> constNameAndType;
 
     private boolean[] predefinedUtfFlags = new boolean[Utils.PREDEFINED_UTF.length];
     private boolean hasSourceFileAttr;
@@ -70,7 +72,6 @@ public class ClassDescriptor {
 
         consts = Resolver.resolveAll(classReader, true);
         constCount = getConstPoolSize(consts);
-        constCountLimiter = LimitNumberWriter.create(constCount);
 
         generatedStr = new LinkedHashSet<String>();
         generatedStr.add(className);
@@ -229,18 +230,19 @@ public class ClassDescriptor {
         moveToBegin(constClasses, 1, new ConstClass(classReader.getSuperName()));
 
         allUtf = Lists.newArrayList(Iterables.concat(generatedStr, packedStr, notPackedStr));
-        utfLimiter = LimitNumberWriter.create(allUtf.size() - 1);
 
         utf2index = new HashMap<String, Integer>();
         for (int i = 0; i < allUtf.size(); i++) {
             utf2index.put(allUtf.get(i), i);
         }
 
-        firstUtfIndex = constCount - allUtf.size();
-        firstNameAndTypeIndex = firstUtfIndex - constNameAndType.size();
-        firstMethodIndex = firstNameAndTypeIndex - constMethods.size();
-        firstIMethodIndex = firstMethodIndex - constInterfaces.size();
-        firstFieldIndex = firstIMethodIndex - constFields.size();
+        utfInterval = ConstIndexInterval.create(constCount, allUtf.size());
+        nameAndTypeInterval = new ConstIndexInterval(utfInterval, constNameAndType.size());
+        methodInterval = new ConstIndexInterval(nameAndTypeInterval, constMethods.size());
+        imethodInterval = new ConstIndexInterval(methodInterval, constInterfaces.size());
+        fieldInterval = new ConstIndexInterval(imethodInterval, constFields.size());
+
+        classesInterval = new ConstIndexInterval(1, constClasses.size());
 
         byte[] classBytes = repack(classReader, constClasses, constFields, constInterfaces, constMethods,
                 constNameAndType, allUtf);
@@ -262,15 +264,13 @@ public class ClassDescriptor {
 
         Utils.writeSmallShort3(plainData, constCount);
 
-        constCountLimiter.write(plainData, allUtf.size());
-
-        utfLimiter.write(plainData, constClasses.size());
-        constClassesLimiter = LimitNumberWriter.create(constClasses.size() - 1);
-
-        Utils.writeSmallShort3(plainData, constFields.size());
-        Utils.writeSmallShort3(plainData, constInterfaces.size());
-        Utils.writeSmallShort3(plainData, constMethods.size());
+        plainData.writeLimitedShort(allUtf.size(), constCount);
         Utils.writeSmallShort3(plainData, constNameAndType.size());
+        Utils.writeSmallShort3(plainData, constMethods.size());
+        Utils.writeSmallShort3(plainData, constInterfaces.size());
+        Utils.writeSmallShort3(plainData, constFields.size());
+
+        plainData.writeLimitedShort(constClasses.size(), utfInterval.getCount());
 
         skipClassConst(buffer, className);
 
@@ -278,7 +278,7 @@ public class ClassDescriptor {
         for (int i = 1; i < constClasses.size(); i++) {
             int utfIndex = skipClassConst(buffer, constClasses.get(i).getType());
 
-            writeUtfIndex(plainData, utfIndex);
+            utfInterval.writeIndexCompact(plainData, utfIndex);
         }
 
         copyConstTableTail(buffer, constCount - 1 - constClasses.size()
@@ -286,20 +286,16 @@ public class ClassDescriptor {
                 - constNameAndType.size()
                 - allUtf.size(), compressed);
 
-        LimitNumberWriter nameAndTypeLimiter = LimitNumberWriter.create(constNameAndType.size() - 1);
-
         for (ConstAbstractRef ref : Iterables.concat(constFields, constInterfaces, constMethods)) {
             int tag = buffer.get();
             assert tag == ref.getTag();
 
             int classIndex = buffer.getShort() & 0xFFFF;
             assert constClasses.get(classIndex - 1).getType().equals(ref.getOwner().getInternalName());
-            constClassesLimiter.write(plainData, classIndex - 1);
+            classesInterval.writeIndexCompact(plainData, classIndex);
 
             int nameTypeIndex = buffer.getShort() & 0xFFFF;
-            assert nameTypeIndex >= firstNameAndTypeIndex && nameTypeIndex < firstNameAndTypeIndex + constNameAndType.size();
-
-            nameAndTypeLimiter.write(plainData, nameTypeIndex - firstNameAndTypeIndex);
+            nameAndTypeInterval.writeIndexCompact(plainData, nameTypeIndex);
         }
 
         for (ConstNameAndType nameAndType : constNameAndType) {
@@ -320,7 +316,7 @@ public class ClassDescriptor {
             plainData.writeBoolean(b);
         }
 
-        utfLimiter.write(plainData, packedStr.size());
+        plainData.writeLimitedShort(packedStr.size(), utfInterval.getCount());
         HuffmanOutputStream<String> h = ctx.getLiteralsCache().createHuffmanOutput();
         h.reset(plainData);
         for (String s : packedStr) {
@@ -328,7 +324,7 @@ public class ClassDescriptor {
             h.write(s);
         }
 
-        utfLimiter.write(plainData, notPackedStr.size());
+        plainData.writeLimitedShort(notPackedStr.size(), utfInterval.getCount());
         for (String s : notPackedStr) {
             compressed.writeUTF(s);
             skipUtfConst(buffer, s);
@@ -361,17 +357,17 @@ public class ClassDescriptor {
         plainData.writeSmall_0_3_8_16(interfaceCount);
 
         for (int i = 0; i < interfaceCount; i++) {
-            int classIndex = buffer.getShort();
-            constClassesLimiter.write(plainData, classIndex - 1);
+            int classIndex = buffer.getShort() & 0xFFFF;
+            classesInterval.writeIndexCompact(plainData, classIndex);
         }
     }
 
     public String getUtfByIndex(int index) {
-        return allUtf.get(index - firstUtfIndex);
+        return allUtf.get(index - utfInterval.getFirstIndex());
     }
 
     public int getIndexByUtf(String utf) {
-        return utf2index.get(utf) + firstUtfIndex;
+        return utf2index.get(utf) + utfInterval.getFirstIndex();
     }
 
     private void processFields(ByteBuffer buffer, DataOutputStream out) throws IOException {
@@ -383,17 +379,17 @@ public class ClassDescriptor {
             out.writeShort(accessFlags);
 
             int nameIndex = buffer.getShort() & 0xFFFF;
-            writeUtfIndex(plainData, nameIndex);
+            utfInterval.writeIndexCompact(plainData, nameIndex);
 
             int descrIndex = buffer.getShort() & 0xFFFF;
-            writeUtfIndex(plainData, descrIndex);
+            utfInterval.writeIndexCompact(plainData, descrIndex);
 
             List<Attribute> attributes = AttributeUtils.readAllAttributes(AttributeType.FIELD, this, buffer);
 
             Utils.writeSmallShort3(out, attributes.size());
 
             for (Attribute attribute : attributes) {
-                writeUtfIndex(out, getIndexByUtf(attribute.getName()));
+                utfInterval.writeIndexCompact(out, getIndexByUtf(attribute.getName()));
                 attribute.writeTo(out, this);
             }
         }
@@ -408,10 +404,10 @@ public class ClassDescriptor {
             out.writeShort(accessFlags);
 
             int nameIndex = buffer.getShort() & 0xFFFF;
-            writeUtfIndex(plainData, nameIndex);
+            utfInterval.writeIndexCompact(plainData, nameIndex);
 
             int descrIndex = buffer.getShort() & 0xFFFF;
-            writeUtfIndex(plainData, descrIndex);
+            utfInterval.writeIndexCompact(plainData, descrIndex);
 
             List<Attribute> attributes = AttributeUtils.readAllAttributes(AttributeType.METHOD, this, buffer);
 
@@ -427,7 +423,7 @@ public class ClassDescriptor {
             }
 
             for (Attribute attribute : attributes) {
-                writeUtfIndex(out, getIndexByUtf(attribute.getName()));
+                utfInterval.writeIndexCompact(out, getIndexByUtf(attribute.getName()));
                 attribute.writeTo(out, this);
             }
         }
@@ -443,7 +439,7 @@ public class ClassDescriptor {
                 continue;
             }
 
-            writeUtfIndex(out, getIndexByUtf(attribute.getName()));
+            utfInterval.writeIndexCompact(out, getIndexByUtf(attribute.getName()));
             attribute.writeTo(out, this);
         }
     }
@@ -481,7 +477,7 @@ public class ClassDescriptor {
         if (tag != ConstClass.TAG) throw new RuntimeException("" + tag);
 
         int utfIndex = buffer.getShort();
-        assert className.equals(allUtf.get(utfIndex - firstUtfIndex));
+        assert className.equals(allUtf.get(utfIndex - utfInterval.getFirstIndex()));
 
         return utfIndex;
     }
@@ -497,22 +493,12 @@ public class ClassDescriptor {
         buffer.position(buffer.position() + strSize);
     }
 
-    public void writeUtfIndex(BitOutputStream out, int utfIndex) throws IOException {
-        assert utfIndex >= firstUtfIndex;
-        utfLimiter.write(out, utfIndex - firstUtfIndex);
-    }
-
-    public void writeUtfIndex(DataOutput out, int utfIndex) throws IOException {
-        assert utfIndex >= firstUtfIndex;
-        Utils.writeLimitedNumber(out, utfIndex - firstUtfIndex, allUtf.size() - 1);
-    }
-
     private void copyUtfIndex(ByteBuffer buffer, BitOutputStream out, @Nullable String expectedValue) throws IOException {
         int utfIndex = buffer.getShort() & 0xFFFF;
-        writeUtfIndex(out, utfIndex);
+        utfInterval.writeIndexCompact(out, utfIndex);
 
         if (expectedValue != null) {
-            assert allUtf.get(utfIndex - firstUtfIndex).equals(expectedValue);
+            assert allUtf.get(utfIndex - utfInterval.getFirstIndex()).equals(expectedValue);
         }
     }
 
@@ -526,10 +512,11 @@ public class ClassDescriptor {
                 case 9: // ClassWriter.FIELD:
                 case 10: // ClassWriter.METH:
                 case 11: // ClassWriter.IMETH:
-                    int classIndex = buffer.getShort();
-                    Utils.writeLimitedNumber(out, classIndex - 1, constClasses.size() - 1);
-                    int nameTypeIndex = buffer.getShort();
-                    Utils.writeLimitedNumber(out, nameTypeIndex - firstNameAndTypeIndex, constNameAndType.size() - 1);
+                    int classIndex = buffer.getShort() & 0xFFFF;
+                    classesInterval.writeIndexCompact(out, classIndex);
+
+                    int nameTypeIndex = buffer.getShort() & 0xFFFF;
+                    nameAndTypeInterval.writeIndexCompact(out, nameTypeIndex);
                     break;
 
                 case 3: // ClassWriter.INT:
@@ -553,7 +540,7 @@ public class ClassDescriptor {
 
                 case 8: // ClassWriter.STR
                 case 16: // ClassWriter.MTYPE
-                    copyUtfIndex(buffer, plainData, null);
+                    utfInterval.writeIndexCompact(plainData, buffer.getShort() & 0xFFFF);
                     break;
 
                 default:
@@ -574,25 +561,24 @@ public class ClassDescriptor {
         return res;
     }
 
-    public int formatFiledIndex(int index) {
-        assert index >= firstFieldIndex;
-        assert index < firstFieldIndex + constFields.size();
-
-        return index - firstFieldIndex;
+    public ConstIndexInterval getFieldInterval() {
+        return fieldInterval;
     }
 
-    public int formatMethodIndex(int index) {
-        assert index >= firstMethodIndex;
-        assert index < firstMethodIndex + constMethods.size();
-
-        return index - firstMethodIndex;
+    public ConstIndexInterval getMethodInterval() {
+        return methodInterval;
     }
 
-    public int formatIMethodIndex(int index) {
-        assert index >= firstIMethodIndex;
-        assert index < firstIMethodIndex + constInterfaces.size();
+    public ConstIndexInterval getImethodInterval() {
+        return imethodInterval;
+    }
 
-        return index - firstIMethodIndex;
+    public ConstIndexInterval getUtfInterval() {
+        return utfInterval;
+    }
+
+    public ConstIndexInterval getClassesInterval() {
+        return classesInterval;
     }
 
     public int getAnonymousClassCount() {

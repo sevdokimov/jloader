@@ -26,7 +26,6 @@ public class AttributeExceptions extends Attribute {
 
         for (int i = 0; i < exceptionCount; i++) {
             int exceptionType = buffer.getShort() & 0xFFFF;
-            assert exceptionType <= descriptor.getConstClasses().size();
 
             exceptions.add(exceptionType);
         }

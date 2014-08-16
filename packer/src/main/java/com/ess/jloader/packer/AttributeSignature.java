@@ -5,9 +5,6 @@ import org.jetbrains.annotations.Nullable;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * @author Sergey Evdokimov
@@ -27,7 +24,7 @@ public class AttributeSignature extends Attribute {
 
     @Override
     public void writeTo(DataOutputStream out, ClassDescriptor descriptor) throws IOException {
-        descriptor.writeUtfIndex(out, utfIndex);
+        descriptor.getUtfInterval().writeIndexCompact(out, utfIndex);
     }
 
     public static final AttributeFactory FACTORY = new AttributeFactory() {

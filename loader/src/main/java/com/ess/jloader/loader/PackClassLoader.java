@@ -134,7 +134,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         private final DataInputStream defDataIn;
 
-        private BitInputStream in;
+        private final BitInputStream in;
 
         private final String className;
 
@@ -142,19 +142,12 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         private ByteBuffer buffer;
 
-        private int utfCount;
-        private LimitNumberReader utfLimiter;
-        private int firstUtfIndex;
-
-        private int classCount;
-        private LimitNumberReader constClassesLimiter;
-
-        private int fieldConstCount;
-        private int firstFieldIndex;
-        private int methodConstCount;
-        private int firstMethodIndex;
-        private int imethodConstCount;
-        private int firstImethodIndex;
+        private ConstIndexInterval classesInterval;
+        private ConstIndexInterval fieldInterval;
+        private ConstIndexInterval imethodInterval;
+        private ConstIndexInterval methodInterval;
+        private ConstIndexInterval nameAndTypeInterval;
+        private ConstIndexInterval utfInterval;
 
         private int[] predefinedUtfIndexes;
 
@@ -192,70 +185,54 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             int constCount = Utils.readSmallShort3(in);
             buffer.putShort((short) constCount);
 
-            LimitNumberReader constCountLimiter = new LimitNumberReader(constCount);
+            utfInterval = ConstIndexInterval.create(constCount, in.readLimitedShort(constCount));
+            nameAndTypeInterval = new ConstIndexInterval(utfInterval, Utils.readSmallShort3(in));
+            methodInterval = new ConstIndexInterval(nameAndTypeInterval, Utils.readSmallShort3(in));
+            imethodInterval = new ConstIndexInterval(methodInterval, Utils.readSmallShort3(in));
+            fieldInterval = new ConstIndexInterval(imethodInterval, Utils.readSmallShort3(in));
 
-            utfCount = constCountLimiter.read(in);
-            utfLimiter = new LimitNumberReader(utfCount - 1);
-
-            firstUtfIndex = constCount - utfCount;
-
-            classCount = utfLimiter.read(in);
-            constClassesLimiter = new LimitNumberReader(classCount - 1);
-
-            fieldConstCount = Utils.readSmallShort3(in);
-            imethodConstCount = Utils.readSmallShort3(in);
-            methodConstCount = Utils.readSmallShort3(in);
-
-            int nameAndTypeCount = Utils.readSmallShort3(in);
-
-            firstMethodIndex = firstUtfIndex - nameAndTypeCount - methodConstCount;
-            firstImethodIndex = firstMethodIndex - imethodConstCount;
-            firstFieldIndex = firstImethodIndex - fieldConstCount;
+            classesInterval = new ConstIndexInterval(1, in.readLimitedShort(utfInterval.getCount()));
 
             buffer.put((byte) 7);
-            buffer.putShort((short) firstUtfIndex); // Class name;
+            buffer.putShort((short) utfInterval.getFirstIndex()); // Class name;
 
-            for (int i = 1; i < classCount; i++) {
+            for (int i = 1; i < classesInterval.getCount(); i++) {
                 buffer.put((byte) 7);
 
-                int utfIndex = readUtfIndexPlain();
+                int utfIndex = utfInterval.readIndexCompact(in);
                 buffer.putShort((short) utfIndex);
             }
 
-            skipConstTableTail(constCount - 1 - classCount
-                            - fieldConstCount - imethodConstCount - methodConstCount
-                            - nameAndTypeCount
-                            - utfCount);
+            skipConstTableTail(constCount - 1 - classesInterval.getCount()
+                            - fieldInterval.getCount() - imethodInterval.getCount() - methodInterval.getCount()
+                            - nameAndTypeInterval.getCount()
+                            - utfInterval.getCount());
 
-            int firstNameAndType = firstUtfIndex - nameAndTypeCount;
-
-            LimitNumberReader nameAndTypeLimiter = new LimitNumberReader(nameAndTypeCount - 1);
-
-            for (int i = 0; i < fieldConstCount; i++) {
+            for (int i = fieldInterval.getCount(); --i >= 0; ) {
                 buffer.put((byte) 9);
-                buffer.putShort((short) (constClassesLimiter.read(in) + 1));
-                buffer.putShort((short) (nameAndTypeLimiter.read(in) + firstNameAndType));
+                buffer.putShort((short) (classesInterval.readIndexCompact(in)));
+                buffer.putShort((short) (nameAndTypeInterval.readIndexCompact(in)));
             }
 
-            for (int i = 0; i < imethodConstCount; i++) {
+            for (int i = imethodInterval.getCount(); --i >= 0; ) {
                 buffer.put((byte) 11);
-                buffer.putShort((short) (constClassesLimiter.read(in) + 1));
-                buffer.putShort((short) (nameAndTypeLimiter.read(in) + firstNameAndType));
+                buffer.putShort((short) (classesInterval.readIndexCompact(in)));
+                buffer.putShort((short) (nameAndTypeInterval.readIndexCompact(in)));
             }
 
-            for (int i = 0; i < methodConstCount; i++) {
+            for (int i = methodInterval.getCount(); --i >= 0; ) {
                 buffer.put((byte) 10);
-                buffer.putShort((short) (constClassesLimiter.read(in) + 1));
-                buffer.putShort((short) (nameAndTypeLimiter.read(in) + firstNameAndType));
+                buffer.putShort((short) (classesInterval.readIndexCompact(in)));
+                buffer.putShort((short) (nameAndTypeInterval.readIndexCompact(in)));
             }
 
-            for (int i = 0; i < nameAndTypeCount; i++) {
+            for (int i = nameAndTypeInterval.getCount(); --i >= 0; ) {
                 buffer.put((byte) 12); // ClassWriter.NAME_TYPE
-                buffer.putShort((short) readUtfIndexPlain());
-                buffer.putShort((short) readUtfIndexPlain());
+                buffer.putShort((short) utfInterval.readIndexCompact(in));
+                buffer.putShort((short) utfInterval.readIndexCompact(in));
             }
 
-            generatedStrIndex = firstUtfIndex;
+            generatedStrIndex = utfInterval.getFirstIndex();
             generatedStrDataOutput = new DataOutputStream(new OpenByteOutputStream(array, buffer.position()));
 
             int generatedStrSize = Utils.readSmallShort3(in);
@@ -278,7 +255,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             }
 
             // Packed utf
-            int packedStrCount = utfLimiter.read(in);
+            int packedStrCount = in.readLimitedShort(utfInterval.getCount());
 
             HuffmanInputStream<byte[]> huffmanInputStream = new HuffmanInputStream<byte[]>(in, packedStrHuffmanTree);
             for (int i = 0; i < packedStrCount; i++) {
@@ -288,7 +265,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 buffer.put(str);
             }
 
-            int notPackedStrCount = utfLimiter.read(in);
+            int notPackedStrCount = in.readLimitedShort(utfInterval.getCount());
             for (int i = 0; i < notPackedStrCount; i++) {
                 buffer.put((byte) 1);
                 int utfSize = defDataIn.readUnsignedShort();
@@ -312,7 +289,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             assert !buffer.hasRemaining() : className;
 
             assert generatedStrDataOutput.size() == generatedStrSize;
-            assert generatedStrIndex == firstUtfIndex + utfCount - packedStrCount - notPackedStrCount;
+            assert generatedStrIndex == constCount - packedStrCount - notPackedStrCount;
 
             return array;
         }
@@ -384,7 +361,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
                     case 8: // ClassWriter.STR
                     case 16: // ClassWriter.MTYPE
-                        buffer.putShort((short) (readUtfIndexPlain()));
+                        buffer.putShort((short) (utfInterval.readIndexCompact(in)));
                         break;
 
                     default:
@@ -398,7 +375,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             buffer.putShort((short) interfaceCount);
 
             for (int i = 0; i < interfaceCount; i++) {
-                int classIndex = constClassesLimiter.read(in) + 1;
+                int classIndex = classesInterval.readIndexCompact(in);
                 buffer.putShort((short) classIndex);
             }
         }
@@ -411,10 +388,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 short accessFlags = defDataIn.readShort();
                 buffer.putShort(accessFlags);
 
-                int nameIndex = readUtfIndexPlain();
+                int nameIndex = utfInterval.readIndexCompact(in);
                 buffer.putShort((short) nameIndex);
 
-                int descrIndex = readUtfIndexPlain();
+                int descrIndex = utfInterval.readIndexCompact(in);
                 buffer.putShort((short) descrIndex);
 
                 int attrCount = Utils.readSmallShort3(defDataIn);
@@ -434,10 +411,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 int accessFlags = defDataIn.readShort();
                 buffer.putShort((short) accessFlags);
 
-                int nameIndex = readUtfIndexPlain();
+                int nameIndex = utfInterval.readIndexCompact(in);
                 buffer.putShort((short) nameIndex);
 
-                int descrIndex = readUtfIndexPlain();
+                int descrIndex = utfInterval.readIndexCompact(in);
                 buffer.putShort((short) descrIndex);
 
                 int attrCount = Utils.readSmallShort3(defDataIn);
@@ -503,7 +480,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         }
 
         private void processAttr() throws IOException {
-            int nameIndex = readUtfIndexDef();
+            int nameIndex = utfInterval.readIndexCompact(defDataIn);
             buffer.putShort((short) nameIndex);
 
             processAttrBodyDefault(nameIndex);
@@ -511,7 +488,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         private void processAttrBodyDefault(int nameIndex) throws IOException {
             if (nameIndex == predefinedUtfIndexes[Utils.PS_SIGNATURE]) {
-                int signUtf = readUtfIndexDef();
+                int signUtf = utfInterval.readIndexCompact(defDataIn);
                 buffer.putInt(2);
                 buffer.putShort((short) signUtf);
                 return;
@@ -524,7 +501,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
 
         private void processMethodAttr() throws IOException {
-            int nameIndex = readUtfIndexDef();
+            int nameIndex = utfInterval.readIndexCompact(defDataIn);
             buffer.putShort((short) nameIndex);
 
             if (nameIndex == predefinedUtfIndexes[Utils.PS_EXCEPTIONS]) {
@@ -540,7 +517,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             buffer.position(savedPosition + 4 + 2);
 
             do {
-                int classIndex = Utils.readLimitedShort(defDataIn, classCount);
+                int classIndex = Utils.readLimitedShort(defDataIn, classesInterval.getCount());
                 if (classIndex == 0) break;
 
                 buffer.putShort((short) classIndex);
@@ -548,14 +525,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
             buffer.putInt(savedPosition, buffer.position() - savedPosition - 4);
             buffer.putShort(savedPosition + 4, (short) ((buffer.position() - savedPosition - 4 - 2) >>> 1));
-        }
-
-        private int readUtfIndexDef() throws IOException {
-            return firstUtfIndex + Utils.readLimitedShort(defDataIn, utfCount - 1);
-        }
-
-        private int readUtfIndexPlain() throws IOException {
-            return firstUtfIndex + utfLimiter.read(in);
         }
 
         private void readCode() throws IOException {
@@ -651,7 +620,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                         int ref = defDataIn.readUnsignedShort();
 
                         if (opcode == 185 /*Opcodes.INVOKEINTERFACE*/) {
-                            int imethIndex = ref + firstImethodIndex;
+                            int imethIndex = ref + imethodInterval.getFirstIndex();
                             buffer.putShort(pos, (short) imethIndex);
                             pos += 2;
 
@@ -661,10 +630,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                         else {
                             if (opcode == 180 /*Opcodes.GETFIELD*/ || opcode == 181 /*Opcodes.PUTFIELD*/
                                     || opcode == 178 /*Opcodes.GETSTATIC*/ || opcode == 179 /*Opcodes.PUTSTATIC*/) {
-                                ref += firstFieldIndex;
+                                ref += fieldInterval.getFirstIndex();
                             } else if (opcode == 182/*Opcodes.INVOKEVIRTUAL*/ || opcode == 183/*Opcodes.INVOKESPECIAL*/
                                     || opcode == 184 /*Opcodes.INVOKESTATIC*/) {
-                                ref += firstMethodIndex;
+                                ref += methodInterval.getFirstIndex();
                             }
                             else {
                                 throw new UnsupportedOperationException(String.valueOf(opcode));

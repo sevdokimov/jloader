@@ -205,6 +205,13 @@ public class BitOutputStream extends FilterOutputStream implements DataOutput {
         dataOutput.writeUTF(s);
     }
 
+    public void writeLimitedShort(int value, int limit) throws IOException {
+        assert value <= limit;
+
+        int bitCount = 32 - Integer.numberOfLeadingZeros(limit);
+        writeBits(value, bitCount);
+    }
+
     public OutputStream getDelegate() {
         return out;
     }

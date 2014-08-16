@@ -73,7 +73,7 @@ public class AttributeCode extends Attribute {
 
         Utils.writeSmallShort3(out, attributes.size());
         for (Attribute attribute : attributes) {
-            descriptor.writeUtfIndex(out, descriptor.getIndexByUtf(attribute.getName()));
+            descriptor.getUtfInterval().writeIndexCompact(out, descriptor.getIndexByUtf(attribute.getName()));
             assert attribute instanceof UnknownAttribute;
             attribute.writeTo(out, descriptor);
         }
@@ -168,22 +168,19 @@ public class AttributeCode extends Attribute {
                 case InsnTypes.ITFMETH_INSN:
                 case InsnTypes.FIELDORMETH_INSN:
                     int ref = codeBuffer.getShort() & 0xFFFF;
+
                     if (opcode == Opcodes.GETFIELD || opcode == Opcodes.PUTFIELD
                             || opcode == Opcodes.GETSTATIC || opcode == Opcodes.PUTSTATIC) {
-
-                        int fieldIndex = descriptor.formatFiledIndex(ref);
-                        out.writeShort(fieldIndex);
+                        out.writeShort(ref - descriptor.getFieldInterval().getFirstIndex());
                     } else if (opcode == Opcodes.INVOKEINTERFACE) {
-                        int imethIndex = descriptor.formatIMethodIndex(ref);
-                        out.writeShort(imethIndex);
+                        out.writeShort(ref - descriptor.getImethodInterval().getFirstIndex());
 
                         out.write(codeBuffer.get());
                         if (codeBuffer.get() != 0) throw new InvalidJarException();
                     }
                     else if (opcode == Opcodes.INVOKEVIRTUAL || opcode == Opcodes.INVOKESPECIAL
                             || opcode == Opcodes.INVOKESTATIC) {
-                        int methIndex = descriptor.formatMethodIndex(ref);
-                        out.writeShort(methIndex);
+                        out.writeShort(ref - descriptor.getMethodInterval().getFirstIndex());
                     }
                     else {
                         throw new UnsupportedOperationException(String.valueOf(opcode));

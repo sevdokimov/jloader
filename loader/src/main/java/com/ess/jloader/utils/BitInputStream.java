@@ -92,6 +92,11 @@ public class BitInputStream extends InputStream implements DataInput {
         throw new UnsupportedOperationException();
     }
 
+    public int readLimitedShort(int limit) throws IOException {
+        int bitsCount = 32 - Integer.numberOfLeadingZeros(limit);
+        return readBits(bitsCount);
+    }
+
     public int readSmall_0_3_8_16() throws IOException {
         if (readBit() == 0) {
             return 0;
