@@ -3,10 +3,12 @@ package com.ess.jloader.packer.tests;
 import com.ess.jloader.loader.PackClassLoader;
 import com.ess.jloader.packer.Config;
 import com.ess.jloader.packer.JarPacker;
+import com.google.common.base.Throwables;
 import org.junit.Test;
 
 import javax.swing.*;
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 
@@ -28,7 +30,7 @@ public class PerformanceTest {
         packer.addJar(guavaLoader);
         packer.addJar(guava);
 
-        File tempFile = TestUtils.createTmpPAckFile("packedGuavaLoader-");
+        final File tempFile = TestUtils.createTmpPAckFile("packedGuavaLoader-");
         packer.writeResult(tempFile);
 
         System.out.println("Packing time: " + (System.currentTimeMillis() - time));
@@ -38,7 +40,16 @@ public class PerformanceTest {
 
         getExecuteTime(URLClassLoader.newInstance(new URL[]{guavaLoader.toURI().toURL(), guava.toURI().toURL()}, null));
 
-        long packedExecuteTime = getExecuteTime(new PackClassLoader(null, tempFile));
+        long packedExecuteTime = getExecuteTime(new ClassLoaderFactory() {
+            @Override
+            public ClassLoader create() {
+                try {
+                    return new PackClassLoader(null, tempFile);
+                } catch (IOException e) {
+                    throw Throwables.propagate(e);
+                }
+            }
+        });
 
         URLClassLoader plainClassLoader = URLClassLoader.newInstance(new URL[]{guavaLoader.toURI().toURL(), guava.toURI().toURL()}, null);
         long plainExecuteTime = getExecuteTime(plainClassLoader);
@@ -46,12 +57,25 @@ public class PerformanceTest {
         System.out.printf("Plain: %d, packed: %d, (res: %d%%)\n", plainExecuteTime, packedExecuteTime, (packedExecuteTime - plainExecuteTime) * 100/plainExecuteTime);
     }
 
-    private long getExecuteTime(ClassLoader loader) throws Exception {
+    private long getExecuteTime(final ClassLoader loader) throws Exception {
+        return getExecuteTime(new ClassLoaderFactory() {
+            @Override
+            public ClassLoader create() {
+                return loader;
+            }
+        });
+    }
+
+    private long getExecuteTime(ClassLoaderFactory factory) throws Exception {
         long time = System.currentTimeMillis();
 
-        TestUtils.runJar(loader);
+        TestUtils.runJar(factory.create());
 
         return System.currentTimeMillis() - time;
+    }
+
+    private static interface ClassLoaderFactory {
+        ClassLoader create();
     }
 
 }
