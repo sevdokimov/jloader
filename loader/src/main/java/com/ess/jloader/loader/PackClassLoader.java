@@ -151,7 +151,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
     private class Unpacker {
 
-        private final InputStream defIn;
         private final DataInputStream defDataIn;
 
         private BitInputStream in;
@@ -187,7 +186,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         public Unpacker(BitInputStream in, InputStream defIn, String className) {
             this.in = in;
-            this.defIn = defIn;
             this.defDataIn = new DataInputStream(new BufferedInputStream(defIn));
 
             this.className = className;
@@ -196,9 +194,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         public byte[] unpack() throws IOException {
             hasSourceFileAttr = in.readBoolean();
 
-            int size = readClassSize();
-
-            ByteBuffer buffer = ByteBuffer.allocate(size);
+            ByteBuffer buffer = ByteBuffer.allocate(readClassSize());
             this.buffer = buffer;
             byte[] array = buffer.array();
             bufferByteOutput = new OpenByteOutputStream(array);
@@ -242,7 +238,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             for (int i = 1; i < classCount; i++) {
                 buffer.put((byte) 7);
 
-                int utfIndex = readUtfIndex(in);
+                int utfIndex = readUtfIndexPlain();
                 buffer.putShort((short) utfIndex);
             }
 
@@ -277,8 +273,8 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
             for (int i = 0; i < nameAndTypeCount; i++) {
                 buffer.put((byte) 12); // ClassWriter.NAME_TYPE
-                buffer.putShort((short) readUtfIndex(in));
-                buffer.putShort((short) readUtfIndex(in));
+                buffer.putShort((short) readUtfIndexPlain());
+                buffer.putShort((short) readUtfIndexPlain());
             }
 
             // Generated utf
@@ -286,7 +282,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             putUtf(className);
             int processedUtfCount = 1;
 
-            processedUtfCount = extractPredefinedStrings(buffer, processedUtfCount, in);
+            processedUtfCount = extractPredefinedStrings(processedUtfCount);
 
             if (hasSourceFileAttr) {
                 sourceFileIndex = processedUtfCount;
@@ -333,9 +329,9 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             // Process interfaces
             processInterfaces();
 
-            processFields(defDataIn);
-            processMethods(defDataIn);
-            processClassAttr(defDataIn);
+            processFields();
+            processMethods();
+            processClassAttr();
 
             assert !buffer.hasRemaining() : className;
 
@@ -358,12 +354,12 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             return size;
         }
 
-        private int extractPredefinedStrings(ByteBuffer buffer, int currentUtfIndex, BitInputStream predefinedStrFlags) throws IOException {
+        private int extractPredefinedStrings(int currentUtfIndex) throws IOException {
             int predefinedUtfCount = Utils.PREDEFINED_UTF.length;
             predefinedUtfIndexes = new int[predefinedUtfCount];
 
             for (int i = 0; i < predefinedUtfCount; i++) {
-                if (predefinedStrFlags.readBoolean()) {
+                if (in.readBoolean()) {
                     predefinedUtfIndexes[i] = currentUtfIndex + firstUtfIndex;
 
                     currentUtfIndex++;
@@ -379,7 +375,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         private void skipConstTableTail(int count) throws IOException {
             ByteBuffer buffer = this.buffer;
-            byte[] array = buffer.array();
 
             for (int i = 0; i < count; i++) {
                 int tag = defDataIn.read();
@@ -405,7 +400,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
                     case 8: // ClassWriter.STR
                     case 16: // ClassWriter.MTYPE
-                        buffer.putShort((short) (readUtfIndex(in)));
+                        buffer.putShort((short) (readUtfIndexPlain()));
                         break;
 
                     default:
@@ -424,7 +419,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             }
         }
 
-        private void processFields(DataInputStream defDataIn) throws IOException {
+        private void processFields() throws IOException {
             int fieldCount = readSmallShort3(defDataIn);
             buffer.putShort((short) fieldCount);
 
@@ -432,22 +427,22 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 short accessFlags = defDataIn.readShort();
                 buffer.putShort(accessFlags);
 
-                int nameIndex = readUtfIndex(defDataIn);
+                int nameIndex = readUtfIndexDef();
                 buffer.putShort((short) nameIndex);
 
-                int descrIndex = readUtfIndex(defDataIn);
+                int descrIndex = readUtfIndexDef();
                 buffer.putShort((short) descrIndex);
 
                 int attrCount = readSmallShort3(defDataIn);
                 buffer.putShort((short) attrCount);
 
                 for (int j = 0; j < attrCount; j++) {
-                    processAttr(defDataIn);
+                    processAttr();
                 }
             }
         }
 
-        private void processMethods(DataInputStream defDataIn) throws IOException {
+        private void processMethods() throws IOException {
             int methodCount = readSmallShort3(defDataIn);
             buffer.putShort((short) methodCount);
 
@@ -455,10 +450,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 int accessFlags = defDataIn.readShort();
                 buffer.putShort((short) accessFlags);
 
-                int nameIndex = readUtfIndex(defDataIn);
+                int nameIndex = readUtfIndexDef();
                 buffer.putShort((short) nameIndex);
 
-                int descrIndex = readUtfIndex(defDataIn);
+                int descrIndex = readUtfIndexDef();
                 buffer.putShort((short) descrIndex);
 
                 int attrCount = readSmallShort3(defDataIn);
@@ -466,17 +461,17 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
                 if ((accessFlags & (0x00000400 /*Modifier.ABSTRACT*/ | 0x00000100 /*Modifier.NATIVE*/)) == 0) {
                     buffer.putShort((short) predefinedUtfIndexes[Utils.PS_CODE]);
-                    processCodeAttr(defDataIn);
+                    processCodeAttr();
                     attrCount--;
                 }
 
                 for (int j = 0; j < attrCount; j++) {
-                    processMethodAttr(defDataIn);
+                    processMethodAttr();
                 }
             }
         }
 
-        private void processClassAttr(DataInputStream defDataIn) throws IOException {
+        private void processClassAttr() throws IOException {
             int attrCount = readSmallShort3(defDataIn);
             buffer.putShort((short) attrCount);
 
@@ -489,11 +484,11 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             }
 
             for (int j = 0; j < attrCount; j++) {
-                processAttr(defDataIn);
+                processAttr();
             }
         }
 
-        private void processCodeAttr(DataInputStream defDataIn) throws IOException {
+        private void processCodeAttr() throws IOException {
             int lengthPosition = buffer.position();
 
             defDataIn.readFully(buffer.array(), lengthPosition + 4, 4); // read max_stack & max_locals
@@ -513,22 +508,22 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             int attrCount = readSmallShort3(defDataIn);
             buffer.putShort((short) attrCount);
             for (int i = 0; i < attrCount; i++) {
-                processAttr(defDataIn);
+                processAttr();
             }
 
             buffer.putInt(lengthPosition, buffer.position() - lengthPosition - 4);
         }
 
-        private void processAttr(DataInputStream defDataIn) throws IOException {
-            int nameIndex = readUtfIndex(defDataIn);
+        private void processAttr() throws IOException {
+            int nameIndex = readUtfIndexDef();
             buffer.putShort((short) nameIndex);
 
-            processAttrBodyDefault(defDataIn, nameIndex);
+            processAttrBodyDefault(nameIndex);
         }
 
-        private void processAttrBodyDefault(DataInputStream defDataIn, int nameIndex) throws IOException {
+        private void processAttrBodyDefault(int nameIndex) throws IOException {
             if (nameIndex == predefinedUtfIndexes[Utils.PS_SIGNATURE]) {
-                int signUtf = readUtfIndex(defDataIn);
+                int signUtf = readUtfIndexDef();
                 buffer.putInt(2);
                 buffer.putShort((short) signUtf);
                 return;
@@ -540,19 +535,19 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         }
 
 
-        private void processMethodAttr(DataInputStream defDataIn) throws IOException {
-            int nameIndex = readUtfIndex(defDataIn);
+        private void processMethodAttr() throws IOException {
+            int nameIndex = readUtfIndexDef();
             buffer.putShort((short) nameIndex);
 
             if (nameIndex == predefinedUtfIndexes[Utils.PS_EXCEPTIONS]) {
-                processExceptionAttr(defDataIn);
+                processExceptionAttr();
             }
             else {
-                processAttrBodyDefault(defDataIn, nameIndex);
+                processAttrBodyDefault(nameIndex);
             }
         }
 
-        private void processExceptionAttr(DataInputStream defDataIn) throws IOException {
+        private void processExceptionAttr() throws IOException {
             int savedPosition = buffer.position();
             buffer.position(savedPosition + 4 + 2);
 
@@ -567,11 +562,11 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             buffer.putShort(savedPosition + 4, (short) ((buffer.position() - savedPosition - 4 - 2) >>> 1));
         }
 
-        private int readUtfIndex(DataInput in) throws IOException {
-            return firstUtfIndex + readLimitedShort(in, utfCount - 1);
+        private int readUtfIndexDef() throws IOException {
+            return firstUtfIndex + readLimitedShort(defDataIn, utfCount - 1);
         }
 
-        private int readUtfIndex(BitInputStream in) throws IOException {
+        private int readUtfIndexPlain() throws IOException {
             return firstUtfIndex + utfLimiter.read(in);
         }
 
