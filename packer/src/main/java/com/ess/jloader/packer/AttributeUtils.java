@@ -19,7 +19,7 @@ public class AttributeUtils {
     };
 
     public static final AttributeFactory[] FIELD_ATTRS = new AttributeFactory[]{
-
+            AttributeSignature.FACTORY,
     };
 
     public static final AttributeFactory[] CODE_ATTRS = new AttributeFactory[]{
@@ -29,6 +29,7 @@ public class AttributeUtils {
     public static final AttributeFactory[] CLASS_ATTRS = new AttributeFactory[]{
             AttributeSourceFile.FACTORY,
             AttributeInnerClasses.FACTORY,
+            AttributeSignature.FACTORY,
     };
 
 //    private static final Field attributeValueField;

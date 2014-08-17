@@ -6,7 +6,6 @@ import com.ess.jloader.utils.Modifier;
 import com.ess.jloader.utils.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.objectweb.asm.*;
 import org.objectweb.asm.Attribute;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
@@ -53,23 +52,17 @@ public class GenerateStrCollector {
 //            res.add("java/lang/Object");
 //        }
 
-//        for (FieldNode field : classNode.fields) {
-//            if (findAttribute(field.attrs, "Synthetic") != null) {
-//                res.add("Synthetic");
-//            }
-//            if (findAttribute(field.attrs, "Signature") != null) {
-//                res.add("Signature");
-//            }
-//        }
+        for (FieldNode field : classNode.fields) {
+            if (field.signature != null) {
+                res.add("Signature");
+            }
+        }
 
         for (MethodNode method : classNode.methods) {
             if (!Modifier.isNative(method.access) && !Modifier.isAbstract(method.access)) {
                 res.add("Code");
             }
 
-//            if (findAttribute(method.attrs, "Synthetic") != null) {
-//                res.add("Synthetic");
-//            }
             if (method.signature != null) {
                 res.add("Signature");
             }
@@ -96,6 +89,10 @@ public class GenerateStrCollector {
             for (int i = 1; i <= anonymousClassCount; i++) {
                 res.add(classNode.name + '$' + i);
             }
+        }
+
+        if (classNode.signature != null) {
+            res.add("Signature");
         }
 
         return res;

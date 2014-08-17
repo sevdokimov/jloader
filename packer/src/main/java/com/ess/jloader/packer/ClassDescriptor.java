@@ -7,6 +7,7 @@ import com.google.common.collect.Lists;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
 
 import java.io.*;
@@ -334,9 +335,18 @@ public class ClassDescriptor {
             int descrIndex = buffer.getShort() & 0xFFFF;
             utfInterval.writeIndexCompact(plainData, descrIndex);
 
+            // Process attributes
             List<Attribute> attributes = AttributeUtils.readAllAttributes(AttributeUtils.FIELD_ATTRS, this, buffer);
 
-            Utils.writeSmallShort3(out, attributes.size());
+            List<Attribute> knownAttributes = new ArrayList<Attribute>();
+
+            int attrInfo = extractKnownAttributes(attributes, knownAttributes, "Signature");
+
+            Utils.writeSmallShort3(out, attrInfo);
+
+            for (Attribute attribute : knownAttributes) {
+                attribute.writeTo(out, plainData, this);
+            }
 
             for (Attribute attribute : attributes) {
                 utfInterval.writeIndexCompact(out, getIndexByUtf(attribute.getName()));
@@ -409,7 +419,7 @@ public class ClassDescriptor {
 
         List<Attribute> knownAttributes = new ArrayList<Attribute>();
 
-        int attrInfo = extractKnownAttributes(attributes, knownAttributes, "SourceFile", "InnerClasses");
+        int attrInfo = extractKnownAttributes(attributes, knownAttributes, "SourceFile", "InnerClasses", "Signature");
 
         Utils.writeSmallShort3(out, attrInfo);
 

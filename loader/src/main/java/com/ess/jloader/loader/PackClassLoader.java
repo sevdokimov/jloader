@@ -381,12 +381,24 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 int descrIndex = utfInterval.readIndexCompact(in);
                 buffer.putShort((short) descrIndex);
 
-                int attrCount = Utils.readSmallShort3(defDataIn);
-                buffer.putShort((short) attrCount);
+                // Process attributes
+                int attrInfo = Utils.readSmallShort3(defDataIn);
+                int attrCountPosition = buffer.position();
+                int processedAttrCount = 0;
+                buffer.position(buffer.position() + 2); // the place to store attr count
 
-                for (int j = 0; j < attrCount; j++) {
+                if ((attrInfo & 1) > 0) {
+                    processSignatureAttr();
+                    processedAttrCount++;
+                }
+
+                int unknownAttrCount = attrInfo >>> 1;
+
+                for (int j = 0; j < unknownAttrCount; j++) {
                     processAttr();
                 }
+
+                buffer.putShort(attrCountPosition, (short) (unknownAttrCount + processedAttrCount));
             }
         }
 
@@ -461,7 +473,12 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 processedAttrCount++;
             }
 
-            int unknownAttrCount = attrInfo >>> 2;
+            if ((attrInfo & 4) > 0) {
+                processSignatureAttr();
+                processedAttrCount++;
+            }
+
+            int unknownAttrCount = attrInfo >>> 3;
 
             for (int j = 0; j < unknownAttrCount; j++) {
                 processAttr();
