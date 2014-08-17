@@ -2,12 +2,13 @@ package com.ess.jloader.packer;
 
 import com.ess.jloader.utils.BitOutputStream;
 import com.ess.jloader.utils.Utils;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * @author Sergey Evdokimov
@@ -16,7 +17,7 @@ public class AttributeExceptions extends Attribute {
 
     private final List<Integer> exceptions = new ArrayList<Integer>();
 
-    public AttributeExceptions(ClassDescriptor descriptor, ByteBuffer buffer) {
+    public AttributeExceptions(ByteBuffer buffer) {
         super("Exceptions");
 
         int length = buffer.getInt();
@@ -46,14 +47,4 @@ public class AttributeExceptions extends Attribute {
 
         Utils.writeLimitedNumber(out, 0, descriptor.getConstClasses().size());
     }
-
-    public static final AttributeFactory FACTORY = new AttributeFactory() {
-        @Nullable
-        @Override
-        public Attribute read(ClassDescriptor descriptor, String name, ByteBuffer buffer) {
-            if (!name.equals("Exceptions")) return null;
-
-            return new AttributeExceptions(descriptor, buffer);
-        }
-    };
 }

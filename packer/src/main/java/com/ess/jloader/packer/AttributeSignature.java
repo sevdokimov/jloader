@@ -1,7 +1,6 @@
 package com.ess.jloader.packer;
 
 import com.ess.jloader.utils.BitOutputStream;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -27,14 +26,4 @@ public class AttributeSignature extends Attribute {
     public void writeTo(DataOutputStream out, BitOutputStream bitOut, ClassDescriptor descriptor) throws IOException {
         descriptor.getUtfInterval().writeIndexCompact(out, utfIndex);
     }
-
-    public static final AttributeFactory FACTORY = new AttributeFactory() {
-        @Nullable
-        @Override
-        public Attribute read(ClassDescriptor descriptor, String name, ByteBuffer buffer) {
-            if (!name.equals("Signature")) return null;
-
-            return new AttributeSignature(buffer);
-        }
-    };
 }

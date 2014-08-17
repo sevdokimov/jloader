@@ -12,27 +12,6 @@ import java.util.Collection;
  */
 public class AttributeUtils {
 
-    public static final AttributeFactory[] METHOD_ATTRS = new AttributeFactory[]{
-            AttributeSignature.FACTORY,
-            AttributeExceptions.FACTORY,
-            AttributeCode.FACTORY
-    };
-
-    public static final AttributeFactory[] FIELD_ATTRS = new AttributeFactory[]{
-            AttributeSignature.FACTORY,
-            AttributeConstValue.FACTORY,
-    };
-
-    public static final AttributeFactory[] CODE_ATTRS = new AttributeFactory[]{
-
-    };
-
-    public static final AttributeFactory[] CLASS_ATTRS = new AttributeFactory[]{
-            AttributeSourceFile.FACTORY,
-            AttributeInnerClasses.FACTORY,
-            AttributeSignature.FACTORY,
-    };
-
 //    private static final Field attributeValueField;
 //
 //    static {
@@ -70,18 +49,6 @@ public class AttributeUtils {
 //
 //    }
 
-    @NotNull
-    public static Attribute read(AttributeFactory[] factories, ClassDescriptor descriptor, String name, ByteBuffer buffer) {
-        for (AttributeFactory factory : factories) {
-            Attribute res = factory.read(descriptor, name, buffer);
-            if (res != null) {
-                return res;
-            }
-        }
-
-        return UnknownAttribute.FACTORY.read(descriptor, name, buffer);
-    }
-
     @Nullable
     public static Attribute findAttributeByName(Collection<? extends Attribute> attributes, @NotNull String name) {
         for (Attribute attribute : attributes) {
@@ -105,7 +72,7 @@ public class AttributeUtils {
         return null;
     }
 
-    public static ArrayList<Attribute> readAllAttributes(AttributeFactory[] factories, ClassDescriptor descriptor, ByteBuffer buffer) {
+    public static ArrayList<Attribute> readAllAttributes(AttributeFactory factory, ClassDescriptor descriptor, ByteBuffer buffer) {
         int attrCount = buffer.getShort() & 0xFFFF;
 
         ArrayList<Attribute> res = new ArrayList<Attribute>(attrCount);
@@ -114,7 +81,7 @@ public class AttributeUtils {
             int nameIndex = buffer.getShort() & 0xFFFF;
             String name = descriptor.getUtfByIndex(nameIndex);
 
-            res.add(AttributeUtils.read(factories, descriptor, name, buffer));
+            res.add(factory.read(descriptor, name, buffer));
         }
 
         return res;

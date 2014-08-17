@@ -3,7 +3,6 @@ package com.ess.jloader.packer;
 import com.ess.jloader.utils.BitOutputStream;
 import com.ess.jloader.utils.InsnTypes;
 import com.ess.jloader.utils.Utils;
-import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Opcodes;
 
 import java.io.DataOutputStream;
@@ -26,7 +25,7 @@ public class AttributeCode extends Attribute {
 
     private ArrayList<Attribute> attributes;
 
-    public AttributeCode(ByteBuffer buffer, ClassDescriptor descriptor) {
+    public AttributeCode(ClassDescriptor descriptor, ByteBuffer buffer) {
         super("Code");
 
         int length = buffer.getInt();
@@ -54,7 +53,7 @@ public class AttributeCode extends Attribute {
             exceptionTable.add(r);
         }
 
-        attributes = AttributeUtils.readAllAttributes(AttributeUtils.CODE_ATTRS, descriptor, buffer);
+        attributes = AttributeUtils.readAllAttributes(CodeAttributeFactory.INSTANCE, descriptor, buffer);
 
         assert buffer.position() - savedPos == length;
     }
@@ -203,16 +202,6 @@ public class AttributeCode extends Attribute {
 
         out.write(0xFF); // end of code marker.
     }
-
-    public static final AttributeFactory FACTORY = new AttributeFactory() {
-        @Nullable
-        @Override
-        public Attribute read(ClassDescriptor descriptor, String name, ByteBuffer buffer) {
-            if (!name.equals("Code")) return null;
-
-            return new AttributeCode(buffer, descriptor);
-        }
-    };
 
     public static class ExceptionRecord {
         public int startPc;

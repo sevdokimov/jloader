@@ -1,7 +1,6 @@
 package com.ess.jloader.packer;
 
 import com.ess.jloader.utils.BitOutputStream;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -29,12 +28,4 @@ public class UnknownAttribute extends Attribute {
         out.writeInt(length);
         out.write(body);
     }
-
-    public static final AttributeFactory<UnknownAttribute> FACTORY = new AttributeFactory<UnknownAttribute>() {
-        @Nullable
-        @Override
-        public UnknownAttribute read(ClassDescriptor descriptor, String name, ByteBuffer buffer) {
-            return new UnknownAttribute(name, buffer);
-        }
-    };
 }

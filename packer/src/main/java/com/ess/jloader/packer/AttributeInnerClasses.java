@@ -1,7 +1,6 @@
 package com.ess.jloader.packer;
 
 import com.ess.jloader.utils.BitOutputStream;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -18,8 +17,8 @@ public class AttributeInnerClasses extends Attribute {
 
     private final int anonymousClassCount;
 
-    public AttributeInnerClasses(ClassDescriptor descriptor, String name, ByteBuffer buffer) {
-        super(name);
+    public AttributeInnerClasses(ClassDescriptor descriptor, ByteBuffer buffer) {
+        super("InnerClasses");
 
         length = buffer.getInt();
         body = PackUtils.readBytes(buffer, length);
@@ -35,13 +34,4 @@ public class AttributeInnerClasses extends Attribute {
         out.writeInt(length);
         out.write(body);
     }
-
-    public static final AttributeFactory<AttributeInnerClasses> FACTORY = new AttributeFactory<AttributeInnerClasses>() {
-        @Nullable
-        @Override
-        public AttributeInnerClasses read(ClassDescriptor descriptor, String name, ByteBuffer buffer) {
-            if (!name.equals("InnerClasses")) return null;
-            return new AttributeInnerClasses(descriptor, name, buffer);
-        }
-    };
 }

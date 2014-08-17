@@ -2,12 +2,10 @@ package com.ess.jloader.packer;
 
 import com.ess.jloader.utils.BitOutputStream;
 import com.ess.jloader.utils.Utils;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.*;
 
 /**
  * @author Sergey Evdokimov
@@ -36,14 +34,4 @@ public class AttributeSourceFile extends Attribute {
             descriptor.getUtfInterval().writeIndexCompact(bitOut, descriptor.getIndexByUtf(sourceFile));
         }
     }
-
-    public static final AttributeFactory FACTORY = new AttributeFactory() {
-        @Nullable
-        @Override
-        public Attribute read(ClassDescriptor descriptor, String name, ByteBuffer buffer) {
-            if (!name.equals("SourceFile")) return null;
-
-            return new AttributeSourceFile(descriptor, buffer);
-        }
-    };
 }

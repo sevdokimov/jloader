@@ -7,9 +7,9 @@ import java.nio.ByteBuffer;
 /**
  * @author Sergey Evdokimov
  */
-public abstract class AttributeFactory<T extends Attribute> {
+public abstract class AttributeFactory {
 
     @Nullable
-    public abstract T read(ClassDescriptor descriptor, String name, ByteBuffer buffer);
+    public abstract Attribute read(ClassDescriptor descriptor, String name, ByteBuffer buffer);
 
 }
