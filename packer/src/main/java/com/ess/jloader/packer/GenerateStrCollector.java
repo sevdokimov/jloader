@@ -2,7 +2,6 @@ package com.ess.jloader.packer;
 
 import com.ess.jloader.packer.consts.AbstractConst;
 import com.ess.jloader.packer.consts.ConstUtf;
-import com.ess.jloader.utils.Modifier;
 import com.ess.jloader.utils.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -11,6 +10,7 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodNode;
 
+import java.lang.reflect.Modifier;
 import java.util.*;
 
 /**

@@ -1,5 +1,6 @@
 package com.ess.jloader.packer.tests;
 
+import com.ess.jloader.loader.PackClassLoader;
 import com.ess.jloader.packer.Config;
 import com.ess.jloader.packer.LiteralsCache;
 import com.ess.jloader.packer.JarPacker;
