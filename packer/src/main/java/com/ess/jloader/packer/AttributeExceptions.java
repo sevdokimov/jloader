@@ -1,5 +1,6 @@
 package com.ess.jloader.packer;
 
+import com.ess.jloader.utils.BitOutputStream;
 import com.ess.jloader.utils.Utils;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,7 +36,7 @@ public class AttributeExceptions extends Attribute {
     }
 
     @Override
-    public void writeTo(DataOutputStream out, ClassDescriptor descriptor) throws IOException {
+    public void writeTo(DataOutputStream out, BitOutputStream bitOut, ClassDescriptor descriptor) throws IOException {
         Integer[] m = exceptions.toArray(new Integer[exceptions.size()]);
         Arrays.sort(m);
 
@@ -49,8 +50,8 @@ public class AttributeExceptions extends Attribute {
     public static final AttributeFactory FACTORY = new AttributeFactory() {
         @Nullable
         @Override
-        public Attribute read(AttributeType type, ClassDescriptor descriptor, String name, ByteBuffer buffer) {
-            if (type != AttributeType.METHOD || !name.equals("Exceptions")) return null;
+        public Attribute read(ClassDescriptor descriptor, String name, ByteBuffer buffer) {
+            if (!name.equals("Exceptions")) return null;
 
             return new AttributeExceptions(descriptor, buffer);
         }

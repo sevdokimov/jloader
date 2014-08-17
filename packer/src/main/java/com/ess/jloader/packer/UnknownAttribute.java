@@ -1,5 +1,6 @@
 package com.ess.jloader.packer;
 
+import com.ess.jloader.utils.BitOutputStream;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.DataOutputStream;
@@ -11,9 +12,9 @@ import java.nio.ByteBuffer;
  */
 public class UnknownAttribute extends Attribute {
 
-    private int length;
+    private final int length;
 
-    private byte[] body;
+    private final byte[] body;
 
     public UnknownAttribute(String name, ByteBuffer buffer) {
         super(name);
@@ -24,7 +25,7 @@ public class UnknownAttribute extends Attribute {
 
 
     @Override
-    public void writeTo(DataOutputStream out, ClassDescriptor descriptor) throws IOException {
+    public void writeTo(DataOutputStream out, BitOutputStream bitOut, ClassDescriptor descriptor) throws IOException {
         out.writeInt(length);
         out.write(body);
     }
@@ -32,7 +33,7 @@ public class UnknownAttribute extends Attribute {
     public static final AttributeFactory<UnknownAttribute> FACTORY = new AttributeFactory<UnknownAttribute>() {
         @Nullable
         @Override
-        public UnknownAttribute read(AttributeType type, ClassDescriptor descriptor, String name, ByteBuffer buffer) {
+        public UnknownAttribute read(ClassDescriptor descriptor, String name, ByteBuffer buffer) {
             return new UnknownAttribute(name, buffer);
         }
     };

@@ -138,8 +138,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         private final String className;
 
-        private boolean hasSourceFileAttr;
-
         private ByteBuffer buffer;
 
         private ConstIndexInterval classesInterval;
@@ -149,12 +147,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         private ConstIndexInterval nameAndTypeInterval;
         private ConstIndexInterval utfInterval;
 
-        private int[] predefinedUtfIndexes;
-
-        private int sourceFileIndex;
-
-        private int anonymousClassCount;
-        private int firstAnonymousNameIndex;
+        private int[] predefinedUtfIndexes = new int[Utils.PREDEFINED_UTF.length];
 
         private int generatedStrIndex;
         private DataOutputStream generatedStrDataOutput;
@@ -167,8 +160,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         }
 
         public byte[] unpack() throws IOException {
-            hasSourceFileAttr = in.readBoolean();
-
             ByteBuffer buffer = ByteBuffer.allocate(readClassSize());
             this.buffer = buffer;
             byte[] array = buffer.array();
@@ -178,8 +169,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
             // Version
             buffer.putInt(versions[in.readBits(3)]);
-
-            anonymousClassCount = in.readSmall_0_3_8_16();
 
             // Const count
             int constCount = Utils.readSmallShort3(in);
@@ -242,17 +231,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             // Generated utf
             putGeneratedStr(className);
 
-            extractPredefinedStrings();
-
-            if (hasSourceFileAttr) {
-                sourceFileIndex = putGeneratedStr(Utils.C_SourceFile);
-                putGeneratedStr(Utils.generateSourceFileName(className));
-            }
-
-            firstAnonymousNameIndex = generatedStrIndex;
-            for (int i = 1; i <= anonymousClassCount; i++) {
-                putGeneratedStr(className + '$' + i);
-            }
+            extractCommonUtf();
 
             // Packed utf
             int packedStrCount = in.readLimitedShort(utfInterval.getCount());
@@ -286,10 +265,11 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             processMethods();
             processClassAttr();
 
+            assert generatedStrIndex == constCount - packedStrCount - notPackedStrCount : className;
+            assert generatedStrDataOutput.size() == generatedStrSize : className;
+
             assert !buffer.hasRemaining() : className;
 
-            assert generatedStrDataOutput.size() == generatedStrSize;
-            assert generatedStrIndex == constCount - packedStrCount - notPackedStrCount;
 
             return array;
         }
@@ -312,6 +292,18 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             return generatedStrIndex++;
         }
 
+        // See Utils.PREDEFINED_UTF
+        private int putPredefinedGeneratedString(int predefinedStrId) throws IOException {
+            int res = predefinedUtfIndexes[predefinedStrId];
+            if (res == 0) {
+                int strStart = Utils.PREDEFINED_UTF_BYTE_INDEXES[predefinedStrId];
+                res = putGeneratedStr(Utils.PREDEFINED_UTF_BYTES, strStart, Utils.PREDEFINED_UTF_BYTE_INDEXES[predefinedStrId + 1] - strStart);
+                predefinedUtfIndexes[predefinedStrId] = res;
+            }
+
+            return res;
+        }
+
         private int readClassSize() throws IOException {
             int size = in.readShort();
             if (size < 0) {
@@ -321,15 +313,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             return size;
         }
 
-        private void extractPredefinedStrings() throws IOException {
-            int predefinedUtfCount = Utils.PREDEFINED_UTF.length;
-            predefinedUtfIndexes = new int[predefinedUtfCount];
-
-            for (int i = 0; i < predefinedUtfCount; i++) {
+        private void extractCommonUtf() throws IOException {
+            for (String s : Utils.COMMON_UTF) {
                 if (in.readBoolean()) {
-                    int utfStart = Utils.PREDEFINED_UTF_BYTE_INDEXES[i];
-                    int utfLen = Utils.PREDEFINED_UTF_BYTE_INDEXES[i + 1] - utfStart;
-                    predefinedUtfIndexes[i] = putGeneratedStr(Utils.PREDEFINED_UTF_BYTES, utfStart, utfLen);
+                    putGeneratedStr(s);
                 }
             }
         }
@@ -417,39 +404,88 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 int descrIndex = utfInterval.readIndexCompact(in);
                 buffer.putShort((short) descrIndex);
 
-                int attrCount = Utils.readSmallShort3(defDataIn);
-                buffer.putShort((short) attrCount);
+                int attrInfo = Utils.readSmallShort3(defDataIn);
+                int attrCountPosition = buffer.position();
+                int processedAttrCount = 0;
+                buffer.position(buffer.position() + 2); // the place to store attr count
 
                 if ((accessFlags & (0x00000400 /*Modifier.ABSTRACT*/ | 0x00000100 /*Modifier.NATIVE*/)) == 0) {
-                    buffer.putShort((short) predefinedUtfIndexes[Utils.PS_CODE]);
                     processCodeAttr();
-                    attrCount--;
+                    processedAttrCount++;
                 }
 
-                for (int j = 0; j < attrCount; j++) {
-                    processMethodAttr();
+                if ((attrInfo & 1) > 0) {
+                    processSignatureAttr();
+                    processedAttrCount++;
                 }
+
+                if ((attrInfo & 2) > 0) {
+                    processExceptionAttr();
+                    processedAttrCount++;
+                }
+
+                int unknownAttrCount = attrInfo >>> 2;
+
+                for (int j = 0; j < unknownAttrCount; j++) {
+                    processAttr();
+                }
+
+                buffer.putShort(attrCountPosition, (short) (unknownAttrCount + processedAttrCount));
             }
         }
 
         private void processClassAttr() throws IOException {
-            int attrCount = Utils.readSmallShort3(defDataIn);
-            buffer.putShort((short) attrCount);
+            int attrInfo = Utils.readSmallShort3(defDataIn);
 
-            if (hasSourceFileAttr) {
-                buffer.putShort((short) (sourceFileIndex));
+            int attrCountPosition = buffer.position();
+            int processedAttrCount = 0;
+            buffer.position(buffer.position() + 2); // the place to store attr count
+
+            if ((attrInfo & 1) > 0) {
+                buffer.putShort((short) putGeneratedStr(Utils.C_SourceFile));
                 buffer.putInt(2);
-                buffer.putShort((short) (sourceFileIndex + 1));
 
-                attrCount--;
+                if (in.readBoolean()) {
+                    buffer.putShort((short) putGeneratedStr(Utils.generateSourceFileName(className)));
+                }
+                else {
+                    int utfIndex = utfInterval.readIndexCompact(in);
+                    buffer.putShort((short) utfIndex);
+                }
+
+                processedAttrCount++;
             }
 
-            for (int j = 0; j < attrCount; j++) {
+            if ((attrInfo & 2) > 0) {
+                processInnerClassesAttr();
+                processedAttrCount++;
+            }
+
+            int unknownAttrCount = attrInfo >>> 2;
+
+            for (int j = 0; j < unknownAttrCount; j++) {
                 processAttr();
             }
+
+            buffer.putShort(attrCountPosition, (short) (unknownAttrCount + processedAttrCount));
+        }
+
+        private void processInnerClassesAttr() throws IOException {
+            buffer.putShort((short) putGeneratedStr(Utils.C_InnerClasses));
+
+            int anonymousClassCount = in.readSmall_0_3_8_16();
+            for (int i = 1; i <= anonymousClassCount; i++) {
+                putGeneratedStr(className + '$' + i);
+            }
+
+            int length = defDataIn.readInt();
+            buffer.putInt(length);
+            Utils.read(defDataIn, buffer, length);
         }
 
         private void processCodeAttr() throws IOException {
+            buffer.putShort((short) putPredefinedGeneratedString(Utils.PS_CODE));
+
             int lengthPosition = buffer.position();
             buffer.position(lengthPosition + 4);
 
@@ -483,36 +519,20 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             int nameIndex = utfInterval.readIndexCompact(defDataIn);
             buffer.putShort((short) nameIndex);
 
-            processAttrBodyDefault(nameIndex);
-        }
-
-        private void processAttrBodyDefault(int nameIndex) throws IOException {
-            if (nameIndex == predefinedUtfIndexes[Utils.PS_SIGNATURE]) {
-                int signUtf = utfInterval.readIndexCompact(defDataIn);
-                buffer.putInt(2);
-                buffer.putShort((short) signUtf);
-                return;
-            }
-
             int length = defDataIn.readInt();
             buffer.putInt(length);
             Utils.read(defDataIn, buffer, length);
         }
 
-
-        private void processMethodAttr() throws IOException {
-            int nameIndex = utfInterval.readIndexCompact(defDataIn);
-            buffer.putShort((short) nameIndex);
-
-            if (nameIndex == predefinedUtfIndexes[Utils.PS_EXCEPTIONS]) {
-                processExceptionAttr();
-            }
-            else {
-                processAttrBodyDefault(nameIndex);
-            }
+        private void processSignatureAttr() throws IOException {
+            buffer.putShort((short) putPredefinedGeneratedString(Utils.PS_SIGNATURE));
+            buffer.putInt(2);
+            buffer.putShort((short) utfInterval.readIndexCompact(defDataIn));
         }
 
         private void processExceptionAttr() throws IOException {
+            buffer.putShort((short) putPredefinedGeneratedString(Utils.PS_EXCEPTIONS));
+
             int savedPosition = buffer.position();
             buffer.position(savedPosition + 4 + 2);
 

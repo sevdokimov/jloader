@@ -12,31 +12,72 @@ import java.util.Collection;
  */
 public class AttributeUtils {
 
-    private final AttributeFactory[] list = new AttributeFactory[]{
+    public static final AttributeFactory[] METHOD_ATTRS = new AttributeFactory[]{
             AttributeSignature.FACTORY,
             AttributeExceptions.FACTORY,
-            AttributeCode.FACTORY};
+            AttributeCode.FACTORY
+    };
 
-    private static final AttributeUtils INSTANCE = new AttributeUtils();
+    public static final AttributeFactory[] FIELD_ATTRS = new AttributeFactory[]{
+
+    };
+
+    public static final AttributeFactory[] CODE_ATTRS = new AttributeFactory[]{
+
+    };
+
+    public static final AttributeFactory[] CLASS_ATTRS = new AttributeFactory[]{
+            AttributeSourceFile.FACTORY,
+            AttributeInnerClasses.FACTORY,
+    };
+
+//    private static final Field attributeValueField;
+//
+//    static {
+//        try {
+//            attributeValueField = org.objectweb.asm.Attribute.class.getDeclaredField("value");
+//            attributeValueField.setAccessible(true);
+//        } catch (NoSuchFieldException e) {
+//            throw Throwables.propagate(e);
+//        }
+//    }
 
     private AttributeUtils() {
 
     }
 
-    public static AttributeUtils getInstance() {
-        return INSTANCE;
-    }
+//    @NotNull
+//    public static Attribute convert(AttributeType type, ClassDescriptor descriptor, org.objectweb.asm.Attribute attr) {
+//        byte[] data;
+//        try {
+//            data = (byte[]) attributeValueField.get(attr);
+//        } catch (IllegalAccessException e) {
+//            throw Throwables.propagate(e);
+//        }
+//
+//        ByteBuffer buffer = ByteBuffer.wrap(data);
+//
+//        for (AttributeFactory factory : list) {
+//            Attribute res = factory.read(type, descriptor, attr.type, buffer);
+//            if (res != null) {
+//                return res;
+//            }
+//        }
+//
+//        return UnknownAttribute.FACTORY.read(type, descriptor, attr.type, buffer);
+//
+//    }
 
     @NotNull
-    public Attribute read(AttributeType type, ClassDescriptor descriptor, String name, ByteBuffer buffer) {
-        for (AttributeFactory factory : list) {
-            Attribute res = factory.read(type, descriptor, name, buffer);
+    public static Attribute read(AttributeFactory[] factories, ClassDescriptor descriptor, String name, ByteBuffer buffer) {
+        for (AttributeFactory factory : factories) {
+            Attribute res = factory.read(descriptor, name, buffer);
             if (res != null) {
                 return res;
             }
         }
 
-        return UnknownAttribute.FACTORY.read(type, descriptor, name, buffer);
+        return UnknownAttribute.FACTORY.read(descriptor, name, buffer);
     }
 
     @Nullable
@@ -50,7 +91,7 @@ public class AttributeUtils {
         return null;
     }
 
-    @NotNull
+    @Nullable
     public static Attribute removeAttributeByName(Collection<? extends Attribute> attributes, @NotNull String name) {
         for (Attribute attribute : attributes) {
             if (attribute.getName().equals(name)) {
@@ -59,19 +100,19 @@ public class AttributeUtils {
             }
         }
 
-        throw new IllegalArgumentException();
+        return null;
     }
 
-    public static ArrayList<Attribute> readAllAttributes(AttributeType type, ClassDescriptor descriptor, ByteBuffer buffer) {
+    public static ArrayList<Attribute> readAllAttributes(AttributeFactory[] factories, ClassDescriptor descriptor, ByteBuffer buffer) {
         int attrCount = buffer.getShort() & 0xFFFF;
 
-        ArrayList<Attribute> res = new ArrayList<Attribute>();
+        ArrayList<Attribute> res = new ArrayList<Attribute>(attrCount);
 
         for (int i = 0; i < attrCount; i++) {
             int nameIndex = buffer.getShort() & 0xFFFF;
             String name = descriptor.getUtfByIndex(nameIndex);
 
-            res.add(AttributeUtils.getInstance().read(type, descriptor, name, buffer));
+            res.add(AttributeUtils.read(factories, descriptor, name, buffer));
         }
 
         return res;

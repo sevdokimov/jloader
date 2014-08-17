@@ -10,22 +10,28 @@ public class Utils {
 
     public static final boolean CHECK_LIMITS = false;
 
-    public static final String[] PREDEFINED_UTF = {
-            "Code",
+    public static final String[] COMMON_UTF = new String[] {
             "LineNumberTable",
             "LocalVariableTable",
+    };
+
+    public static final String[] PREDEFINED_UTF = {
+            "Code",
             "Exceptions",
-            "InnerClasses",
             "Synthetic",
             "Signature",
     };
 
 
+    public static final int PS_CODE = 0;
+    public static final int PS_EXCEPTIONS = 1;
+    public static final int PS_SIGNATURE = 3;
 
     public static final byte[] PREDEFINED_UTF_BYTES;
     public static final int[] PREDEFINED_UTF_BYTE_INDEXES;
 
     public static final byte[] C_SourceFile = toByteArray("SourceFile");
+    public static final byte[] C_InnerClasses = toByteArray("InnerClasses");
 
     static {
         try {
@@ -52,12 +58,6 @@ public class Utils {
             throw new RuntimeException(e);
         }
     }
-
-
-    public static final int PS_CODE = 0;
-    public static final int PS_EXCEPTIONS = 3;
-    public static final int PS_INNER_CLASSES = 4;
-    public static final int PS_SIGNATURE = 6;
 
     public static final byte PACKER_VERSION = 0x01;
 

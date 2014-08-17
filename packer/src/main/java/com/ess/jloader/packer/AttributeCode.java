@@ -1,5 +1,6 @@
 package com.ess.jloader.packer;
 
+import com.ess.jloader.utils.BitOutputStream;
 import com.ess.jloader.utils.InsnTypes;
 import com.ess.jloader.utils.Utils;
 import org.jetbrains.annotations.Nullable;
@@ -53,13 +54,13 @@ public class AttributeCode extends Attribute {
             exceptionTable.add(r);
         }
 
-        attributes = AttributeUtils.readAllAttributes(AttributeType.CODE, descriptor, buffer);
+        attributes = AttributeUtils.readAllAttributes(AttributeUtils.CODE_ATTRS, descriptor, buffer);
 
         assert buffer.position() - savedPos == length;
     }
 
     @Override
-    public void writeTo(DataOutputStream out, ClassDescriptor descriptor) throws IOException {
+    public void writeTo(DataOutputStream out, BitOutputStream bitOut, ClassDescriptor descriptor) throws IOException {
         Utils.writeSmallShort3(out, maxStack);
         Utils.writeSmallShort3(out, maxLocals);
 
@@ -75,7 +76,7 @@ public class AttributeCode extends Attribute {
         for (Attribute attribute : attributes) {
             descriptor.getUtfInterval().writeIndexCompact(out, descriptor.getIndexByUtf(attribute.getName()));
             assert attribute instanceof UnknownAttribute;
-            attribute.writeTo(out, descriptor);
+            attribute.writeTo(out, bitOut, descriptor);
         }
     }
 
@@ -206,8 +207,8 @@ public class AttributeCode extends Attribute {
     public static final AttributeFactory FACTORY = new AttributeFactory() {
         @Nullable
         @Override
-        public Attribute read(AttributeType type, ClassDescriptor descriptor, String name, ByteBuffer buffer) {
-            if (type != AttributeType.METHOD || !name.equals("Code")) return null;
+        public Attribute read(ClassDescriptor descriptor, String name, ByteBuffer buffer) {
+            if (!name.equals("Code")) return null;
 
             return new AttributeCode(buffer, descriptor);
         }

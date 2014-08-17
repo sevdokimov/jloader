@@ -10,6 +10,6 @@ import java.nio.ByteBuffer;
 public abstract class AttributeFactory<T extends Attribute> {
 
     @Nullable
-    public abstract T read(AttributeType type, ClassDescriptor descriptor, String name, ByteBuffer buffer);
+    public abstract T read(ClassDescriptor descriptor, String name, ByteBuffer buffer);
 
 }

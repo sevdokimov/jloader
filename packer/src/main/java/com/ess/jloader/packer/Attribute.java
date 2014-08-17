@@ -1,10 +1,10 @@
 package com.ess.jloader.packer;
 
+import com.ess.jloader.utils.BitOutputStream;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 
 /**
  * @author Sergey Evdokimov
@@ -17,7 +17,7 @@ public abstract class Attribute {
         this.name = name;
     }
 
-    public abstract void writeTo(DataOutputStream out, ClassDescriptor descriptor) throws IOException;
+    public abstract void writeTo(DataOutputStream defOut, BitOutputStream bitOut, ClassDescriptor descriptor) throws IOException;
 
     @NotNull
     public String getName() {

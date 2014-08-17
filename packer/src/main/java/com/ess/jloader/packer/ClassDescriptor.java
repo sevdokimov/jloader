@@ -54,15 +54,6 @@ public class ClassDescriptor {
 
     private final Set<String> generatedStr;
 
-
-    private boolean[] predefinedUtfFlags = new boolean[Utils.PREDEFINED_UTF.length];
-    private boolean hasSourceFileAttr;
-
-    private final int[] predefinedUtfIndexes = new int[Utils.PREDEFINED_UTF.length];
-
-    private int anonymousClassCount;
-    private int firstAnonymousNameIndex;
-
     private final ClassNode classNode;
 
     public ClassDescriptor(ClassReader classReader) {
@@ -70,50 +61,13 @@ public class ClassDescriptor {
 
         className = classReader.getClassName();
 
+        classNode = new ClassNode();
+        classReader.accept(classNode, 0);
+
         consts = Resolver.resolveAll(classReader, true);
         constCount = getConstPoolSize(consts);
 
-        generatedStr = new LinkedHashSet<String>();
-        generatedStr.add(className);
-
-        List<String> predefinedStr = Arrays.asList(Utils.PREDEFINED_UTF);
-        for (AbstractConst aConst : consts) {
-            if (aConst instanceof ConstUtf) {
-                String s = ((ConstUtf) aConst).getValue();
-                if (generatedStr.contains(s)) continue;
-
-                int idx = predefinedStr.indexOf(s);
-
-                if (idx >= 0) {
-                    predefinedUtfFlags[idx] = true;
-                }
-            }
-        }
-
-        for (int i = 0; i < Utils.PREDEFINED_UTF.length; i++) {
-            if (predefinedUtfFlags[i]) {
-                predefinedUtfIndexes[i] = generatedStr.size();
-                generatedStr.add(Utils.PREDEFINED_UTF[i]);
-            }
-        }
-
-        classNode = new ClassNode();
-        classReader.accept(classNode, 0);
-        if (classNode.sourceFile != null) {
-            String sourceFileName = Utils.generateSourceFileName(className);
-            if (sourceFileName.equals(classNode.sourceFile)) {
-                hasSourceFileAttr = true;
-                generatedStr.add("SourceFile");
-                generatedStr.add(sourceFileName);
-            }
-        }
-
-        anonymousClassCount = PackUtils.evaluateAnonymousClassCount(classNode);
-        if (anonymousClassCount > 0xFF) throw new InvalidJarException();
-        firstAnonymousNameIndex = generatedStr.size();
-        for (int i = 1; i <= anonymousClassCount; i++) {
-            generatedStr.add(className + '$' + i);
-        }
+        generatedStr = GenerateStrCollector.collectGeneratedStr(classNode, consts);
     }
 
     private void writeClassSize(BitOutputStream out, int size) throws IOException {
@@ -181,8 +135,6 @@ public class ClassDescriptor {
         forCompressionDataArray = new OpenByteOutputStream();
 
         DataOutputStream compressed = new DataOutputStream(forCompressionDataArray);
-
-        plainData.writeBoolean(hasSourceFileAttr);
 
         Set<String> packedStr = new LinkedHashSet<String>();
         List<String> notPackedStr = new ArrayList<String>();
@@ -260,8 +212,6 @@ public class ClassDescriptor {
             throw new RuntimeException();
         }
 
-        plainData.writeSmall_0_3_8_16(anonymousClassCount);
-
         Utils.writeSmallShort3(plainData, constCount);
 
         plainData.writeLimitedShort(allUtf.size(), constCount);
@@ -312,8 +262,8 @@ public class ClassDescriptor {
         }
         Utils.writeSmallShort3(plainData, buffer.position() - generatedStrPosition);
 
-        for (boolean b : predefinedUtfFlags) {
-            plainData.writeBoolean(b);
+        for (String utf : Utils.COMMON_UTF) {
+            plainData.writeBit(generatedStr.contains(utf));
         }
 
         plainData.writeLimitedShort(packedStr.size(), utfInterval.getCount());
@@ -384,13 +334,13 @@ public class ClassDescriptor {
             int descrIndex = buffer.getShort() & 0xFFFF;
             utfInterval.writeIndexCompact(plainData, descrIndex);
 
-            List<Attribute> attributes = AttributeUtils.readAllAttributes(AttributeType.FIELD, this, buffer);
+            List<Attribute> attributes = AttributeUtils.readAllAttributes(AttributeUtils.FIELD_ATTRS, this, buffer);
 
             Utils.writeSmallShort3(out, attributes.size());
 
             for (Attribute attribute : attributes) {
                 utfInterval.writeIndexCompact(out, getIndexByUtf(attribute.getName()));
-                attribute.writeTo(out, this);
+                attribute.writeTo(out, plainData, this);
             }
         }
     }
@@ -409,41 +359,69 @@ public class ClassDescriptor {
             int descrIndex = buffer.getShort() & 0xFFFF;
             utfInterval.writeIndexCompact(plainData, descrIndex);
 
-            List<Attribute> attributes = AttributeUtils.readAllAttributes(AttributeType.METHOD, this, buffer);
+            List<Attribute> attributes = AttributeUtils.readAllAttributes(AttributeUtils.METHOD_ATTRS, this, buffer);
 
-            Utils.writeSmallShort3(out, attributes.size());
+            Attribute code = AttributeUtils.removeAttributeByName(attributes, "Code");
+
+            List<Attribute> knownAttributes = new ArrayList<Attribute>();
+
+            int attrInfo = extractKnownAttributes(attributes, knownAttributes, "Signature", "Exceptions");
+
+            Utils.writeSmallShort3(out, attrInfo);
 
             if (!Modifier.isNative(accessFlags) && !Modifier.isAbstract(accessFlags)) {
-                Attribute code = AttributeUtils.removeAttributeByName(attributes, "Code");
-
-                code.writeTo(out, this);
+                assert code != null;
+                code.writeTo(out, plainData, this);
             }
             else {
-                assert AttributeUtils.findAttributeByName(attributes, "Code") == null;
+                assert code == null;
+            }
+
+            for (Attribute attribute : knownAttributes) {
+                attribute.writeTo(out, plainData, this);
             }
 
             for (Attribute attribute : attributes) {
                 utfInterval.writeIndexCompact(out, getIndexByUtf(attribute.getName()));
-                attribute.writeTo(out, this);
+                attribute.writeTo(out, plainData, this);
             }
         }
+    }
+
+    private static int extractKnownAttributes(List<Attribute> attributes, List<Attribute> knownAttributes, String ... names) {
+        int attrInfo = 0;
+
+        for (int i = 0; i < names.length; i++) {
+            Attribute attribute = AttributeUtils.removeAttributeByName(attributes, names[i]);
+            if (attribute != null) {
+                attrInfo |= 1 << i;
+                knownAttributes.add(attribute);
+            }
+        }
+
+        attrInfo |= attributes.size() << names.length;
+
+        return attrInfo;
     }
 
     private void processClassAttributes(ByteBuffer buffer, DataOutputStream out) throws IOException {
-        List<Attribute> attributes = AttributeUtils.readAllAttributes(AttributeType.CLASS, this, buffer);
+        List<Attribute> attributes = AttributeUtils.readAllAttributes(AttributeUtils.CLASS_ATTRS, this, buffer);
 
-        Utils.writeSmallShort3(out, attributes.size());
+        List<Attribute> knownAttributes = new ArrayList<Attribute>();
+
+        int attrInfo = extractKnownAttributes(attributes, knownAttributes, "SourceFile", "InnerClasses");
+
+        Utils.writeSmallShort3(out, attrInfo);
+
+        for (Attribute attribute : knownAttributes) {
+            attribute.writeTo(out, plainData, this);
+        }
 
         for (Attribute attribute : attributes) {
-            if (hasSourceFileAttr && attribute.getName().equals("SourceFile")) {
-                continue;
-            }
-
             utfInterval.writeIndexCompact(out, getIndexByUtf(attribute.getName()));
-            attribute.writeTo(out, this);
+            attribute.writeTo(out, plainData, this);
         }
     }
-
 
     private <T> void moveToBegin(List<T> list, int beginIndex, T element) {
         int oldIndex = list.indexOf(element);
@@ -581,8 +559,12 @@ public class ClassDescriptor {
         return classesInterval;
     }
 
-    public int getAnonymousClassCount() {
-        return anonymousClassCount;
+    public String getClassName() {
+        return className;
+    }
+
+    public ClassNode getClassNode() {
+        return classNode;
     }
 
     @Override
