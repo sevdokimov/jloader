@@ -56,6 +56,10 @@ public class GenerateStrCollector {
             if (field.signature != null) {
                 res.add("Signature");
             }
+
+            if (field.value != null) {
+                res.add("ConstantValue");
+            }
         }
 
         for (MethodNode method : classNode.methods) {

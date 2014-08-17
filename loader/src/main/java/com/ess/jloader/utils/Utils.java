@@ -19,12 +19,14 @@ public class Utils {
             "Code",
             "Exceptions",
             "Signature",
+            "ConstantValue",
     };
 
 
     public static final int PS_CODE = 0;
     public static final int PS_EXCEPTIONS = 1;
     public static final int PS_SIGNATURE = 2;
+    public static final int PS_CONST_VALUE = 3;
 
     public static final byte[] PREDEFINED_UTF_BYTES;
     public static final int[] PREDEFINED_UTF_BYTE_INDEXES;

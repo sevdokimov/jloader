@@ -392,7 +392,12 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                     processedAttrCount++;
                 }
 
-                int unknownAttrCount = attrInfo >>> 1;
+                if ((attrInfo & 2) > 0) {
+                    processConstantValueAttr();
+                    processedAttrCount++;
+                }
+
+                int unknownAttrCount = attrInfo >>> 2;
 
                 for (int j = 0; j < unknownAttrCount; j++) {
                     processAttr();
@@ -545,6 +550,13 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             buffer.putShort((short) putPredefinedGeneratedString(Utils.PS_SIGNATURE));
             buffer.putInt(2);
             buffer.putShort((short) utfInterval.readIndexCompact(defDataIn));
+        }
+
+        private void processConstantValueAttr() throws IOException {
+            buffer.putShort((short) putPredefinedGeneratedString(Utils.PS_CONST_VALUE));
+            buffer.putInt(2);
+
+            buffer.putShort((short) Utils.readSmallShort3(defDataIn));
         }
 
         private void processExceptionAttr() throws IOException {

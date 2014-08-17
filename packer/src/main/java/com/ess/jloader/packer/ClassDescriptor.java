@@ -343,7 +343,7 @@ public class ClassDescriptor {
 
             List<Attribute> knownAttributes = new ArrayList<Attribute>();
 
-            int attrInfo = extractKnownAttributes(attributes, knownAttributes, "Signature");
+            int attrInfo = extractKnownAttributes(attributes, knownAttributes, "Signature", "ConstantValue");
 
             Utils.writeSmallShort3(out, attrInfo);
 

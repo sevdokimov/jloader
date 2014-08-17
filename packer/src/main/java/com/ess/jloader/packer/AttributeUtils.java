@@ -20,6 +20,7 @@ public class AttributeUtils {
 
     public static final AttributeFactory[] FIELD_ATTRS = new AttributeFactory[]{
             AttributeSignature.FACTORY,
+            AttributeConstValue.FACTORY,
     };
 
     public static final AttributeFactory[] CODE_ATTRS = new AttributeFactory[]{
