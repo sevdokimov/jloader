@@ -86,15 +86,26 @@ public class PackFreeMarker {
     }
 
     @Test
-    public void packFreeMarker() throws IOException {
+    public void packFreeMarker() throws IOException, ClassNotFoundException {
         File freeMarkerJar = TestUtils.getJarByMarker("freemarker/core/Assignment.class");
 
         File packedFreeMarker = TestUtils.createTmpPAckFile("packedFreeMarker");
-        JarPacker.pack(freeMarkerJar, packedFreeMarker);
+
+        JarPacker packer = new JarPacker(new Config());
+        packer.addJar(freeMarkerJar);
+        packer.writeResult(packedFreeMarker);
 
         System.out.printf("Src: %d, Result: %d,  (%d%%)", freeMarkerJar.length(), packedFreeMarker.length(), packedFreeMarker.length() * 100 / freeMarkerJar.length());
 
-        assert packedFreeMarker.length() <= 571774;
+        long time = System.currentTimeMillis();
+
+        PackClassLoader packClassLoader = new PackClassLoader(null, packedFreeMarker);
+
+        for (String className : packer.getClassMap().keySet()) {
+            packClassLoader.unpackClass(className);
+        }
+
+        System.out.println("Unpack time: " + (System.currentTimeMillis() - time));
     }
 
     public void statFreeMarker() throws IOException {
