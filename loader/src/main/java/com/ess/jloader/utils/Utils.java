@@ -11,7 +11,6 @@ public class Utils {
     public static final boolean CHECK_LIMITS = false;
 
     public static final String[] COMMON_UTF = new String[] {
-            "LineNumberTable",
             "LocalVariableTable",
     };
 
@@ -20,6 +19,7 @@ public class Utils {
             "Exceptions",
             "Signature",
             "ConstantValue",
+            "LineNumberTable",
     };
 
 
@@ -27,6 +27,7 @@ public class Utils {
     public static final int PS_EXCEPTIONS = 1;
     public static final int PS_SIGNATURE = 2;
     public static final int PS_CONST_VALUE = 3;
+    public static final int PS_LINE_NUMBER_TABLE = 4;
 
     public static final byte[] PREDEFINED_UTF_BYTES;
     public static final int[] PREDEFINED_UTF_BYTE_INDEXES;

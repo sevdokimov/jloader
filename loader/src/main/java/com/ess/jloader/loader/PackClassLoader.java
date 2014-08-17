@@ -152,6 +152,8 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         private int generatedStrIndex;
         private DataOutputStream generatedStrDataOutput;
 
+        private int maxLineNumberBits;
+
         public Unpacker(BitInputStream in, InputStream defIn, String className) {
             this.in = in;
             this.defDataIn = new DataInputStream(new BufferedInputStream(defIn));
@@ -528,11 +530,24 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             buffer.putShort((short) exceptionTableLength);
             Utils.read(defDataIn, buffer, exceptionTableLength * 4*2);
 
-            int attrCount = Utils.readSmallShort3(defDataIn);
-            buffer.putShort((short) attrCount);
-            for (int i = 0; i < attrCount; i++) {
+            // Process attributes
+            int attrInfo = Utils.readSmallShort3(defDataIn);
+            int attrCountPosition = buffer.position();
+            int processedAttrCount = 0;
+            buffer.position(buffer.position() + 2); // the place to store attr count
+
+            if ((attrInfo & 1) > 0) {
+                processLineNumbersAttr();
+                processedAttrCount++;
+            }
+
+            int unknownAttrCount = attrInfo >>> 1;
+
+            for (int j = 0; j < unknownAttrCount; j++) {
                 processAttr();
             }
+
+            buffer.putShort(attrCountPosition, (short) (unknownAttrCount + processedAttrCount));
 
             buffer.putInt(lengthPosition, buffer.position() - lengthPosition - 4);
         }
@@ -550,6 +565,74 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             buffer.putShort((short) putPredefinedGeneratedString(Utils.PS_SIGNATURE));
             buffer.putInt(2);
             buffer.putShort((short) utfInterval.readIndexCompact(defDataIn));
+        }
+
+        private void processLineNumbersAttr() throws IOException {
+            buffer.putShort((short) putPredefinedGeneratedString(Utils.PS_LINE_NUMBER_TABLE));
+
+            if (maxLineNumberBits == 0) {
+                maxLineNumberBits = in.readBits(4) + 1;
+            }
+
+            int prevLineNumber = in.readBits(maxLineNumberBits);
+
+            buffer.putShort(buffer.position() + 4 + 2 + 2, (short) prevLineNumber);
+
+            int count = 1;
+
+            if (!in.readBoolean()) { // one line only
+                int pos = buffer.position() + 4 + 2 + 2 + 4;
+
+                do {
+                    int x = defDataIn.read();
+                    if (x >= 127) {
+                        if (x == 127) {
+                            break;
+                        }
+
+                        if (x == 128) {
+                            prevLineNumber = in.readBits(maxLineNumberBits);
+                        }
+                        else {
+                            x = ((byte)x); // make x negative
+                        }
+                    }
+
+                    prevLineNumber += x;
+
+                    buffer.putShort(pos, (short) prevLineNumber);
+                    pos += 4;
+                } while (true);
+
+                count += (pos - (buffer.position() + 4 + 2 + 2 + 4)) >>> 2;
+            }
+
+            buffer.putInt(2 + count * 4);
+            buffer.putShort((short) count);
+
+            buffer.putShort((short) 0); // first code position always 0
+            buffer.position(buffer.position() + 2);
+
+            int prevCodePos = 0;
+            for (int i = 1; i < count; i++) {
+                int x = in.readBits(5);
+                if (x >= 29) {
+                    if (x == 29) {
+                        x = 29 + in.readBits(4);
+                    }
+                    else if (x == 30) {
+                        x = 45 + in.readBits(7);
+                    }
+                    else {
+                        assert x == 31;
+                        x = in.readUnsignedShort();
+                    }
+                }
+
+                prevCodePos += x;
+                buffer.putShort((short) prevCodePos); // first code position always 0
+                buffer.position(buffer.position() + 2);
+            }
         }
 
         private void processConstantValueAttr() throws IOException {

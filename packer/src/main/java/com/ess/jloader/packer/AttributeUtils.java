@@ -6,6 +6,7 @@ import org.jetbrains.annotations.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 /**
  * @author Sergey Evdokimov
@@ -70,6 +71,22 @@ public class AttributeUtils {
         }
 
         return null;
+    }
+
+    public static int extractKnownAttributes(List<Attribute> attributes, List<Attribute> knownAttributes, String ... names) {
+        int attrInfo = 0;
+
+        for (int i = 0; i < names.length; i++) {
+            Attribute attribute = AttributeUtils.removeAttributeByName(attributes, names[i]);
+            if (attribute != null) {
+                attrInfo |= 1 << i;
+                knownAttributes.add(attribute);
+            }
+        }
+
+        attrInfo |= attributes.size() << names.length;
+
+        return attrInfo;
     }
 
     public static ArrayList<Attribute> readAllAttributes(AttributeFactory factory, ClassDescriptor descriptor, ByteBuffer buffer) {

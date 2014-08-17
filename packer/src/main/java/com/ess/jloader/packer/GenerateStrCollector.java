@@ -6,9 +6,7 @@ import com.ess.jloader.utils.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Attribute;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.FieldNode;
-import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.*;
 
 import java.lang.reflect.Modifier;
 import java.util.*;
@@ -74,6 +72,10 @@ public class GenerateStrCollector {
             if (method.exceptions.size() > 0) {
                 res.add("Exceptions");
             }
+
+            if (hasLineNumbers(method)) {
+                res.add("LineNumberTable");
+            }
         }
 
         if (classNode.sourceFile != null) {
@@ -102,4 +104,13 @@ public class GenerateStrCollector {
         return res;
     }
 
+    private static boolean hasLineNumbers(MethodNode method) {
+        for (Iterator<AbstractInsnNode> itr = method.instructions.iterator(); itr.hasNext(); ) {
+            if (itr.next() instanceof LineNumberNode) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

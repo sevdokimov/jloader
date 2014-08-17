@@ -55,10 +55,11 @@ public class ClassDescriptor {
     private List<String> allUtf;
     private Map<String, Integer> utf2index;
 
-
     private final Set<String> generatedStr;
 
     private final ClassNode classNode;
+
+    private final Map<Object, Object> properties = new HashMap<Object, Object>();
 
     public ClassDescriptor(ClassReader classReader) {
         this.classReader = classReader;
@@ -343,7 +344,7 @@ public class ClassDescriptor {
 
             List<Attribute> knownAttributes = new ArrayList<Attribute>();
 
-            int attrInfo = extractKnownAttributes(attributes, knownAttributes, "Signature", "ConstantValue");
+            int attrInfo = AttributeUtils.extractKnownAttributes(attributes, knownAttributes, "Signature", "ConstantValue");
 
             Utils.writeSmallShort3(out, attrInfo);
 
@@ -378,7 +379,7 @@ public class ClassDescriptor {
 
             List<Attribute> knownAttributes = new ArrayList<Attribute>();
 
-            int attrInfo = extractKnownAttributes(attributes, knownAttributes, "Signature", "Exceptions");
+            int attrInfo = AttributeUtils.extractKnownAttributes(attributes, knownAttributes, "Signature", "Exceptions");
 
             Utils.writeSmallShort3(out, attrInfo);
 
@@ -401,28 +402,12 @@ public class ClassDescriptor {
         }
     }
 
-    private static int extractKnownAttributes(List<Attribute> attributes, List<Attribute> knownAttributes, String ... names) {
-        int attrInfo = 0;
-
-        for (int i = 0; i < names.length; i++) {
-            Attribute attribute = AttributeUtils.removeAttributeByName(attributes, names[i]);
-            if (attribute != null) {
-                attrInfo |= 1 << i;
-                knownAttributes.add(attribute);
-            }
-        }
-
-        attrInfo |= attributes.size() << names.length;
-
-        return attrInfo;
-    }
-
     private void processClassAttributes(ByteBuffer buffer, DataOutputStream out) throws IOException {
         List<Attribute> attributes = AttributeUtils.readAllAttributes(ClassAttributeFactory.INSTANCE, this, buffer);
 
         List<Attribute> knownAttributes = new ArrayList<Attribute>();
 
-        int attrInfo = extractKnownAttributes(attributes, knownAttributes, "SourceFile", "InnerClasses", "Signature");
+        int attrInfo = AttributeUtils.extractKnownAttributes(attributes, knownAttributes, "SourceFile", "InnerClasses", "Signature");
 
         Utils.writeSmallShort3(out, attrInfo);
 
@@ -578,6 +563,10 @@ public class ClassDescriptor {
 
     public ClassNode getClassNode() {
         return classNode;
+    }
+
+    public Map<Object, Object> getProperties() {
+        return properties;
     }
 
     @Override

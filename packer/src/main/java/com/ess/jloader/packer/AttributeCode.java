@@ -71,10 +71,17 @@ public class AttributeCode extends Attribute {
             record.writeTo(out);
         }
 
-        Utils.writeSmallShort3(out, attributes.size());
+        List<Attribute> knownAttributes = new ArrayList<Attribute>();
+        int attrInfo = AttributeUtils.extractKnownAttributes(attributes, knownAttributes, "LineNumberTable");
+
+        Utils.writeSmallShort3(out, attrInfo);
+
+        for (Attribute attribute : knownAttributes) {
+            attribute.writeTo(out, bitOut, descriptor);
+        }
+
         for (Attribute attribute : attributes) {
             descriptor.getUtfInterval().writeIndexCompact(out, descriptor.getIndexByUtf(attribute.getName()));
-            assert attribute instanceof UnknownAttribute;
             attribute.writeTo(out, bitOut, descriptor);
         }
     }
