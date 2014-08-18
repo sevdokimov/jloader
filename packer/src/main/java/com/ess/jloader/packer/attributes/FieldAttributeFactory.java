@@ -18,7 +18,7 @@ public class FieldAttributeFactory extends AttributeFactory {
 
     @Nullable
     @Override
-    public Attribute read(ClassDescriptor descriptor, String name, ByteBuffer buffer) {
+    public Attribute read(AttrContext ctx, String name, ByteBuffer buffer) {
         if (name.equals("Signature")) {
             return new AttributeSignature(buffer);
         }

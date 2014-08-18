@@ -16,16 +16,16 @@ public class AttributeSourceFile extends Attribute {
     private final String sourceFile;
     private final boolean isStandard;
 
-    public AttributeSourceFile(ClassDescriptor descriptor, ByteBuffer buffer) {
+    public AttributeSourceFile(AttrContext ctx, ByteBuffer buffer) {
         super("SourceFile");
 
         int length = buffer.getInt();
         assert length == 2;
 
         int utfIndex = buffer.getShort() & 0xFFFF;
-        sourceFile = descriptor.getUtfByIndex(utfIndex);
+        sourceFile = ctx.getClassDescriptor().getUtfByIndex(utfIndex);
 
-        isStandard = sourceFile.equals(Utils.generateSourceFileName(descriptor.getClassName()));
+        isStandard = sourceFile.equals(Utils.generateSourceFileName(ctx.getClassDescriptor().getClassName()));
     }
 
     @Override

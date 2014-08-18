@@ -28,7 +28,7 @@ public class AttributeCode extends Attribute {
 
     private ArrayList<Attribute> attributes;
 
-    public AttributeCode(ClassDescriptor descriptor, ByteBuffer buffer) {
+    public AttributeCode(AttrContext ctx, ByteBuffer buffer) {
         super("Code");
 
         int length = buffer.getInt();
@@ -56,7 +56,7 @@ public class AttributeCode extends Attribute {
             exceptionTable.add(r);
         }
 
-        attributes = AttributeUtils.readAllAttributes(CodeAttributeFactory.INSTANCE, descriptor, buffer);
+        attributes = AttributeUtils.readAllAttributes(CodeAttributeFactory.INSTANCE, ctx, buffer);
 
         assert buffer.position() - savedPos == length;
     }

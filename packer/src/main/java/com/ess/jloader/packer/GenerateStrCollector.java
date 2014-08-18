@@ -76,6 +76,9 @@ public class GenerateStrCollector {
             if (hasLineNumbers(method)) {
                 res.add("LineNumberTable");
             }
+            if (method.localVariables != null && method.localVariables.size() > 0) {
+                res.add("LocalVariableTable");
+            }
         }
 
         if (classNode.sourceFile != null) {

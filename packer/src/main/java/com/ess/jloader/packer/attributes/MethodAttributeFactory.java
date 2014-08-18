@@ -18,7 +18,7 @@ public class MethodAttributeFactory extends AttributeFactory {
 
     @Nullable
     @Override
-    public Attribute read(ClassDescriptor descriptor, String name, ByteBuffer buffer) {
+    public Attribute read(AttrContext ctx, String name, ByteBuffer buffer) {
         if (name.equals("Signature")) {
             return new AttributeSignature(buffer);
         }
@@ -26,7 +26,7 @@ public class MethodAttributeFactory extends AttributeFactory {
             return new AttributeExceptions(buffer);
         }
         if (name.equals("Code")) {
-            return new AttributeCode(descriptor, buffer);
+            return new AttributeCode(ctx, buffer);
         }
 
         return new AttributeUnknown(name, buffer);

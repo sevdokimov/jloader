@@ -343,7 +343,7 @@ public class ClassDescriptor {
             utfInterval.writeIndexCompact(plainData, descrIndex);
 
             // Process attributes
-            List<Attribute> attributes = AttributeUtils.readAllAttributes(FieldAttributeFactory.INSTANCE, this, buffer);
+            List<Attribute> attributes = AttributeUtils.readAllAttributes(FieldAttributeFactory.INSTANCE, new AttrContext(this), buffer);
 
             List<Attribute> knownAttributes = new ArrayList<Attribute>();
 
@@ -376,7 +376,7 @@ public class ClassDescriptor {
             int descrIndex = buffer.getShort() & 0xFFFF;
             utfInterval.writeIndexCompact(plainData, descrIndex);
 
-            List<Attribute> attributes = AttributeUtils.readAllAttributes(MethodAttributeFactory.INSTANCE, this, buffer);
+            List<Attribute> attributes = AttributeUtils.readAllAttributes(MethodAttributeFactory.INSTANCE, new AttrContext(this), buffer);
 
             Attribute code = AttributeUtils.removeAttributeByName(attributes, "Code");
 
@@ -406,7 +406,7 @@ public class ClassDescriptor {
     }
 
     private void processClassAttributes(ByteBuffer buffer, DataOutputStream out) throws IOException {
-        List<Attribute> attributes = AttributeUtils.readAllAttributes(ClassAttributeFactory.INSTANCE, this, buffer);
+        List<Attribute> attributes = AttributeUtils.readAllAttributes(ClassAttributeFactory.INSTANCE, new AttrContext(this), buffer);
 
         List<Attribute> knownAttributes = new ArrayList<Attribute>();
 

@@ -18,10 +18,13 @@ public class CodeAttributeFactory extends AttributeFactory {
 
     @Nullable
     @Override
-    public Attribute read(ClassDescriptor descriptor, String name, ByteBuffer buffer) {
+    public Attribute read(AttrContext ctx, String name, ByteBuffer buffer) {
         if (name.equals("LineNumberTable")) {
-            return new AttributeLineNumberTable(descriptor, buffer);
+            return new AttributeLineNumberTable(buffer);
         }
+//        if (name.equals("LocalVariableTable")) {
+//            return new AttributeLocalVariable(ctx, buffer);
+//        }
 
         return new AttributeUnknown(name, buffer);
     }

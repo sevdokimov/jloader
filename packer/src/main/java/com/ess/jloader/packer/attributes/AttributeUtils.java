@@ -90,16 +90,16 @@ public class AttributeUtils {
         return attrInfo;
     }
 
-    public static ArrayList<Attribute> readAllAttributes(AttributeFactory factory, ClassDescriptor descriptor, ByteBuffer buffer) {
+    public static ArrayList<Attribute> readAllAttributes(AttributeFactory factory, AttrContext ctx, ByteBuffer buffer) {
         int attrCount = buffer.getShort() & 0xFFFF;
 
         ArrayList<Attribute> res = new ArrayList<Attribute>(attrCount);
 
         for (int i = 0; i < attrCount; i++) {
             int nameIndex = buffer.getShort() & 0xFFFF;
-            String name = descriptor.getUtfByIndex(nameIndex);
+            String name = ctx.getClassDescriptor().getUtfByIndex(nameIndex);
 
-            res.add(factory.read(descriptor, name, buffer));
+            res.add(factory.read(ctx, name, buffer));
         }
 
         return res;

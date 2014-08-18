@@ -19,13 +19,13 @@ public class AttributeInnerClasses extends Attribute {
 
     private final int anonymousClassCount;
 
-    public AttributeInnerClasses(ClassDescriptor descriptor, ByteBuffer buffer) {
+    public AttributeInnerClasses(AttrContext ctx, ByteBuffer buffer) {
         super("InnerClasses");
 
         length = buffer.getInt();
         body = PackUtils.readBytes(buffer, length);
 
-        anonymousClassCount = PackUtils.evaluateAnonymousClassCount(descriptor.getClassNode());
+        anonymousClassCount = PackUtils.evaluateAnonymousClassCount(ctx.getClassDescriptor().getClassNode());
     }
 
 

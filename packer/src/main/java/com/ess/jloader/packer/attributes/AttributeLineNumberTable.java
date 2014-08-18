@@ -23,7 +23,7 @@ public class AttributeLineNumberTable extends Attribute {
 
     private final Element[] elements;
 
-    public AttributeLineNumberTable(ClassDescriptor descriptor, ByteBuffer buffer) {
+    public AttributeLineNumberTable(ByteBuffer buffer) {
         super("LineNumberTable");
 
         int attrSize = buffer.getInt();
