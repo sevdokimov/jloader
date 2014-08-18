@@ -69,8 +69,10 @@ public class ClassDescriptor {
         classNode = new ClassNode();
         classReader.accept(classNode, 0);
 
-        consts = Resolver.resolveAll(classReader, true);
-        constCount = getConstPoolSize(consts);
+        consts = Resolver.resolveAll(classReader);
+        consts.retainAll(Resolver.resolveAll(PackUtils.repack(classReader)));
+
+        constCount = PackUtils.getConstPoolSize(consts);
 
         generatedStr = GenerateStrCollector.collectGeneratedStr(classNode, consts);
     }
@@ -523,18 +525,6 @@ public class ClassDescriptor {
                     throw new RuntimeException(String.valueOf(tag));
             }
         }
-    }
-
-    private static int getConstPoolSize(Collection<AbstractConst> consts) {
-        int res = consts.size() + 1;
-
-        for (AbstractConst aConst : consts) {
-            if (aConst.getTag() == ConstLong.TAG || aConst.getTag() == ConstDouble.TAG) {
-                res++;
-            }
-        }
-
-        return res;
     }
 
     public ConstIndexInterval getFieldInterval() {

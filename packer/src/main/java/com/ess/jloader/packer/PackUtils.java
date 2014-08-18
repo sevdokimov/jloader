@@ -1,8 +1,12 @@
 package com.ess.jloader.packer;
 
 import com.ess.jloader.loader.PackClassLoader;
+import com.ess.jloader.packer.consts.AbstractConst;
+import com.ess.jloader.packer.consts.ConstDouble;
+import com.ess.jloader.packer.consts.ConstLong;
 import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.InnerClassNode;
 
@@ -230,6 +234,24 @@ public class PackUtils {
         }
 
         return maxAnonymousClassIndex;
+    }
+
+    public static ClassReader repack(ClassReader classReader) {
+        ClassWriter classWriter = new ClassWriter(0);
+        classReader.accept(classWriter, 0);
+        return new ClassReader(classWriter.toByteArray());
+    }
+
+    public static int getConstPoolSize(Collection<AbstractConst> consts) {
+        int res = consts.size() + 1;
+
+        for (AbstractConst aConst : consts) {
+            if (aConst.getTag() == ConstLong.TAG || aConst.getTag() == ConstDouble.TAG) {
+                res++;
+            }
+        }
+
+        return res;
     }
 
 }
