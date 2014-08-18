@@ -1,5 +1,6 @@
 package com.ess.jloader.packer;
 
+import com.ess.jloader.packer.attributes.*;
 import com.ess.jloader.packer.consts.*;
 import com.ess.jloader.utils.*;
 import com.google.common.collect.Iterables;

@@ -1,8 +1,8 @@
-package com.ess.jloader.packer;
+package com.ess.jloader.packer.attributes;
 
+import com.ess.jloader.packer.ClassDescriptor;
+import com.ess.jloader.packer.InvalidJarException;
 import com.ess.jloader.utils.BitOutputStream;
-import com.ess.jloader.utils.Utils;
-import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.LineNumberNode;

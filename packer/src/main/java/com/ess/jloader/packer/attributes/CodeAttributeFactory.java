@@ -1,5 +1,6 @@
-package com.ess.jloader.packer;
+package com.ess.jloader.packer.attributes;
 
+import com.ess.jloader.packer.ClassDescriptor;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.ByteBuffer;
@@ -22,6 +23,6 @@ public class CodeAttributeFactory extends AttributeFactory {
             return new AttributeLineNumberTable(descriptor, buffer);
         }
 
-        return new UnknownAttribute(name, buffer);
+        return new AttributeUnknown(name, buffer);
     }
 }

@@ -1,5 +1,7 @@
-package com.ess.jloader.packer;
+package com.ess.jloader.packer.attributes;
 
+import com.ess.jloader.packer.ClassDescriptor;
+import com.ess.jloader.packer.PackUtils;
 import com.ess.jloader.utils.BitOutputStream;
 
 import java.io.DataOutputStream;
@@ -9,28 +11,22 @@ import java.nio.ByteBuffer;
 /**
  * @author Sergey Evdokimov
  */
-public class AttributeInnerClasses extends Attribute {
+public class AttributeUnknown extends Attribute {
 
     private final int length;
 
     private final byte[] body;
 
-    private final int anonymousClassCount;
-
-    public AttributeInnerClasses(ClassDescriptor descriptor, ByteBuffer buffer) {
-        super("InnerClasses");
+    public AttributeUnknown(String name, ByteBuffer buffer) {
+        super(name);
 
         length = buffer.getInt();
         body = PackUtils.readBytes(buffer, length);
-
-        anonymousClassCount = PackUtils.evaluateAnonymousClassCount(descriptor.getClassNode());
     }
 
 
     @Override
     public void writeTo(DataOutputStream out, BitOutputStream bitOut, ClassDescriptor descriptor) throws IOException {
-        bitOut.writeSmall_0_3_8_16(anonymousClassCount);
-
         out.writeInt(length);
         out.write(body);
     }

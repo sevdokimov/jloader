@@ -1,5 +1,8 @@
-package com.ess.jloader.packer;
+package com.ess.jloader.packer.attributes;
 
+import com.ess.jloader.packer.ClassDescriptor;
+import com.ess.jloader.packer.InvalidJarException;
+import com.ess.jloader.packer.PackUtils;
 import com.ess.jloader.utils.BitOutputStream;
 import com.ess.jloader.utils.InsnTypes;
 import com.ess.jloader.utils.Utils;
