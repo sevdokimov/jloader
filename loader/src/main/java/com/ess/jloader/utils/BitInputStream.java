@@ -36,7 +36,11 @@ public class BitInputStream extends InputStream implements DataInput {
     public int read(byte[] b, int off, int len) throws IOException {
         if (len == 0) return 0;
 
-        if (pos == limit) return -1;
+        if (len > limit - pos) {
+            len = limit - pos;
+
+            if (len == 0) return -1;
+        }
 
         int end = off + len;
         do {
@@ -45,7 +49,7 @@ public class BitInputStream extends InputStream implements DataInput {
 
             x >>>= 8;
         }
-        while (off < end && pos < limit);
+        while (off < end);
 
         return off - (end - len);
     }
