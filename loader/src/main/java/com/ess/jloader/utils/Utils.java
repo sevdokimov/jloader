@@ -34,6 +34,7 @@ public class Utils {
 
     public static final byte[] C_SourceFile = toByteArray("SourceFile");
     public static final byte[] C_InnerClasses = toByteArray("InnerClasses");
+    public static final byte[] C_EnclosingMethod = toByteArray("EnclosingMethod");
 
     static {
         try {
@@ -190,6 +191,11 @@ public class Utils {
                 out.writeShort(x);
             }
         }
+    }
+
+    public static String generateEnclosingClassName(String thisClassName) {
+        int idx = thisClassName.lastIndexOf('$');
+        return idx == -1 ? null : thisClassName.substring(0, idx);
     }
 
 }

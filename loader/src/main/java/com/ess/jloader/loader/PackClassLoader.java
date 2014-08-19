@@ -485,7 +485,12 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 processedAttrCount++;
             }
 
-            int unknownAttrCount = attrInfo >>> 3;
+            if ((attrInfo & 8) > 0) {
+                processEnclosingMethodAttr();
+                processedAttrCount++;
+            }
+
+            int unknownAttrCount = attrInfo >>> 4;
 
             for (int j = 0; j < unknownAttrCount; j++) {
                 processAttr();
@@ -565,6 +570,25 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             buffer.putShort((short) putPredefinedGeneratedString(Utils.PS_SIGNATURE));
             buffer.putInt(2);
             buffer.putShort((short) utfInterval.readIndexCompact(defDataIn));
+        }
+
+        private void processEnclosingMethodAttr() throws IOException {
+            buffer.putShort((short) putGeneratedStr(Utils.C_EnclosingMethod));
+            buffer.putInt(4);
+
+            int classNameIndex = putGeneratedStr(Utils.generateEnclosingClassName(className));
+            buffer.putShort((short) findClassIndexByName(classNameIndex));
+
+            buffer.putShort(in.readShort());
+        }
+
+        private int findClassIndexByName(int nameIndex) {
+            int res = 1;
+            while (buffer.getShort(11 + res * 3) != nameIndex) {
+                res++;
+            }
+
+            return res;
         }
 
         private void processLineNumbersAttr() throws IOException {

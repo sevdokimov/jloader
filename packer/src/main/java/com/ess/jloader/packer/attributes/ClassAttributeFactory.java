@@ -28,6 +28,9 @@ public class ClassAttributeFactory extends AttributeFactory {
         if (name.equals("InnerClasses")) {
             return new AttributeInnerClasses(ctx, buffer);
         }
+        if (name.equals("EnclosingMethod")) {
+            return new AttributeEnclosingMethod(ctx, buffer);
+        }
 
         return new AttributeUnknown(name, buffer);
     }

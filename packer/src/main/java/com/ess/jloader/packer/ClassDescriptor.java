@@ -410,7 +410,7 @@ public class ClassDescriptor {
 
         List<Attribute> knownAttributes = new ArrayList<Attribute>();
 
-        int attrInfo = AttributeUtils.extractKnownAttributes(attributes, knownAttributes, "SourceFile", "InnerClasses", "Signature");
+        int attrInfo = AttributeUtils.extractKnownAttributes(attributes, knownAttributes, "SourceFile", "InnerClasses", "Signature", "EnclosingMethod");
 
         Utils.writeSmallShort3(out, attrInfo);
 

@@ -1,5 +1,6 @@
 package com.ess.jloader.packer;
 
+import com.ess.jloader.packer.attributes.AttributeEnclosingMethod;
 import com.ess.jloader.packer.consts.AbstractConst;
 import com.ess.jloader.packer.consts.ConstUtf;
 import com.ess.jloader.utils.Utils;
@@ -102,6 +103,14 @@ public class GenerateStrCollector {
 
         if (classNode.signature != null) {
             res.add("Signature");
+        }
+
+        if (classNode.outerClass != null) {
+            String expectedEnclosingClassName = Utils.generateEnclosingClassName(classNode.name);
+            if (classNode.outerClass.equals(expectedEnclosingClassName)) {
+                res.add("EnclosingMethod");
+                res.add(expectedEnclosingClassName);
+            }
         }
 
         return res;
