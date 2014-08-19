@@ -50,7 +50,7 @@ public class ConstIndexInterval {
     public void writeIndexCompact(DataOutputStream out, int index) throws IOException {
         assert index >= firstIndex && index < firstIndex + count;
 
-        Utils.writeLimitedNumber(out, index - firstIndex, count);
+        Utils.writeLimitedNumber(out, index - firstIndex, count - 1);
     }
 
     public static ConstIndexInterval create(int rightBorder, int count) {
