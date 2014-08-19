@@ -55,7 +55,7 @@ public class UnpackTime {
         packer.addJar(guavaLoader);
         packer.addJar(guava);
 
-        File tempFile = TestUtils.createTmpPAckFile("packedGuavaLoader-");
+        File tempFile = TestUtils.createTmpPackFile("packedGuavaLoader-");
         packer.writeResult(tempFile);
 
         System.out.println("Packing time: " + (System.currentTimeMillis() - time));

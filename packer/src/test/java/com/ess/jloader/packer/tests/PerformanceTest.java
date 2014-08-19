@@ -6,7 +6,6 @@ import com.ess.jloader.packer.JarPacker;
 import com.google.common.base.Throwables;
 import org.junit.Test;
 
-import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -30,7 +29,7 @@ public class PerformanceTest {
         packer.addJar(guavaLoader);
         packer.addJar(guava);
 
-        final File tempFile = TestUtils.createTmpPAckFile("packedGuavaLoader-");
+        final File tempFile = TestUtils.createTmpPackFile("packedGuavaLoader-");
         packer.writeResult(tempFile);
 
         System.out.println("Packing time: " + (System.currentTimeMillis() - time));

@@ -89,7 +89,7 @@ public class PackFreeMarker {
     public void packFreeMarker() throws IOException, ClassNotFoundException {
         File freeMarkerJar = TestUtils.getJarByMarker("freemarker/core/Assignment.class");
 
-        File packedFreeMarker = TestUtils.createTmpPAckFile("packedFreeMarker");
+        File packedFreeMarker = TestUtils.createTmpPackFile("packedFreeMarker");
 
         JarPacker packer = new JarPacker(new Config());
         packer.addJar(freeMarkerJar);
@@ -129,7 +129,7 @@ public class PackFreeMarker {
     public void packIdea() throws IOException {
         File srcJar = new File("/home/user/EAP/idea-IU-138.777/lib/idea.jar");
 
-        File resultJar = TestUtils.createTmpPAckFile("packedIdea");
+        File resultJar = TestUtils.createTmpPackFile("packedIdea");
         JarPacker.pack(srcJar, resultJar);
 
         System.out.printf("Src: %d, Result: %d,  (%d%%)", srcJar.length(), resultJar.length(), resultJar.length() * 100 / srcJar.length());
@@ -139,7 +139,7 @@ public class PackFreeMarker {
 //    public void packFreeMarker() throws IOException {
 //        File freeMarkerJar = TestUtils.getJarByMarker("freemarker/core/Assignment.class");
 //
-//        File packedFreeMarker = TestUtils.createTmpPAckFile("packedFreeMarker");
+//        File packedFreeMarker = TestUtils.createTmpPackFile("packedFreeMarker");
 //
 //        JarPacker packer = new JarPacker(new Config());
 //        packer.addJar(freeMarkerJar);

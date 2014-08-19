@@ -25,7 +25,7 @@ public class TestUtils {
         return new File(path);
     }
 
-    public static File createTmpPAckFile(String prefix) {
+    public static File createTmpPackFile(String prefix) {
         return new File(System.getProperty("java.io.tmpdir") + "/" + prefix + ".j");
     }
 

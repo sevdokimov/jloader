@@ -1,11 +1,9 @@
 package com.ess.jloader.packer.tests;
 
-import com.ess.jloader.loader.PackClassLoader;
 import com.ess.jloader.packer.JarPacker;
 import org.junit.Test;
 
 import java.io.File;
-import java.lang.reflect.Method;
 
 /**
  * @author Sergey Evdokimov
@@ -20,7 +18,7 @@ public class TestLoad {
     private void testProject(String marker) throws Exception {
         File src = TestUtils.getJarByMarker(marker);
 
-        File tempFile = TestUtils.createTmpPAckFile("packed-" + marker.substring(0, marker.indexOf('.')));
+        File tempFile = TestUtils.createTmpPackFile("packed-" + marker.substring(0, marker.indexOf('.')));
 
         JarPacker.pack(src, tempFile);
 
