@@ -57,7 +57,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             }
 
             // Build Huffman tree
-            PriorityQueue<HuffmanUtils.TreeElement> queue = new PriorityQueue<HuffmanUtils.TreeElement>();
+            PriorityQueue<HuffmanUtils.TreeElement> queue = new PriorityQueue<HuffmanUtils.TreeElement>(packedStringsCount);
             for (int i = 0; i < packedStringsCount; i++) {
                 int count = Utils.readSmallShort3(inputStream);
                 queue.add(new HuffmanUtils.Leaf(count, packedStrings[i]));
