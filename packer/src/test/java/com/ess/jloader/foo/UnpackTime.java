@@ -49,20 +49,23 @@ public class UnpackTime {
 
         //JOptionPane.showMessageDialog(null, "Click Ok to continue");
 
-        long time = System.currentTimeMillis();
-
-        JarPacker packer = new JarPacker(new Config());
-        packer.addJar(guavaLoader);
-        packer.addJar(guava);
-
         File tempFile = TestUtils.createTmpPackFile("packedGuavaLoader-");
-        packer.writeResult(tempFile);
 
-        System.out.println("Packing time: " + (System.currentTimeMillis() - time));
+        if (!tempFile.exists()) {
+            long time = System.currentTimeMillis();
 
-        long srcSize = guava.length() + guavaLoader.length();
-        System.out.printf("Src: %d, Result: %d,  (%d%%)\n", srcSize, tempFile.length(), tempFile.length() * 100 / srcSize);
+            JarPacker packer = new JarPacker(new Config());
+            packer.addJar(guavaLoader);
+            packer.addJar(guava);
 
+
+            packer.writeResult(tempFile);
+
+            System.out.println("Packing time: " + (System.currentTimeMillis() - time));
+
+            long srcSize = guava.length() + guavaLoader.length();
+            System.out.printf("Src: %d, Result: %d,  (%d%%)\n", srcSize, tempFile.length(), tempFile.length() * 100 / srcSize);
+        }
 
         List<String> classes = loadClassesList(guava);
         Collections.shuffle(classes, new Random(485590345345L));

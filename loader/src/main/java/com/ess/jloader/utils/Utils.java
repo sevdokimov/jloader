@@ -82,12 +82,6 @@ public class Utils {
         return className.concat(".java");
     }
 
-    public static void read(DataInputStream in, ByteBuffer buffer, int length) throws IOException {
-        int position = buffer.position();
-        in.readFully(buffer.array(), position, length);
-        buffer.position(position + length);
-    }
-
     public static byte[] toByteArray(String s) {
         try {
             int size = s.length() + 2;
