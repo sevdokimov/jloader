@@ -11,7 +11,6 @@ import org.objectweb.asm.tree.MethodNode;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Iterator;
 
 /**
@@ -37,10 +36,10 @@ public class AttributeLineNumberTable extends Attribute {
             elements[i] = new Element(buffer.getShort() & 0xFFFF, buffer.getShort() & 0xFFFF);
         }
 
-        Arrays.sort(elements);
         if (elements[0].codePos != 0) throw new InvalidJarException();
+
         for (int i = 1; i < elements.length; i++) {
-            if (elements[i] == elements[i - 1]) throw new InvalidJarException();
+            if (elements[i - 1].codePos >= elements[i].codePos) throw new InvalidJarException();
         }
 
         assert attrSize == 2 + length * 4;
@@ -121,7 +120,7 @@ public class AttributeLineNumberTable extends Attribute {
         return 32 - Integer.numberOfLeadingZeros(maxLineNumber);
     }
 
-    private static class Element implements Comparable<Element> {
+    private static class Element {
         public int codePos;
         public int line;
 
@@ -135,10 +134,10 @@ public class AttributeLineNumberTable extends Attribute {
             return codePos + " " + line;
         }
 
-        @Override
-        public int compareTo(Element o) {
-            return codePos - o.codePos;
-        }
+//        @Override
+//        public int compareTo(Element o) {
+//            return codePos - o.codePos;
+//        }
     }
 
 }
