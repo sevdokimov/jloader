@@ -1,6 +1,7 @@
 package com.ess.jloader.packer.attributes;
 
 import com.ess.jloader.packer.ClassDescriptor;
+import com.ess.jloader.packer.InvalidJarException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -80,6 +81,8 @@ public class AttributeUtils {
         for (int i = 0; i < names.length; i++) {
             Attribute attribute = AttributeUtils.removeAttributeByName(attributes, names[i]);
             if (attribute != null) {
+                if (findAttributeByName(attributes, names[i]) != null) throw new InvalidJarException();
+
                 attrInfo |= 1 << i;
                 knownAttributes.add(attribute);
             }
