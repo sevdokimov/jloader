@@ -1,7 +1,10 @@
 package com.ess.jloader.utils;
 
-import java.io.*;
-import java.nio.ByteBuffer;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.zip.CRC32;
 
 /**
  * @author Sergey Evdokimov
@@ -192,4 +195,9 @@ public class Utils {
         return idx == -1 ? null : thisClassName.substring(0, idx);
     }
 
+    public static int crc32(byte[] data, int off, int len) {
+        CRC32 crc = new CRC32();
+        crc.update(data, off, len);
+        return (int) crc.getValue();
+    }
 }
