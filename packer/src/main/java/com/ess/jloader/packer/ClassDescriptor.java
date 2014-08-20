@@ -139,6 +139,8 @@ public class ClassDescriptor {
     }
 
     public void pack(CompressionContext ctx) throws IOException {
+        assert plainData == null;
+
         plainData = new BitOutputStream(new ByteArrayOutputStream());
         forCompressionDataArray = new OpenByteOutputStream();
 
