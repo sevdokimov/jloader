@@ -650,7 +650,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                     }
                 }
 
-                prevCodePos += x;
+                prevCodePos += x + 1;
                 buffer.putShort(prevCodePos); // first code position always 0
                 buffer.skip(2);
             }
