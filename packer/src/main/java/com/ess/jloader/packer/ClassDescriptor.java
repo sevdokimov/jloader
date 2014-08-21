@@ -222,13 +222,13 @@ public class ClassDescriptor {
             throw new RuntimeException();
         }
 
-        Utils.writeSmallShort3(plainData, constCount);
+        PackUtils.writeSmallShort3(plainData, constCount);
 
         plainData.writeLimitedShort(allUtf.size(), constCount);
-        Utils.writeSmallShort3(plainData, constNameAndType.size());
-        Utils.writeSmallShort3(plainData, constMethods.size());
-        Utils.writeSmallShort3(plainData, constInterfaces.size());
-        Utils.writeSmallShort3(plainData, constFields.size());
+        PackUtils.writeSmallShort3(plainData, constNameAndType.size());
+        PackUtils.writeSmallShort3(plainData, constMethods.size());
+        PackUtils.writeSmallShort3(plainData, constInterfaces.size());
+        PackUtils.writeSmallShort3(plainData, constFields.size());
 
         plainData.writeLimitedShort(constClasses.size(), utfInterval.getCount());
 
@@ -270,7 +270,7 @@ public class ClassDescriptor {
         for (String s : generatedStr) {
             skipUtfConst(buffer, s);
         }
-        Utils.writeSmallShort3(plainData, buffer.position() - generatedStrPosition);
+        PackUtils.writeSmallShort3(plainData, buffer.position() - generatedStrPosition);
 
         for (String utf : Utils.COMMON_UTF) {
             plainData.writeBit(generatedStr.contains(utf));
@@ -332,7 +332,7 @@ public class ClassDescriptor {
 
     private void processFields(ByteBuffer buffer, DataOutputStream out) throws IOException {
         int fieldCount = buffer.getShort() & 0xFFFF;
-        Utils.writeSmallShort3(out, fieldCount);
+        PackUtils.writeSmallShort3(out, fieldCount);
 
         for (int i = 0; i < fieldCount; i++) {
             short accessFlags = buffer.getShort();
@@ -351,7 +351,7 @@ public class ClassDescriptor {
 
             int attrInfo = AttributeUtils.extractKnownAttributes(attributes, knownAttributes, "Signature", "ConstantValue");
 
-            Utils.writeSmallShort3(out, attrInfo);
+            PackUtils.writeSmallShort3(out, attrInfo);
 
             for (Attribute attribute : knownAttributes) {
                 attribute.writeTo(out, plainData, this);
@@ -366,7 +366,7 @@ public class ClassDescriptor {
 
     private void processMethods(ByteBuffer buffer, DataOutputStream out) throws IOException {
         int methodCount = buffer.getShort() & 0xFFFF;
-        Utils.writeSmallShort3(out, methodCount);
+        PackUtils.writeSmallShort3(out, methodCount);
 
         for (int i = 0; i < methodCount; i++) {
             int accessFlags = buffer.getShort();
@@ -386,7 +386,7 @@ public class ClassDescriptor {
 
             int attrInfo = AttributeUtils.extractKnownAttributes(attributes, knownAttributes, "Signature", "Exceptions");
 
-            Utils.writeSmallShort3(out, attrInfo);
+            PackUtils.writeSmallShort3(out, attrInfo);
 
             if (!Modifier.isNative(accessFlags) && !Modifier.isAbstract(accessFlags)) {
                 assert code != null;
@@ -414,7 +414,7 @@ public class ClassDescriptor {
 
         int attrInfo = AttributeUtils.extractKnownAttributes(attributes, knownAttributes, "SourceFile", "InnerClasses", "Signature", "EnclosingMethod");
 
-        Utils.writeSmallShort3(out, attrInfo);
+        PackUtils.writeSmallShort3(out, attrInfo);
 
         for (Attribute attribute : knownAttributes) {
             attribute.writeTo(out, plainData, this);

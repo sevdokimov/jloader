@@ -1,7 +1,5 @@
 package com.ess.jloader.packer;
 
-import sun.text.normalizer.IntTrie;
-
 import java.io.File;
 import java.io.IOException;
 

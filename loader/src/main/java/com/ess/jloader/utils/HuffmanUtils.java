@@ -9,8 +9,6 @@ import java.util.SortedMap;
  */
 public class HuffmanUtils {
 
-    public static final Object END_MARKER = new Object();
-
     public static <T> TreeElement buildHuffmanTree(PriorityQueue<TreeElement> queue) {
         while (queue.size() > 1) {
             TreeElement e1 = queue.poll();

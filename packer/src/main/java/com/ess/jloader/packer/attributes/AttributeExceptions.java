@@ -1,8 +1,8 @@
 package com.ess.jloader.packer.attributes;
 
 import com.ess.jloader.packer.ClassDescriptor;
+import com.ess.jloader.packer.PackUtils;
 import com.ess.jloader.utils.BitOutputStream;
-import com.ess.jloader.utils.Utils;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -43,9 +43,9 @@ public class AttributeExceptions extends Attribute {
         Arrays.sort(m);
 
         for (Integer x : m) {
-            Utils.writeLimitedNumber(out, x, descriptor.getConstClasses().size());
+            PackUtils.writeLimitedNumber(out, x, descriptor.getConstClasses().size());
         }
 
-        Utils.writeLimitedNumber(out, 0, descriptor.getConstClasses().size());
+        PackUtils.writeLimitedNumber(out, 0, descriptor.getConstClasses().size());
     }
 }

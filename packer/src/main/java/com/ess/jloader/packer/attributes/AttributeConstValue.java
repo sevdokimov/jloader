@@ -1,8 +1,8 @@
 package com.ess.jloader.packer.attributes;
 
 import com.ess.jloader.packer.ClassDescriptor;
+import com.ess.jloader.packer.PackUtils;
 import com.ess.jloader.utils.BitOutputStream;
-import com.ess.jloader.utils.Utils;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -26,6 +26,6 @@ public class AttributeConstValue extends Attribute {
 
     @Override
     public void writeTo(DataOutputStream out, BitOutputStream bitOut, ClassDescriptor descriptor) throws IOException {
-        Utils.writeSmallShort3(out, constIndex);
+        PackUtils.writeSmallShort3(out, constIndex);
     }
 }

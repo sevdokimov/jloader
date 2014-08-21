@@ -30,13 +30,6 @@ public class OpenByteOutputStream extends ByteArrayOutputStream {
         return buf;
     }
 
-    public static OpenByteOutputStream wrap(byte[] buffer, int position) {
-        OpenByteOutputStream res = new OpenByteOutputStream(0);
-        res.buf = buffer;
-        res.count = position;
-        return res;
-    }
-
     public void writeTo(ByteBuffer buffer) {
         buffer.put(buf, 0, count);
     }

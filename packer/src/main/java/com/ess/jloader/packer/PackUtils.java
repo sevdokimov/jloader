@@ -4,6 +4,7 @@ import com.ess.jloader.loader.PackClassLoader;
 import com.ess.jloader.packer.consts.AbstractConst;
 import com.ess.jloader.packer.consts.ConstDouble;
 import com.ess.jloader.packer.consts.ConstLong;
+import com.ess.jloader.utils.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -42,6 +43,53 @@ public class PackUtils {
         int position = codeBuffer.position();
         out.write(codeBuffer.array(), position, len);
         codeBuffer.position(position + len);
+    }
+
+    public static void writeLimitedNumber(DataOutput out, int x, int limit) throws IOException {
+        assert x >= 0;
+        assert x <= limit;
+
+        if (Utils.CHECK_LIMITS) {
+            out.writeShort(limit);
+        }
+
+        if (limit == 0) {
+            // data no needed
+        }
+        else if (limit < 256) {
+            out.write(x);
+        }
+        else if (limit < 256*3) {
+            writeSmallShort3(out, x);
+        }
+        else {
+            out.writeShort(x);
+        }
+    }
+
+    public static void writeSmallShort3(DataOutput out, int x) throws IOException {
+        assert x <= 0xFFFF;
+
+        if (Utils.CHECK_LIMITS) {
+            out.writeByte(0x73);
+        }
+
+        if (x <= 251) {
+            out.write(x);
+        }
+        else {
+            int z = x + 4;
+            int d = 251 + (z >> 8);
+
+            if (d < 255) {
+                out.write(d);
+                out.write(z);
+            }
+            else {
+                out.write(255);
+                out.writeShort(x);
+            }
+        }
     }
 
     private static class Package {

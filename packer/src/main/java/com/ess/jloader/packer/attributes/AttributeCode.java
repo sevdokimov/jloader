@@ -5,7 +5,6 @@ import com.ess.jloader.packer.InvalidJarException;
 import com.ess.jloader.packer.PackUtils;
 import com.ess.jloader.utils.BitOutputStream;
 import com.ess.jloader.utils.InsnTypes;
-import com.ess.jloader.utils.Utils;
 import org.objectweb.asm.Opcodes;
 
 import java.io.DataOutputStream;
@@ -63,12 +62,12 @@ public class AttributeCode extends Attribute {
 
     @Override
     public void writeTo(DataOutputStream out, BitOutputStream bitOut, ClassDescriptor descriptor) throws IOException {
-        Utils.writeSmallShort3(out, maxStack);
-        Utils.writeSmallShort3(out, maxLocals);
+        PackUtils.writeSmallShort3(out, maxStack);
+        PackUtils.writeSmallShort3(out, maxLocals);
 
         writeCode(out, descriptor);
 
-        Utils.writeSmallShort3(out, exceptionTable.size());
+        PackUtils.writeSmallShort3(out, exceptionTable.size());
 
         for (ExceptionRecord record : exceptionTable) {
             record.writeTo(out);
@@ -77,7 +76,7 @@ public class AttributeCode extends Attribute {
         List<Attribute> knownAttributes = new ArrayList<Attribute>();
         int attrInfo = AttributeUtils.extractKnownAttributes(attributes, knownAttributes, "LineNumberTable");
 
-        Utils.writeSmallShort3(out, attrInfo);
+        PackUtils.writeSmallShort3(out, attrInfo);
 
         for (Attribute attribute : knownAttributes) {
             attribute.writeTo(out, bitOut, descriptor);
