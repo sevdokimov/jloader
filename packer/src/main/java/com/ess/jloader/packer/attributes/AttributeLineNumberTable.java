@@ -4,6 +4,7 @@ import com.ess.jloader.packer.ClassDescriptor;
 import com.ess.jloader.packer.InvalidJarException;
 import com.ess.jloader.utils.BitOutputStream;
 import com.ess.jloader.utils.Key;
+import com.ess.jloader.utils.Utils;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.LineNumberNode;
@@ -23,6 +24,8 @@ public class AttributeLineNumberTable extends Attribute {
 
     private final Element[] elements;
 
+    private int crc;
+    
     private AttributeCode codeAttr;
 
     public AttributeLineNumberTable(AttrContext ctx, ByteBuffer buffer) {
@@ -31,6 +34,10 @@ public class AttributeLineNumberTable extends Attribute {
         codeAttr = ctx.getProperty(AttributeCode.CODE_ATTR_KEY);
 
         int attrSize = buffer.getInt();
+
+        if (Utils.CHECK_LIMITS) {
+            crc = Utils.crc32(buffer.array(), buffer.position(), attrSize);
+        }
 
         int length = buffer.getShort() & 0xFFFF;
         elements = new Element[length];
@@ -107,6 +114,10 @@ public class AttributeLineNumberTable extends Attribute {
                     bitOut.writeShort(x);
                 }
             }
+        }
+
+        if (Utils.CHECK_LIMITS) {
+            defOut.writeInt(crc);
         }
     }
 
