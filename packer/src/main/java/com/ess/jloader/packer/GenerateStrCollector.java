@@ -66,19 +66,20 @@ public class GenerateStrCollector {
                 res.add("Code");
             }
 
+            if (hasLineNumbers(method)) {
+                res.add("LineNumberTable");
+            }
+//            if (method.localVariables != null && method.localVariables.size() > 0) {
+//                res.add("LocalVariableTable");
+//            }
+
+
             if (method.signature != null) {
                 res.add("Signature");
             }
 
             if (method.exceptions.size() > 0) {
                 res.add("Exceptions");
-            }
-
-            if (hasLineNumbers(method)) {
-                res.add("LineNumberTable");
-            }
-            if (method.localVariables != null && method.localVariables.size() > 0) {
-                res.add("LocalVariableTable");
             }
         }
 
