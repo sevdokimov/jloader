@@ -4,15 +4,14 @@ import com.ess.jloader.loader.PackClassLoader;
 import com.ess.jloader.utils.OpenByteOutputStream;
 import com.ess.jloader.utils.Utils;
 import com.google.common.base.Function;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
 import com.google.common.hash.Hashing;
 import com.google.common.io.ByteStreams;
 import org.apache.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.ClassReader;
 
 import java.io.*;
-import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -106,7 +105,7 @@ public class JarPacker {
         zipOut.closeEntry();
     }
 
-    public void pack(OutputStream output) throws IOException {
+    public void writeResult(@NotNull File resultFile) throws IOException {
         CompressionContext ctx = new CompressionContext(classMap.values());
 
         for (ClassDescriptor classDescriptor : classMap.values()) {
@@ -122,66 +121,62 @@ public class JarPacker {
 //        byte[] dictionary = new byte[0];
         byte[] dictionary = DictionaryCalculator.buildDictionary(packedItems);
 
-        JarOutputStream zipOutputStream;
+        OutputStream out = new FileOutputStream(resultFile);
 
-        if (manifest != null) {
-            zipOutputStream = new JarOutputStream(output, manifest);
-        }
-        else {
-            zipOutputStream = new JarOutputStream(output);
-        }
+        try {
+            JarOutputStream zipOutputStream;
 
-        writeMetadata(zipOutputStream, ctx, dictionary);
-
-        OpenByteOutputStream buff = new OpenByteOutputStream();
-
-        for (Map.Entry<String, JarEntry> entry : resourceEntries.entrySet()) {
-            JarEntry jarEntry = entry.getValue();
-
-            jarEntry.setCompressedSize(-1);
-
-            if (!jarEntry.isDirectory()) {
-                byte[] resourceContent = resourceMap.get(jarEntry.getName());
-                if (resourceContent != null) {
-                    zipOutputStream.putNextEntry(jarEntry);
-                    zipOutputStream.write(resourceContent);
-                    zipOutputStream.closeEntry();
-                }
-                else {
-
-                    String className = Utils.fileNameToClassName(entry.getKey());
-
-                    ClassDescriptor classDescriptor = classMap.get(className);
-                    buff.reset();
-                    classDescriptor.writeTo(buff, dictionary);
-
-                    jarEntry.setMethod(ZipEntry.STORED);
-                    jarEntry.setSize(buff.size());
-                    jarEntry.setCompressedSize(buff.size());
-                    jarEntry.setCrc(Hashing.crc32().hashBytes(buff.getBuffer(), 0, buff.size()).asInt() & 0xFFFFFFFFL);
-
-                    zipOutputStream.putNextEntry(jarEntry);
-                    buff.writeTo(zipOutputStream);
-                    zipOutputStream.closeEntry();
-                }
+            if (manifest != null) {
+                zipOutputStream = new JarOutputStream(out, manifest);
             }
             else {
-                zipOutputStream.putNextEntry(jarEntry);
-                zipOutputStream.closeEntry();
+                zipOutputStream = new JarOutputStream(out);
             }
-        }
 
-        zipOutputStream.close();
-    }
+            writeMetadata(zipOutputStream, ctx, dictionary);
 
-    public void writeResult(File file) throws IOException {
-        OutputStream fileOut = new FileOutputStream(file);
-        try {
-            pack(fileOut);
+            OpenByteOutputStream buff = new OpenByteOutputStream();
+
+            for (Map.Entry<String, JarEntry> entry : resourceEntries.entrySet()) {
+                JarEntry jarEntry = entry.getValue();
+
+                jarEntry.setCompressedSize(-1);
+
+                if (!jarEntry.isDirectory()) {
+                    byte[] resourceContent = resourceMap.get(jarEntry.getName());
+                    if (resourceContent != null) {
+                        zipOutputStream.putNextEntry(jarEntry);
+                        zipOutputStream.write(resourceContent);
+                        zipOutputStream.closeEntry();
+                    }
+                    else {
+
+                        String className = Utils.fileNameToClassName(entry.getKey());
+
+                        ClassDescriptor classDescriptor = classMap.get(className);
+                        buff.reset();
+                        classDescriptor.writeTo(buff, dictionary);
+
+                        jarEntry.setMethod(ZipEntry.STORED);
+                        jarEntry.setSize(buff.size());
+                        jarEntry.setCompressedSize(buff.size());
+                        jarEntry.setCrc(Hashing.crc32().hashBytes(buff.getBuffer(), 0, buff.size()).asInt() & 0xFFFFFFFFL);
+
+                        zipOutputStream.putNextEntry(jarEntry);
+                        buff.writeTo(zipOutputStream);
+                        zipOutputStream.closeEntry();
+                    }
+                }
+                else {
+                    zipOutputStream.putNextEntry(jarEntry);
+                    zipOutputStream.closeEntry();
+                }
+            }
+
+            zipOutputStream.close();
         } finally {
-            fileOut.close();
+            out.close();
         }
-
     }
 
     public static void pack(File src, File dest) throws IOException {
