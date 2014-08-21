@@ -1,6 +1,7 @@
 package com.ess.jloader.packer;
 
 import com.ess.jloader.loader.PackClassLoader;
+import com.ess.jloader.utils.ClassComparator;
 import com.ess.jloader.utils.OpenByteOutputStream;
 import com.ess.jloader.utils.Utils;
 import com.google.common.base.Function;
@@ -176,6 +177,17 @@ public class JarPacker {
             zipOutputStream.close();
         } finally {
             out.close();
+        }
+    }
+
+    public void checkResult(File targetJar) throws IOException {
+        PackClassLoader loader = new PackClassLoader(null, targetJar);
+
+        for (ClassDescriptor descriptor : classMap.values()) {
+            byte[] unpackClass = loader.unpackClass(descriptor.getClassName());
+            assert unpackClass != null;
+
+            ClassComparator.compare(descriptor.getRepackedClass(), unpackClass);
         }
     }
 

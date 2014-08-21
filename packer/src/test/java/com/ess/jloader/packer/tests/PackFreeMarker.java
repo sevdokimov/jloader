@@ -1,9 +1,8 @@
 package com.ess.jloader.packer.tests;
 
-import com.ess.jloader.loader.PackClassLoader;
 import com.ess.jloader.packer.Config;
-import com.ess.jloader.packer.LiteralsCache;
 import com.ess.jloader.packer.JarPacker;
+import com.ess.jloader.packer.LiteralsCache;
 import com.google.common.util.concurrent.AtomicLongMap;
 import org.junit.Test;
 import org.objectweb.asm.ClassReader;
@@ -97,15 +96,7 @@ public class PackFreeMarker {
 
         System.out.printf("Src: %d, Result: %d,  (%d%%)", freeMarkerJar.length(), packedFreeMarker.length(), packedFreeMarker.length() * 100 / freeMarkerJar.length());
 
-        long time = System.currentTimeMillis();
-
-        PackClassLoader packClassLoader = new PackClassLoader(null, packedFreeMarker);
-
-        for (String className : packer.getClassMap().keySet()) {
-            packClassLoader.unpackClass(className);
-        }
-
-        System.out.println("Unpack time: " + (System.currentTimeMillis() - time));
+        packer.checkResult(packedFreeMarker);
     }
 
     public void statFreeMarker() throws IOException {

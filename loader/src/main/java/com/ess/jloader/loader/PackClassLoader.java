@@ -79,35 +79,31 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         }
     }
 
-    public byte[] unpackClass(String jvmClassName) throws ClassNotFoundException {
+    public byte[] unpackClass(String jvmClassName) throws IOException {
         String classFileName = jvmClassName.concat(".class");
 
+        ZipEntry entry = zipFile.getEntry(classFileName);
+        if (entry == null) return null;
+
+        InputStream inputStream = zipFile.getInputStream(entry);
+
         try {
-            ZipEntry entry = zipFile.getEntry(classFileName);
-            if (entry == null) throw new ClassNotFoundException();
+            DataInputStream dataInputStream = new DataInputStream(inputStream);
+            int plainSize = dataInputStream.readUnsignedShort();
+            byte[] plainData = new byte[plainSize];
+            dataInputStream.readFully(plainData);
 
-            InputStream inputStream = zipFile.getInputStream(entry);
+            BitInputStream in = new BitInputStream(plainData, 0, plainSize);
 
-            try {
-                DataInputStream dataInputStream = new DataInputStream(inputStream);
-                int plainSize = dataInputStream.readUnsignedShort();
-                byte[] plainData = new byte[plainSize];
-                dataInputStream.readFully(plainData);
+            Inflater inflater = new Inflater(true);
+            inflater.setDictionary(dictionary);
+            InflaterInputStream defIn = new InflaterInputStream(new BufferedInputStream(inputStream), inflater);
 
-                BitInputStream in = new BitInputStream(plainData, 0, plainSize);
+            Unpacker unpacker = new Unpacker(in, defIn, jvmClassName);
 
-                Inflater inflater = new Inflater(true);
-                inflater.setDictionary(dictionary);
-                InflaterInputStream defIn = new InflaterInputStream(new BufferedInputStream(inputStream), inflater);
-
-                Unpacker unpacker = new Unpacker(in, defIn, jvmClassName);
-
-                return unpacker.unpack();
-            } finally {
-                inputStream.close();
-            }
-        } catch (IOException e) {
-            throw new ClassNotFoundException("", e);
+            return unpacker.unpack();
+        } finally {
+            inputStream.close();
         }
     }
 
@@ -115,7 +111,15 @@ public class PackClassLoader extends ClassLoader implements Closeable {
     protected Class<?> findClass(String name) throws ClassNotFoundException {
         String jvmClassName = name.replace('.', '/');
 
-        byte[] classData = unpackClass(jvmClassName);
+        byte[] classData;
+
+        try {
+            classData = unpackClass(jvmClassName);
+            if (classData == null) throw new ClassNotFoundException();
+        } catch (IOException e) {
+            throw new ClassNotFoundException();
+        }
+
         return defineClass(name, classData, 0, classData.length);
     }
 

@@ -60,6 +60,8 @@ public class ClassDescriptor extends PropertiesHolder {
 
     private final ClassNode classNode;
 
+    private byte[] repackedClass;
+
     public ClassDescriptor(ClassReader classReader) {
         this.classReader = classReader;
 
@@ -204,12 +206,12 @@ public class ClassDescriptor extends PropertiesHolder {
 
         classesInterval = new ConstIndexInterval(1, constClasses.size());
 
-        byte[] classBytes = repack(classReader, constClasses, constFields, constInterfaces, constMethods,
+        repackedClass = repack(classReader, constClasses, constFields, constInterfaces, constMethods,
                 constNameAndType, allUtf);
 
-        ByteBuffer buffer = ByteBuffer.wrap(classBytes);
+        ByteBuffer buffer = ByteBuffer.wrap(repackedClass);
 
-        writeClassSize(plainData, classBytes.length);
+        writeClassSize(plainData, repackedClass.length);
 
         buffer.getInt(); // Skip 0xCAFEBABE
 
@@ -554,6 +556,10 @@ public class ClassDescriptor extends PropertiesHolder {
 
     public ClassNode getClassNode() {
         return classNode;
+    }
+
+    public byte[] getRepackedClass() {
+        return repackedClass;
     }
 
     @Override
