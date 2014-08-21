@@ -23,8 +23,12 @@ public class AttributeLineNumberTable extends Attribute {
 
     private final Element[] elements;
 
-    public AttributeLineNumberTable(ByteBuffer buffer) {
+    private AttributeCode codeAttr;
+
+    public AttributeLineNumberTable(AttrContext ctx, ByteBuffer buffer) {
         super("LineNumberTable");
+
+        codeAttr = ctx.getProperty(AttributeCode.CODE_ATTR_KEY);
 
         int attrSize = buffer.getInt();
 
@@ -35,9 +39,9 @@ public class AttributeLineNumberTable extends Attribute {
 
         for (int i = 0; i < length; i++) {
             elements[i] = new Element(buffer.getShort() & 0xFFFF, buffer.getShort() & 0xFFFF);
-        }
 
-        if (elements[0].codePos != 0) throw new InvalidJarException();
+            if (elements[i].codePos >= codeAttr.getCode().length) throw new InvalidJarException();
+        }
 
         for (int i = 1; i < elements.length; i++) {
             if (elements[i - 1].codePos >= elements[i].codePos) throw new InvalidJarException();
@@ -58,6 +62,12 @@ public class AttributeLineNumberTable extends Attribute {
         }
 
         bitOut.writeBits(elements[0].line, bitCount);
+        if (elements[0].codePos != 0) {
+            bitOut.writeBit(true);
+            bitOut.writeLimitedShort(elements[0].codePos, codeAttr.getCode().length - 1);
+        } else {
+            bitOut.writeBit(false);
+        }
 
         if (elements.length == 1) {
             bitOut.writeBit(true);

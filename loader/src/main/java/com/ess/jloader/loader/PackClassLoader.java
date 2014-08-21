@@ -539,7 +539,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             buffer.skip(2); // the place to store attr count
 
             if ((attrInfo & 1) > 0) {
-                processLineNumbersAttr();
+                processLineNumbersAttr(codeLength);
                 processedAttrCount++;
             }
 
@@ -588,7 +588,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             return res;
         }
 
-        private void processLineNumbersAttr() throws IOException {
+        private void processLineNumbersAttr(int codeLength) throws IOException {
             buffer.putShort(putPredefinedGeneratedString(Utils.PS_LINE_NUMBER_TABLE));
 
             if (maxLineNumberBits == 0) {
@@ -596,6 +596,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             }
 
             int prevLineNumber = in.readBits(maxLineNumberBits);
+            int firstCodePos = 0;
+            if (in.readBoolean()) {
+                firstCodePos = in.readLimitedShort(codeLength - 1);
+            }
 
             buffer.putShort(buffer.pos + 4 + 2 + 2, prevLineNumber);
 
@@ -631,10 +635,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             buffer.putInt(2 + count * 4);
             buffer.putShort(count);
 
-            buffer.putShort(0); // first code position always 0
+            buffer.putShort(firstCodePos); // first code position always 0
             buffer.skip(2);
 
-            int prevCodePos = 0;
+            int prevCodePos = firstCodePos;
             for (int i = 1; i < count; i++) {
                 int x = in.readBits(5);
                 if (x >= 29) {

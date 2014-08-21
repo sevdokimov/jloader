@@ -5,6 +5,7 @@ import com.ess.jloader.packer.InvalidJarException;
 import com.ess.jloader.packer.PackUtils;
 import com.ess.jloader.utils.BitOutputStream;
 import com.ess.jloader.utils.InsnTypes;
+import com.ess.jloader.utils.Key;
 import org.objectweb.asm.Opcodes;
 
 import java.io.DataOutputStream;
@@ -17,6 +18,8 @@ import java.util.List;
  * @author Sergey Evdokimov
  */
 public class AttributeCode extends Attribute {
+
+    public static final Key<AttributeCode> CODE_ATTR_KEY = Key.create("CODE_ATTR_KEY");
 
     private int maxStack;
     private int maxLocals;
@@ -55,7 +58,11 @@ public class AttributeCode extends Attribute {
             exceptionTable.add(r);
         }
 
+        ctx.putProperty(CODE_ATTR_KEY, this);
+
         attributes = AttributeUtils.readAllAttributes(CodeAttributeFactory.INSTANCE, ctx, buffer);
+
+        ctx.removeProperty(CODE_ATTR_KEY);
 
         assert buffer.position() - savedPos == length;
     }
@@ -210,6 +217,23 @@ public class AttributeCode extends Attribute {
         }
 
         out.write(0xFF); // end of code marker.
+    }
+
+
+    public int getMaxStack() {
+        return maxStack;
+    }
+
+    public int getMaxLocals() {
+        return maxLocals;
+    }
+
+    public byte[] getCode() {
+        return code;
+    }
+
+    public List<ExceptionRecord> getExceptionTable() {
+        return exceptionTable;
     }
 
     public static class ExceptionRecord {

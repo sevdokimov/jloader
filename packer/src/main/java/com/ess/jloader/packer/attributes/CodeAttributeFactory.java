@@ -20,7 +20,7 @@ public class CodeAttributeFactory extends AttributeFactory {
     @Override
     public Attribute read(AttrContext ctx, String name, ByteBuffer buffer) {
         if (name.equals("LineNumberTable")) {
-            return new AttributeLineNumberTable(buffer);
+            return new AttributeLineNumberTable(ctx, buffer);
         }
 //        if (name.equals("LocalVariableTable")) {
 //            return new AttributeLocalVariable(ctx, buffer);
