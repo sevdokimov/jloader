@@ -23,7 +23,7 @@ import java.util.zip.DeflaterOutputStream;
 /**
 * @author Sergey Evdokimov
 */
-public class ClassDescriptor {
+public class ClassDescriptor extends PropertiesHolder {
 
     private final ClassReader classReader;
 
@@ -59,8 +59,6 @@ public class ClassDescriptor {
     private final Set<String> generatedStr;
 
     private final ClassNode classNode;
-
-    private final Map<Object, Object> properties = new HashMap<Object, Object>();
 
     public ClassDescriptor(ClassReader classReader) {
         this.classReader = classReader;
@@ -556,10 +554,6 @@ public class ClassDescriptor {
 
     public ClassNode getClassNode() {
         return classNode;
-    }
-
-    public Map<Object, Object> getProperties() {
-        return properties;
     }
 
     @Override

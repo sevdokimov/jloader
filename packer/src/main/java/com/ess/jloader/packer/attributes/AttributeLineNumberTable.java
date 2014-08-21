@@ -3,6 +3,7 @@ package com.ess.jloader.packer.attributes;
 import com.ess.jloader.packer.ClassDescriptor;
 import com.ess.jloader.packer.InvalidJarException;
 import com.ess.jloader.utils.BitOutputStream;
+import com.ess.jloader.utils.Key;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.LineNumberNode;
@@ -18,7 +19,7 @@ import java.util.Iterator;
  */
 public class AttributeLineNumberTable extends Attribute {
 
-    private static final Object LINE_NUMBER_BIT_COUNT_KEY = new Object();
+    private static final Key<Integer> LINE_NUMBER_BIT_COUNT_KEY = Key.create("LINE_NUMBER_BIT_COUNT_KEY");
 
     private final Element[] elements;
 
@@ -47,10 +48,10 @@ public class AttributeLineNumberTable extends Attribute {
 
     @Override
     public void writeTo(DataOutputStream defOut, BitOutputStream bitOut, ClassDescriptor descriptor) throws IOException {
-        Integer bitCount = (Integer) descriptor.getProperties().get(LINE_NUMBER_BIT_COUNT_KEY);
+        Integer bitCount = descriptor.getProperty(LINE_NUMBER_BIT_COUNT_KEY);
         if (bitCount == null) {
             bitCount = evaluateLineNumbersBitCount(descriptor.getClassNode());
-            descriptor.getProperties().put(LINE_NUMBER_BIT_COUNT_KEY, bitCount);
+            descriptor.putProperty(LINE_NUMBER_BIT_COUNT_KEY, bitCount);
 
             bitOut.writeBits(bitCount - 1, 4);
             assert bitCount - 1 < 16;
