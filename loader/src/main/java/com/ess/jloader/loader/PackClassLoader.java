@@ -559,13 +559,17 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 processLocalVarTableAttr(codeLength, maxLocals, localVarAttrInfo > 2);
             }
 
-            int unknownAttrCount = attrInfo >>> 3;
+            if ((attrInfo & 8) > 0) {
+                processStackMapAttr();
+            }
+
+            int unknownAttrCount = attrInfo >>> 4;
 
             for (int j = 0; j < unknownAttrCount; j++) {
                 processAttr();
             }
 
-            buffer.putShort(attrCountPosition, unknownAttrCount + Integer.bitCount(attrInfo & 7));
+            buffer.putShort(attrCountPosition, unknownAttrCount + Integer.bitCount(attrInfo & 15));
 
             buffer.putInt(lengthPosition, buffer.pos - lengthPosition - 4);
         }
@@ -680,6 +684,13 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 buffer.putShort(prevCodePos); // first code position always 0
                 buffer.skip(2);
             }
+        }
+
+        private void processStackMapAttr() throws IOException {
+            buffer.putShort(putPredefinedGeneratedString(Utils.PS_STACK_MAP_TABLE));
+            int attrSize = Utils.readSmallShort3(defDataIn);
+            buffer.putInt(attrSize);
+            buffer.readFully(defDataIn, attrSize);
         }
 
         private void processLocalVarTableAttr(int codeLen, int maxLocals, boolean hasTypeAttribute) throws IOException {

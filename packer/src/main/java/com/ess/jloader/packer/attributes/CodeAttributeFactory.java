@@ -27,6 +27,9 @@ public class CodeAttributeFactory extends AttributeFactory {
         if (name.equals("LocalVariableTypeTable")) {
             return new AttributeLocalVariableType(ctx, buffer);
         }
+        if (name.equals("StackMapTable")) {
+            return new AttributeStackMap(ctx, buffer);
+        }
 
         return new AttributeUnknown(name, buffer);
     }

@@ -66,7 +66,7 @@ public class GenerateStrCollector {
                 res.add("Code");
             }
 
-            if (hasLineNumbers(method)) {
+            if (hasInsnType(method, LineNumberNode.class)) {
                 res.add("LineNumberTable");
             }
             if (method.localVariables != null && method.localVariables.size() > 0) {
@@ -90,7 +90,9 @@ public class GenerateStrCollector {
                     }
                 }
             }
-
+            if (hasInsnType(method, FrameNode.class)) {
+                res.add("StackMapTable");
+            }
 
             if (method.signature != null) {
                 res.add("Signature");
@@ -136,9 +138,10 @@ public class GenerateStrCollector {
         return res;
     }
 
-    private static boolean hasLineNumbers(MethodNode method) {
+    private static boolean hasInsnType(MethodNode method, Class<? extends AbstractInsnNode> insnClass) {
         for (Iterator<AbstractInsnNode> itr = method.instructions.iterator(); itr.hasNext(); ) {
-            if (itr.next() instanceof LineNumberNode) {
+            AbstractInsnNode insnNode = itr.next();
+            if (insnClass.isAssignableFrom(insnNode.getClass())) {
                 return true;
             }
         }

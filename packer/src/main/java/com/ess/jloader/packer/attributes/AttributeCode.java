@@ -83,7 +83,7 @@ public class AttributeCode extends Attribute {
 
         List<Attribute> allAttributes = new ArrayList<Attribute>(attributes);
         List<Attribute> knownAttributes = new ArrayList<Attribute>();
-        int attrInfo = AttributeUtils.extractKnownAttributes(allAttributes, knownAttributes, "LineNumberTable", "LocalVariableTable", "LocalVariableTypeTable");
+        int attrInfo = AttributeUtils.extractKnownAttributes(allAttributes, knownAttributes, "LineNumberTable", "LocalVariableTable", "LocalVariableTypeTable", "StackMapTable");
 
         PackUtils.writeSmallShort3(out, attrInfo);
 
