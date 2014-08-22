@@ -1,7 +1,5 @@
 package com.ess.jloader.utils;
 
-import com.ess.jloader.loader.PackClassLoader;
-
 import java.io.*;
 
 /**
@@ -207,6 +205,10 @@ public class BitOutputStream extends FilterOutputStream implements DataOutput {
 
     public void writeLimitedShort(int value, int limit) throws IOException {
         assert value <= limit;
+
+        if (Utils.CHECK_LIMITS) {
+            writeInt(limit);
+        }
 
         int bitCount = 32 - Integer.numberOfLeadingZeros(limit);
         writeBits(value, bitCount);

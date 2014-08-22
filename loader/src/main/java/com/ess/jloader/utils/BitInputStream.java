@@ -97,6 +97,11 @@ public class BitInputStream extends InputStream implements DataInput {
     }
 
     public int readLimitedShort(int limit) throws IOException {
+        if (Utils.CHECK_LIMITS) {
+            int savedLimit = readInt();
+            assert savedLimit == limit;
+        }
+
         int bitsCount = 32 - Integer.numberOfLeadingZeros(limit);
         return readBits(bitsCount);
     }
