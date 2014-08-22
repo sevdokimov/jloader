@@ -5,7 +5,6 @@ import com.ess.jloader.packer.consts.AbstractConst;
 import com.ess.jloader.packer.consts.ConstDouble;
 import com.ess.jloader.packer.consts.ConstLong;
 import com.ess.jloader.utils.Utils;
-import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.ClassNode;
@@ -16,6 +15,7 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipFile;
 
 /**
  * @author Sergey Evdokimov
@@ -302,4 +302,13 @@ public class PackUtils {
         return res;
     }
 
+    public static boolean isPackedJar(File jar) throws IOException {
+        ZipFile zipFile = new ZipFile(jar);
+
+        try {
+            return zipFile.getEntry(PackClassLoader.METADATA_ENTRY_NAME) != null;
+        } finally {
+            zipFile.close();
+        }
+    }
 }
