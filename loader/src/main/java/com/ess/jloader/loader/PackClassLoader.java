@@ -49,20 +49,27 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             }
 
             int packedStringsCount = inputStream.readInt();
-            byte[][] packedStrings = new byte[packedStringsCount][];
-            for (int i = 0; i < packedStringsCount; i++) {
-                int len = inputStream.readUnsignedShort();
-                packedStrings[i] = new byte[len];
-                inputStream.readFully(packedStrings[i]);
-            }
 
-            // Build Huffman tree
-            PriorityQueue<HuffmanUtils.TreeElement> queue = new PriorityQueue<HuffmanUtils.TreeElement>(packedStringsCount);
-            for (int i = 0; i < packedStringsCount; i++) {
-                int count = Utils.readSmallShort3(inputStream);
-                queue.add(new HuffmanUtils.Leaf(count, packedStrings[i]));
+            if (packedStringsCount > 0) {
+                byte[][] packedStrings = new byte[packedStringsCount][];
+
+                for (int i = 0; i < packedStringsCount; i++) {
+                    int len = inputStream.readUnsignedShort();
+                    packedStrings[i] = new byte[len];
+                    inputStream.readFully(packedStrings[i]);
+                }
+
+                // Build Huffman tree
+                PriorityQueue<HuffmanUtils.TreeElement> queue = new PriorityQueue<HuffmanUtils.TreeElement>(packedStringsCount);
+                for (int i = 0; i < packedStringsCount; i++) {
+                    int count = Utils.readSmallShort3(inputStream);
+                    queue.add(new HuffmanUtils.Leaf(count, packedStrings[i]));
+                }
+                packedStrHuffmanTree = HuffmanUtils.buildHuffmanTree(queue);
             }
-            packedStrHuffmanTree = HuffmanUtils.buildHuffmanTree(queue);
+            else {
+                packedStrHuffmanTree = null;
+            }
 
             int dictionarySize = inputStream.readUnsignedShort();
             dictionary = new byte[dictionarySize];

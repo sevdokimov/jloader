@@ -3,10 +3,7 @@ package com.ess.jloader.utils;
 import com.google.common.collect.Maps;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.PriorityQueue;
+import java.util.*;
 
 /**
  * @author Sergey Evdokimov
@@ -57,7 +54,9 @@ public class HuffmanOutputStream<T> {
     }
 
     public static <T> Map<T, boolean[]> buildPathMap(Map<T, Integer> map) {
-        assert map.size() > 0;
+        if (map.isEmpty()) {
+            return Collections.emptyMap();
+        }
 
         PriorityQueue<HuffmanUtils.TreeElement> queue = new PriorityQueue<HuffmanUtils.TreeElement>();
 
