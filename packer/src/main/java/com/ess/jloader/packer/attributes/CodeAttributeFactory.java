@@ -1,6 +1,5 @@
 package com.ess.jloader.packer.attributes;
 
-import com.ess.jloader.packer.ClassDescriptor;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.ByteBuffer;
@@ -22,9 +21,9 @@ public class CodeAttributeFactory extends AttributeFactory {
         if (name.equals("LineNumberTable")) {
             return new AttributeLineNumberTable(ctx, buffer);
         }
-//        if (name.equals("LocalVariableTable")) {
-//            return new AttributeLocalVariable(ctx, buffer);
-//        }
+        if (name.equals("LocalVariableTable")) {
+            return new AttributeLocalVariable(ctx, buffer);
+        }
 
         return new AttributeUnknown(name, buffer);
     }

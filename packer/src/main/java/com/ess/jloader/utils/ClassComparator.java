@@ -128,6 +128,9 @@ public class ClassComparator {
         if (attrName.equals("Exceptions")) {
             return new ExceptionsAttr(buffer, cr);
         }
+        if (attrName.equals("LocalVariableTable")) {
+            return new LocalVarAttr(buffer);
+        }
 
         return new DefaultAttr(attrName, buffer);
     }
@@ -184,13 +187,46 @@ public class ClassComparator {
     private static class Attr {
         protected final String name;
 
-        private Attr(String name) {
+        private Attr(@NotNull String name) {
             this.name = name;
         }
 
         @Override
         public String toString() {
             return name;
+        }
+
+        @Override
+        public int hashCode() {
+            return name.hashCode();
+        }
+    }
+
+    private static class LocalVarAttr extends Attr {
+
+        private final Set<ByteArrayString> elements = new LinkedHashSet<ByteArrayString>();
+
+        private LocalVarAttr(ByteBuffer buffer) {
+            super("LocalVariableTable");
+
+            int attrSize = buffer.getInt();
+            int length = buffer.getShort();
+
+            for (int i = 0; i < length; i++) {
+                elements.add(new ByteArrayString(PackUtils.readBytes(buffer, 5 * 2)));
+            }
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            LocalVarAttr that = (LocalVarAttr) o;
+
+            if (!elements.equals(that.elements)) return false;
+
+            return true;
         }
     }
 
@@ -223,11 +259,6 @@ public class ClassComparator {
 
             return true;
         }
-
-        @Override
-        public int hashCode() {
-            return ExceptionsAttr.class.hashCode();
-        }
     }
 
     private static class DefaultAttr extends Attr {
@@ -251,11 +282,6 @@ public class ClassComparator {
             if (!Arrays.equals(data, that.data)) return false;
 
             return true;
-        }
-
-        @Override
-        public int hashCode() {
-            return name.hashCode();
         }
     }
 }

@@ -67,6 +67,16 @@ public class PackUtils {
         }
     }
 
+    public static void writeSmallSignedShort(DataOutput out, int x) throws IOException {
+        if (x > 127 || x < -127) {
+            out.write(-128);
+            out.writeShort(x);
+        }
+        else {
+            out.write(x);
+        }
+    }
+
     public static void writeSmallShort3(DataOutput out, int x) throws IOException {
         assert x <= 0xFFFF;
 

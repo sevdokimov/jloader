@@ -69,9 +69,22 @@ public class GenerateStrCollector {
             if (hasLineNumbers(method)) {
                 res.add("LineNumberTable");
             }
-//            if (method.localVariables != null && method.localVariables.size() > 0) {
-//                res.add("LocalVariableTable");
-//            }
+            if (method.localVariables != null && method.localVariables.size() > 0) {
+                res.add("LocalVariableTable");
+
+                String classType = "L" + classNode.name + ';';
+
+                for (LocalVariableNode localVariable : method.localVariables) {
+                    if (localVariable.start.getPrevious() == null
+                        // && localVariable.end == method.codeLength
+                            && localVariable.index == 0
+                            && localVariable.name.equals("this")
+                            && localVariable.desc.equals(classType)) {
+                        res.add("this");
+                        res.add(classType);
+                    }
+                }
+            }
 
 
             if (method.signature != null) {

@@ -164,6 +164,8 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         private int maxLineNumberBits;
 
+        private int classTypeIndex;
+
         public Unpacker(BitInputStream in, InputStream defIn, String className) {
             this.in = in;
             this.defDataIn = new DataInputStream(new BufferedInputStream(defIn));
@@ -554,7 +556,12 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 processedAttrCount++;
             }
 
-            int unknownAttrCount = attrInfo >>> 1;
+            if ((attrInfo & 2) > 0) {
+                processLocalVarTableAttr(codeLength, maxLocals);
+                processedAttrCount++;
+            }
+
+            int unknownAttrCount = attrInfo >>> 2;
 
             for (int j = 0; j < unknownAttrCount; j++) {
                 processAttr();
@@ -674,6 +681,92 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 prevCodePos += x + 1;
                 buffer.putShort(prevCodePos); // first code position always 0
                 buffer.skip(2);
+            }
+        }
+
+        private void processLocalVarTableAttr(int codeLen, int maxLocals) throws IOException {
+            buffer.putShort(putPredefinedGeneratedString(Utils.PS_LOCAL_VARIABLE_TABLE));
+
+            int attrSizePos = buffer.pos;
+
+            int varInfo = defDataIn.read();
+
+            buffer.skip(4 + 2);
+
+            int index = 0;
+
+            if ((varInfo & 1) != 0) {
+                buffer.putShort(0);
+                buffer.putShort(codeLen);
+                buffer.putShort(putPredefinedGeneratedString(Utils.PS_THIS));
+
+                if (classTypeIndex == 0) {
+                    classTypeIndex = putGeneratedStr('L' + className + ';');
+                }
+                buffer.putShort(classTypeIndex);
+                buffer.putShort(0);
+                index = 1;
+            }
+
+            int paramCount = (varInfo >>> 1) & 7;
+            int plainVarCount = varInfo >>> 4;
+
+            int pos = buffer.pos;
+
+            while (true) {
+                int descrIndex = Utils.readLimitedShort(defDataIn, utfInterval.count);
+                if (descrIndex == 0) {
+                    break;
+                }
+
+                buffer.putShort(pos + 2 + 2, utfInterval.readIndexCompact(in));
+                buffer.putShort(pos + 2 + 2 + 2, descrIndex - 1 + utfInterval.firstIndex);
+
+                pos += 2 * 5;
+            }
+
+            for (int i = 0; i < paramCount; i++) {
+                buffer.putShort(0);
+                buffer.putShort(codeLen);
+                buffer.skip(2 + 2);
+                buffer.putShort(index++);
+            }
+
+            for (int i = 0; i < plainVarCount; i++) {
+                int codePos = in.readLimitedShort(codeLen);
+                assert codePos <= codeLen;
+
+                buffer.putShort(codePos);
+                buffer.putShort(codeLen - codePos);
+                buffer.skip(2 + 2);
+                buffer.putShort(index++);
+            }
+
+            while (buffer.pos != pos) {
+                int codePos = in.readLimitedShort(codeLen);
+                assert codePos < codeLen;
+
+                buffer.putShort(codePos);
+
+                int end = Utils.readLimitedShort(defDataIn, codeLen);
+                assert end >= codePos;
+                buffer.putShort(end - codePos);
+
+                buffer.skip(2 + 2);
+
+                buffer.putShort(in.readLimitedShort(maxLocals));
+                index++;
+            }
+
+            int attrSize = buffer.pos - attrSizePos - 4;
+            buffer.putInt(attrSizePos, attrSize);
+            buffer.putShort(attrSizePos + 4, index);
+
+            assert attrSize == 2 + index * 2 * 5;
+
+            if (Utils.CHECK_LIMITS) {
+                assert defDataIn.read() == 125;
+                assert in.read() == 125;
             }
         }
 

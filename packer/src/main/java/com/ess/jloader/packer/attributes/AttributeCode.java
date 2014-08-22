@@ -81,7 +81,7 @@ public class AttributeCode extends Attribute {
         }
 
         List<Attribute> knownAttributes = new ArrayList<Attribute>();
-        int attrInfo = AttributeUtils.extractKnownAttributes(attributes, knownAttributes, "LineNumberTable");
+        int attrInfo = AttributeUtils.extractKnownAttributes(attributes, knownAttributes, "LineNumberTable", "LocalVariableTable");
 
         PackUtils.writeSmallShort3(out, attrInfo);
 

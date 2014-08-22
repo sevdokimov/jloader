@@ -1,7 +1,6 @@
 package com.ess.jloader.utils;
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.zip.CRC32;
@@ -14,7 +13,7 @@ public class Utils {
     public static final boolean CHECK_LIMITS = false;
 
     public static final String[] COMMON_UTF = new String[] {
-            "LocalVariableTable",
+
     };
 
     public static final String[] PREDEFINED_UTF = {
@@ -23,6 +22,8 @@ public class Utils {
             "Signature",
             "ConstantValue",
             "LineNumberTable",
+            "LocalVariableTable",
+            "this",
     };
 
 
@@ -31,6 +32,8 @@ public class Utils {
     public static final int PS_SIGNATURE = 2;
     public static final int PS_CONST_VALUE = 3;
     public static final int PS_LINE_NUMBER_TABLE = 4;
+    public static final int PS_LOCAL_VARIABLE_TABLE = 5;
+    public static final int PS_THIS = 6;
 
     public static final byte[] PREDEFINED_UTF_BYTES;
     public static final int[] PREDEFINED_UTF_BYTE_INDEXES;
@@ -102,9 +105,7 @@ public class Utils {
     public static int readLimitedShort(DataInput in, int limit) throws IOException {
         if (CHECK_LIMITS) {
             int storedLimit = in.readUnsignedShort();
-            if (storedLimit != limit) {
-                throw new RuntimeException();
-            }
+            assert storedLimit == limit;
         }
 
         int res;
