@@ -24,8 +24,6 @@ public class AttributeLineNumberTable extends Attribute {
 
     private final Element[] elements;
 
-    private int crc;
-    
     private AttributeCode codeAttr;
 
     public AttributeLineNumberTable(AttrContext ctx, ByteBuffer buffer) {
@@ -34,10 +32,6 @@ public class AttributeLineNumberTable extends Attribute {
         codeAttr = ctx.getProperty(AttributeCode.CODE_ATTR_KEY);
 
         int attrSize = buffer.getInt();
-
-        if (Utils.CHECK_LIMITS) {
-            crc = Utils.crc32(buffer.array(), buffer.position(), attrSize);
-        }
 
         int length = buffer.getShort() & 0xFFFF;
         elements = new Element[length];
@@ -114,10 +108,6 @@ public class AttributeLineNumberTable extends Attribute {
                     bitOut.writeShort(x);
                 }
             }
-        }
-
-        if (Utils.CHECK_LIMITS) {
-            defOut.writeInt(crc);
         }
     }
 

@@ -663,12 +663,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 buffer.putShort(prevCodePos); // first code position always 0
                 buffer.skip(2);
             }
-
-            if (Utils.CHECK_LIMITS) {
-                int crc = defDataIn.readInt();
-                int len = 2 + count * 4;
-                assert Utils.crc32(buffer.array, buffer.pos - len, len) == crc;
-            }
         }
 
         private void processConstantValueAttr() throws IOException {
