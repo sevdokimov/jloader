@@ -107,9 +107,10 @@ public class GenerateStrCollector {
         }
 
         if (classNode.outerClass != null) {
+            res.add("EnclosingMethod");
+
             String expectedEnclosingClassName = Utils.generateEnclosingClassName(classNode.name);
             if (classNode.outerClass.equals(expectedEnclosingClassName)) {
-                res.add("EnclosingMethod");
                 res.add(expectedEnclosingClassName);
             }
         }

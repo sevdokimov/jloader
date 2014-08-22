@@ -51,6 +51,19 @@ public class ConstIndexInterval {
         out.writeBits(index - firstIndex, bitsCount);
     }
 
+    public void writeIndexCompactNullable(BitOutputStream bitOut, int index) throws IOException {
+        assert index == 0 || (index >= firstIndex && index < firstIndex + count);
+
+        int bitCount = 32 - Integer.numberOfLeadingZeros(count);
+
+        if (index == 0) {
+            bitOut.writeBits(0, bitCount);
+        }
+        else {
+            bitOut.writeBits(index - firstIndex + 1, bitCount);
+        }
+    }
+
     public void writeIndexCompact(DataOutputStream out, int index) throws IOException {
         assert index >= firstIndex && index < firstIndex + count;
 

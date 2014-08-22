@@ -584,10 +584,15 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             buffer.putShort(putGeneratedStr(Utils.C_EnclosingMethod));
             buffer.putInt(4);
 
-            int classNameIndex = putGeneratedStr(Utils.generateEnclosingClassName(className));
-            buffer.putShort(findClassIndexByName(classNameIndex));
+            if (in.readBoolean()) {
+                int classNameIndex = putGeneratedStr(Utils.generateEnclosingClassName(className));
+                buffer.putShort(findClassIndexByName(classNameIndex));
+            }
+            else {
+                buffer.putShort(classesInterval.readIndexCompact(in));
+            }
 
-            buffer.putShort(in.readUnsignedShort());
+            buffer.putShort(nameAndTypeInterval.readIndexCompactNullable(in));
         }
 
         private int findClassIndexByName(int nameIndex) {

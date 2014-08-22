@@ -542,6 +542,10 @@ public class ClassDescriptor extends PropertiesHolder {
         return imethodInterval;
     }
 
+    public ConstIndexInterval getNameAndTypeInterval() {
+        return nameAndTypeInterval;
+    }
+
     public ConstIndexInterval getUtfInterval() {
         return utfInterval;
     }

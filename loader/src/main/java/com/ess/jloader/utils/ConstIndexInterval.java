@@ -25,6 +25,15 @@ public class ConstIndexInterval {
         return in.readBits(32 - Integer.numberOfLeadingZeros(count - 1)) + firstIndex;
     }
 
+    public int readIndexCompactNullable(BitInputStream in) throws IOException {
+        int x = in.readBits(32 - Integer.numberOfLeadingZeros(count));
+        if (x == 0) {
+            return x;
+        }
+
+        return x - 1 + firstIndex;
+    }
+
     public int readIndexCompact(DataInputStream in) throws IOException {
         return Utils.readLimitedShort(in, count - 1) + firstIndex;
     }

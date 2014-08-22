@@ -15,6 +15,7 @@ import java.nio.ByteBuffer;
 public class AttributeEnclosingMethod extends Attribute {
 
     private int methodIndex;
+    private int classIndex;
 
     public AttributeEnclosingMethod(AttrContext ctx, ByteBuffer buffer) {
         super("EnclosingMethod");
@@ -22,17 +23,23 @@ public class AttributeEnclosingMethod extends Attribute {
         int size = buffer.getInt();
         assert size == 4;
 
-        int classIndex = buffer.getShort() & 0xFFFF;
-
-        ConstClass enclosingClass = ctx.getClassDescriptor().getConstClasses().get(classIndex - 1);
-        assert enclosingClass.getType().equals(Utils.generateEnclosingClassName(ctx.getClassDescriptor().getClassName()));
-
+        classIndex = buffer.getShort() & 0xFFFF;
         methodIndex = buffer.getShort() & 0xFFFF;
     }
 
     @Override
     public void writeTo(DataOutputStream defOut, BitOutputStream bitOut, ClassDescriptor descriptor) throws IOException {
-        bitOut.writeShort(methodIndex);
+        ConstClass enclosingClass = descriptor.getConstClasses().get(classIndex - 1);
+
+        if (enclosingClass.getType().equals(Utils.generateEnclosingClassName(descriptor.getClassName()))) {
+            bitOut.writeBit(true);
+        }
+        else {
+            bitOut.writeBit(false);
+            descriptor.getClassesInterval().writeIndexCompact(bitOut, classIndex);
+        }
+
+        descriptor.getNameAndTypeInterval().writeIndexCompactNullable(bitOut, methodIndex);
     }
 
 }
