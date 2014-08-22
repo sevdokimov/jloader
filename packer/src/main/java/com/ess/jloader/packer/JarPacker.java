@@ -106,6 +106,10 @@ public class JarPacker {
         zipOut.closeEntry();
     }
 
+    public boolean hasClasses() {
+        return classMap.size() > 0;
+    }
+
     public void writeResult(@NotNull File resultFile) throws IOException {
         CompressionContext ctx = new CompressionContext(classMap.values());
 
@@ -134,7 +138,9 @@ public class JarPacker {
                 zipOutputStream = new JarOutputStream(out);
             }
 
-            writeMetadata(zipOutputStream, ctx, dictionary);
+            if (hasClasses()) {
+                writeMetadata(zipOutputStream, ctx, dictionary);
+            }
 
             OpenByteOutputStream buff = new OpenByteOutputStream();
 
@@ -181,6 +187,8 @@ public class JarPacker {
     }
 
     public void checkResult(File targetJar) throws IOException {
+        if (!hasClasses()) return;
+
         PackClassLoader loader = new PackClassLoader(null, targetJar);
 
         for (ClassDescriptor descriptor : classMap.values()) {
@@ -195,6 +203,8 @@ public class JarPacker {
         JarPacker packer = new JarPacker(new Config());
         packer.addJar(src);
         packer.writeResult(dest);
+
+        packer.checkResult(dest);
     }
 
     public Map<String, ClassDescriptor> getClassMap() {
