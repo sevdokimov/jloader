@@ -741,9 +741,9 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                         } else {
                             len = 2;
                         }
-                        pos += len;
-
                         defDataIn.readFully(array, pos, len);
+
+                        pos += len;
                         break;
 
                     case InsnTypes.TABL_INSN: {
