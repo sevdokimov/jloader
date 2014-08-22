@@ -13,21 +13,23 @@ import java.nio.ByteBuffer;
  */
 public class AttributeUnknown extends Attribute {
 
-    private final int length;
-
     private final byte[] body;
 
     public AttributeUnknown(String name, ByteBuffer buffer) {
         super(name);
 
-        length = buffer.getInt();
+        int length = buffer.getInt();
         body = PackUtils.readBytes(buffer, length);
     }
 
 
     @Override
     public void writeTo(DataOutputStream out, BitOutputStream bitOut, ClassDescriptor descriptor) throws IOException {
-        out.writeInt(length);
+        out.writeInt(body.length);
         out.write(body);
+    }
+
+    public byte[] getBody() {
+        return body;
     }
 }
