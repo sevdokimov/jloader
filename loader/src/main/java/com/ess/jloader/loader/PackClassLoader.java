@@ -585,11 +585,11 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         private int findClassIndexByName(int nameIndex) {
             int res = 1;
-            while (buffer.getShort(11 + res * 3) != nameIndex) {
+            while (buffer.getShort(4 + 4 + 2 + 1 + res * 3) != nameIndex) {
                 res++;
             }
 
-            return res;
+            return res + 1;
         }
 
         private void processLineNumbersAttr(int codeLength) throws IOException {
