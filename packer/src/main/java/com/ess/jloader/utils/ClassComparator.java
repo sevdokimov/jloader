@@ -1,11 +1,12 @@
 package com.ess.jloader.utils;
 
 import com.ess.jloader.packer.PackUtils;
+import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.ClassReader;
 
+import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -39,7 +40,7 @@ public class ClassComparator {
         targetBuffer = ByteBuffer.wrap(targetClass);
 
         assert sourceClassReader.header == targetClassReader.header;
-        assertArrayEquals(sourceClassReader.header);
+        processBytes(sourceClassReader.header);
 
         cr = sourceClassReader;
         charBuffer = new char[cr.getMaxStringLength()];
@@ -49,7 +50,7 @@ public class ClassComparator {
         processShort(); // super class index
 
         int interfaceCount = processShort();
-        assertArrayEquals(interfaceCount * 2);
+        processBytes(interfaceCount * 2);
 
         int fieldCount = processShort();
         for (int i = 0; i < fieldCount; i++) {
@@ -58,24 +59,54 @@ public class ClassComparator {
             String name = processUtf();
             String descr = processUtf();
 
-            processAttributes();
+            processAttributes(false);
         }
 
         int methodCount = processShort();
         for (int i = 0; i < methodCount; i++) {
-            processShort(); // access flags
+            int accessFlags = processShort(); // access flags
 
             String name = processUtf();
             String descr = processUtf();
 
-            processAttributes();
+            processAttributes(!Modifier.isNative(accessFlags) && !Modifier.isAbstract(accessFlags));
         }
 
-        processAttributes();
+        processAttributes(false);
+
+        assert !sourceBuffer.hasRemaining();
+        assert !targetBuffer.hasRemaining();
     }
 
-    private void processAttributes() {
+    private void processCodeAttribute() {
+        String codeAttrName = processUtf();
+        assert codeAttrName.equals("Code");
+
+        int attrSize = processInt();
+        int savedPos = sourceBuffer.position();
+
+        processShort(); // max stack
+        processShort(); // max locals
+
+        int codeLen = processInt();
+        processBytes(codeLen);
+
+        int exceptionTableLen = processShort();
+        processBytes(exceptionTableLen * 4 * 2);
+
+        processAttributes(false);
+
+        assert savedPos + attrSize == sourceBuffer.position();
+    }
+
+    private void processAttributes(boolean hasCodeAttribute) {
         int attrCount = processShort();
+
+        if (hasCodeAttribute) {
+            attrCount--;
+
+            processCodeAttribute();
+        }
 
         Set<Attr> sourceAttr = new LinkedHashSet<Attr>();
         Set<Attr> targetAttr = new LinkedHashSet<Attr>();
@@ -86,7 +117,7 @@ public class ClassComparator {
         }
 
         for (Attr attr : sourceAttr) {
-            assert targetAttr.contains(attr);
+            assert targetAttr.contains(attr) : attr.name;
         }
     }
 
@@ -98,17 +129,17 @@ public class ClassComparator {
             return new ExceptionsAttr(buffer, cr);
         }
 
-        if (attrName.equals("Code")) {
-            return new CodeAttr(buffer);
-        }
-
-        return new DefaultAttr(buffer);
+        return new DefaultAttr(attrName, buffer);
     }
 
-    private void assertArrayEquals(int len) {
-        for (int i = sourceBuffer.position(), end = sourceBuffer.position() + len; i < end; i++) {
-            assert sourceClass[i] == targetClass[i];
+    private void processBytes(int len) {
+        int sourcePos = sourceBuffer.position();
+        int targetPos = sourceBuffer.position();
+
+        for (int i = 0; i < len; i++) {
+            assert sourceClass[sourcePos + i] == targetClass[targetPos + i];
         }
+
         skip(len);
     }
 
@@ -150,40 +181,24 @@ public class ClassComparator {
         comparator.compare();
     }
 
-    private interface Attr {
+    private static class Attr {
+        protected final String name;
 
-    }
-
-    private class CodeAttr implements Attr {
-        private byte[] data;
-
-        public CodeAttr(ByteBuffer buffer) {
-            int size = buffer.getInt();
-            data = PackUtils.readBytes(buffer, size);
+        private Attr(String name) {
+            this.name = name;
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-
-            CodeAttr that = (CodeAttr) o;
-
-//            if (data.length != that.data.length)) return false;
-
-            return true;
-        }
-
-        @Override
-        public int hashCode() {
-            return data.length;
+        public String toString() {
+            return name;
         }
     }
 
-    private class ExceptionsAttr implements Attr {
+    private class ExceptionsAttr extends Attr {
         private final Set<String> exceptions = new LinkedHashSet<String>();
 
         public ExceptionsAttr(ByteBuffer buffer, ClassReader cr) {
+            super("Exceptions");
             int size = buffer.getInt();
             int exceptionsCount = buffer.getShort() & 0xFFFF;
 
@@ -211,14 +226,15 @@ public class ClassComparator {
 
         @Override
         public int hashCode() {
-            return exceptions.hashCode();
+            return ExceptionsAttr.class.hashCode();
         }
     }
 
-    private static class DefaultAttr implements Attr {
+    private static class DefaultAttr extends Attr {
         private byte[] data;
 
-        public DefaultAttr(ByteBuffer buffer) {
+        public DefaultAttr(@NotNull String name, ByteBuffer buffer) {
+            super(name);
             int size = buffer.getInt();
             data = PackUtils.readBytes(buffer, size);
         }
@@ -230,6 +246,8 @@ public class ClassComparator {
 
             DefaultAttr that = (DefaultAttr) o;
 
+            if (!name.equals(that.name)) return false;
+
             if (!Arrays.equals(data, that.data)) return false;
 
             return true;
@@ -237,7 +255,7 @@ public class ClassComparator {
 
         @Override
         public int hashCode() {
-            return Arrays.hashCode(data);
+            return name.hashCode();
         }
     }
 }

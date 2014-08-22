@@ -54,6 +54,8 @@ public class PerformanceTest {
         long plainExecuteTime = getExecuteTime(plainClassLoader);
 
         System.out.printf("Plain: %d, packed: %d, (res: %d%%)\n", plainExecuteTime, packedExecuteTime, (packedExecuteTime - plainExecuteTime) * 100/plainExecuteTime);
+
+        packer.checkResult(tempFile);
     }
 
     private long getExecuteTime(final ClassLoader loader) throws Exception {
