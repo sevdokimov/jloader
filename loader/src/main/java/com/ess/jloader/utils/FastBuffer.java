@@ -27,7 +27,7 @@ public class FastBuffer {
     }
 
     public void put(byte[] data) {
-        if (data.length < 8) {
+        if (data.length < 16) {
             int p = pos;
             for (int i = 0; i < data.length; i++) {
                 array[p++] = data[i];

@@ -24,6 +24,9 @@ public class CodeAttributeFactory extends AttributeFactory {
         if (name.equals("LocalVariableTable")) {
             return new AttributeLocalVariable(ctx, buffer);
         }
+        if (name.equals("LocalVariableTypeTable")) {
+            return new AttributeLocalVariableType(ctx, buffer);
+        }
 
         return new AttributeUnknown(name, buffer);
     }

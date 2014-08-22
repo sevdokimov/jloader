@@ -6,7 +6,6 @@ import com.ess.jloader.packer.InvalidJarException;
 import com.ess.jloader.packer.PackUtils;
 import com.ess.jloader.utils.BitOutputStream;
 import com.ess.jloader.utils.Utils;
-import com.google.common.collect.ComparisonChain;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -19,7 +18,7 @@ import java.util.Collections;
  */
 public class AttributeLocalVariable extends Attribute {
 
-    private final Element[] elements;
+    private final LocalVarElement[] elements;
 
     private AttributeCode codeAttr;
 
@@ -35,16 +34,10 @@ public class AttributeLocalVariable extends Attribute {
 
         if (length == 0) throw new InvalidJarException();
 
-        elements = new Element[length];
+        elements = new LocalVarElement[length];
 
         for (int i = 0; i < length; i++) {
-            elements[i] = new Element(
-                    ctx.getClassDescriptor(),
-                    buffer.getShort() & 0xFFFF,
-                    buffer.getShort() & 0xFFFF,
-                    buffer.getShort() & 0xFFFF,
-                    buffer.getShort() & 0xFFFF,
-                    buffer.getShort() & 0xFFFF);
+            elements[i] = new LocalVarElement(ctx.getClassDescriptor(), buffer);
         }
 
         Arrays.sort(elements);
@@ -104,7 +97,7 @@ public class AttributeLocalVariable extends Attribute {
         ConstIndexInterval utfInterval = descriptor.getUtfInterval();
 
         for (int j = hasThis; j < elements.length; j++) {
-            Element e = elements[j];
+            LocalVarElement e = elements[j];
 
             utfInterval.writeIndexCompact(bitOut, e.nameIndex);
             PackUtils.writeLimitedNumber(defOut, e.descriptorIndex + 1 - utfInterval.getFirstIndex(), utfInterval.getCount());
@@ -116,7 +109,7 @@ public class AttributeLocalVariable extends Attribute {
         }
 
         for (int j = i; j < elements.length; j++) {
-            Element e = elements[j];
+            LocalVarElement e = elements[j];
 
             bitOut.writeLimitedShort(e.codePos, codeLen);
             assert e.getEnd() <= codeLen;
@@ -130,42 +123,7 @@ public class AttributeLocalVariable extends Attribute {
         }
     }
 
-    private static class Element implements Comparable<Element> {
-        private final ClassDescriptor descriptor;
-
-        public int codePos;
-        public int len;
-        public int nameIndex;
-        public int descriptorIndex;
-        public int index;
-
-        public Element(ClassDescriptor descriptor, int codePos, int len, int nameIndex, int descriptorIndex, int index) {
-            this.descriptor = descriptor;
-
-            this.codePos = codePos;
-            this.len = len;
-            this.nameIndex = nameIndex;
-            this.descriptorIndex = descriptorIndex;
-            this.index = index;
-        }
-
-        @Override
-        public String toString() {
-            return codePos + "-" + getEnd() + " i" + index + "  " + descriptor.getUtfByIndex(nameIndex) + "  " + descriptor.getUtfByIndex(descriptorIndex);
-        }
-
-        public int getEnd() {
-            return codePos + len;
-        }
-
-        @Override
-        public int compareTo(Element o) {
-            return ComparisonChain.start()
-                    .compare(codePos, o.codePos)
-                    .compare(o.len, len)
-                    .compare(index, o.index)
-                    .result();
-        }
+    public LocalVarElement[] getElements() {
+        return elements;
     }
-
 }

@@ -24,6 +24,7 @@ public class Utils {
             "LineNumberTable",
             "LocalVariableTable",
             "this",
+            "LocalVariableTypeTable",
     };
 
 
@@ -34,6 +35,7 @@ public class Utils {
     public static final int PS_LINE_NUMBER_TABLE = 4;
     public static final int PS_LOCAL_VARIABLE_TABLE = 5;
     public static final int PS_THIS = 6;
+    public static final int PS_LOCAL_VARIABLE_TYPE_TABLE = 7;
 
     public static final byte[] PREDEFINED_UTF_BYTES;
     public static final int[] PREDEFINED_UTF_BYTE_INDEXES;

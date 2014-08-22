@@ -548,26 +548,24 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             // Process attributes
             int attrInfo = Utils.readSmallShort3(defDataIn);
             int attrCountPosition = buffer.pos;
-            int processedAttrCount = 0;
             buffer.skip(2); // the place to store attr count
 
             if ((attrInfo & 1) > 0) {
                 processLineNumbersAttr(codeLength);
-                processedAttrCount++;
             }
 
-            if ((attrInfo & 2) > 0) {
-                processLocalVarTableAttr(codeLength, maxLocals);
-                processedAttrCount++;
+            int localVarAttrInfo = attrInfo & (2|4);
+            if (localVarAttrInfo > 0) {
+                processLocalVarTableAttr(codeLength, maxLocals, localVarAttrInfo > 2);
             }
 
-            int unknownAttrCount = attrInfo >>> 2;
+            int unknownAttrCount = attrInfo >>> 3;
 
             for (int j = 0; j < unknownAttrCount; j++) {
                 processAttr();
             }
 
-            buffer.putShort(attrCountPosition, unknownAttrCount + processedAttrCount);
+            buffer.putShort(attrCountPosition, unknownAttrCount + Integer.bitCount(attrInfo & 7));
 
             buffer.putInt(lengthPosition, buffer.pos - lengthPosition - 4);
         }
@@ -684,7 +682,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             }
         }
 
-        private void processLocalVarTableAttr(int codeLen, int maxLocals) throws IOException {
+        private void processLocalVarTableAttr(int codeLen, int maxLocals, boolean hasTypeAttribute) throws IOException {
             buffer.putShort(putPredefinedGeneratedString(Utils.PS_LOCAL_VARIABLE_TABLE));
 
             int attrSizePos = buffer.pos;
@@ -767,6 +765,31 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             if (Utils.CHECK_LIMITS) {
                 assert defDataIn.read() == 125;
                 assert in.read() == 125;
+            }
+
+            if (hasTypeAttribute) {
+                pos = attrSizePos + 4 + 2;
+                buffer.putShort(putPredefinedGeneratedString(Utils.PS_LOCAL_VARIABLE_TYPE_TABLE));
+
+                int pos2 = buffer.pos + 4 + 2;
+
+                int elementCount = 0;
+
+                for (int i = 0; i < index; i++) {
+                    if (in.readBoolean()) {
+                        System.arraycopy(buffer.array, pos, buffer.array, pos2, 10);
+                        buffer.putShort(pos2 + 2*3, utfInterval.readIndexCompact(defDataIn));
+                        pos2 += 10;
+
+                        elementCount++;
+                    }
+
+                    pos += 10;
+                }
+
+                buffer.putInt(pos2 - buffer.pos - 4);
+                buffer.putShort(elementCount);
+                buffer.pos = pos2;
             }
         }
 

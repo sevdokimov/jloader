@@ -129,7 +129,10 @@ public class ClassComparator {
             return new ExceptionsAttr(buffer, cr);
         }
         if (attrName.equals("LocalVariableTable")) {
-            return new LocalVarAttr(buffer);
+            return new LocalVarAttr("LocalVariableTable", buffer);
+        }
+        if (attrName.equals("LocalVariableTypeTable")) {
+            return new LocalVarAttr("LocalVariableTypeTable", buffer);
         }
 
         return new DefaultAttr(attrName, buffer);
@@ -206,8 +209,8 @@ public class ClassComparator {
 
         private final Set<ByteArrayString> elements = new LinkedHashSet<ByteArrayString>();
 
-        private LocalVarAttr(ByteBuffer buffer) {
-            super("LocalVariableTable");
+        private LocalVarAttr(@NotNull String name, ByteBuffer buffer) {
+            super(name);
 
             int attrSize = buffer.getInt();
             int length = buffer.getShort();

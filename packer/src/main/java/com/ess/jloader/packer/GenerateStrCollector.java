@@ -84,6 +84,11 @@ public class GenerateStrCollector {
                         res.add(classType);
                     }
                 }
+                for (LocalVariableNode localVariable : method.localVariables) {
+                    if (localVariable.signature != null) {
+                        res.add("LocalVariableTypeTable");
+                    }
+                }
             }
 
 

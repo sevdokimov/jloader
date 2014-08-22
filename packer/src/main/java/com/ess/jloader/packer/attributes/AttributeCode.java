@@ -12,6 +12,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -28,7 +29,7 @@ public class AttributeCode extends Attribute {
 
     private List<ExceptionRecord> exceptionTable;
 
-    private ArrayList<Attribute> attributes;
+    private final Collection<Attribute> attributes;
 
     public AttributeCode(AttrContext ctx, ByteBuffer buffer) {
         super("Code");
@@ -80,8 +81,9 @@ public class AttributeCode extends Attribute {
             record.writeTo(out);
         }
 
+        List<Attribute> allAttributes = new ArrayList<Attribute>(attributes);
         List<Attribute> knownAttributes = new ArrayList<Attribute>();
-        int attrInfo = AttributeUtils.extractKnownAttributes(attributes, knownAttributes, "LineNumberTable", "LocalVariableTable");
+        int attrInfo = AttributeUtils.extractKnownAttributes(allAttributes, knownAttributes, "LineNumberTable", "LocalVariableTable", "LocalVariableTypeTable");
 
         PackUtils.writeSmallShort3(out, attrInfo);
 
@@ -89,7 +91,7 @@ public class AttributeCode extends Attribute {
             attribute.writeTo(out, bitOut, descriptor);
         }
 
-        for (Attribute attribute : attributes) {
+        for (Attribute attribute : allAttributes) {
             descriptor.getUtfInterval().writeIndexCompact(out, descriptor.getIndexByUtf(attribute.getName()));
             attribute.writeTo(out, bitOut, descriptor);
         }
@@ -234,6 +236,10 @@ public class AttributeCode extends Attribute {
 
     public List<ExceptionRecord> getExceptionTable() {
         return exceptionTable;
+    }
+
+    public Collection<Attribute> getAttributes() {
+        return attributes;
     }
 
     public static class ExceptionRecord {
