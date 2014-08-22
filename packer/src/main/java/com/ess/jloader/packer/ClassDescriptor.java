@@ -146,7 +146,7 @@ public class ClassDescriptor extends PropertiesHolder {
 
         DataOutputStream compressed = new DataOutputStream(forCompressionDataArray);
 
-        Set<String> packedStr = new LinkedHashSet<String>();
+        List<String> packedStr = new ArrayList<String>();
         List<String> notPackedStr = new ArrayList<String>();
 
         constClasses = new ArrayList<ConstClass>();
