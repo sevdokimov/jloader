@@ -9,10 +9,8 @@ import java.io.IOException;
  */
 public class ConstIndexInterval {
 
-    private final int firstIndex;
-    private final int count;
-
-    private final int bitsCount;
+    public final int firstIndex;
+    public final int count;
 
     public ConstIndexInterval(ConstIndexInterval rightNeighbor, int count) {
         this(rightNeighbor.firstIndex - count, count);
@@ -21,20 +19,10 @@ public class ConstIndexInterval {
     public ConstIndexInterval(int firstIndex, int count) {
         this.firstIndex = firstIndex;
         this.count = count;
-
-        bitsCount = 32 - Integer.numberOfLeadingZeros(count - 1);
-    }
-
-    public int getFirstIndex() {
-        return firstIndex;
-    }
-
-    public int getCount() {
-        return count;
     }
 
     public int readIndexCompact(BitInputStream in) throws IOException {
-        return in.readBits(bitsCount) + firstIndex;
+        return in.readBits(32 - Integer.numberOfLeadingZeros(count - 1)) + firstIndex;
     }
 
     public int readIndexCompact(DataInputStream in) throws IOException {

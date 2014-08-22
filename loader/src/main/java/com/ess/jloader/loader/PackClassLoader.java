@@ -184,48 +184,48 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             imethodInterval = new ConstIndexInterval(methodInterval, Utils.readSmallShort3(in));
             fieldInterval = new ConstIndexInterval(imethodInterval, Utils.readSmallShort3(in));
 
-            classesInterval = new ConstIndexInterval(1, in.readLimitedShort(utfInterval.getCount()));
+            classesInterval = new ConstIndexInterval(1, in.readLimitedShort(utfInterval.count));
 
             buffer.put((byte) 7);
-            buffer.putShort(utfInterval.getFirstIndex()); // Class name;
+            buffer.putShort(utfInterval.firstIndex); // Class name;
 
-            for (int i = 1; i < classesInterval.getCount(); i++) {
+            for (int i = 1; i < classesInterval.count; i++) {
                 buffer.put((byte) 7);
 
                 int utfIndex = utfInterval.readIndexCompact(in);
                 buffer.putShort(utfIndex);
             }
 
-            skipConstTableTail(constCount - 1 - classesInterval.getCount()
-                            - fieldInterval.getCount() - imethodInterval.getCount() - methodInterval.getCount()
-                            - nameAndTypeInterval.getCount()
-                            - utfInterval.getCount());
+            skipConstTableTail(constCount - 1 - classesInterval.count
+                            - fieldInterval.count - imethodInterval.count - methodInterval.count
+                            - nameAndTypeInterval.count
+                            - utfInterval.count);
 
-            for (int i = fieldInterval.getCount(); --i >= 0; ) {
+            for (int i = fieldInterval.count; --i >= 0; ) {
                 buffer.put((byte) 9);
                 buffer.putShort((classesInterval.readIndexCompact(in)));
                 buffer.putShort(nameAndTypeInterval.readIndexCompact(in));
             }
 
-            for (int i = imethodInterval.getCount(); --i >= 0; ) {
+            for (int i = imethodInterval.count; --i >= 0; ) {
                 buffer.put((byte) 11);
                 buffer.putShort(classesInterval.readIndexCompact(in));
                 buffer.putShort(nameAndTypeInterval.readIndexCompact(in));
             }
 
-            for (int i = methodInterval.getCount(); --i >= 0; ) {
+            for (int i = methodInterval.count; --i >= 0; ) {
                 buffer.put((byte) 10);
                 buffer.putShort(classesInterval.readIndexCompact(in));
                 buffer.putShort(nameAndTypeInterval.readIndexCompact(in));
             }
 
-            for (int i = nameAndTypeInterval.getCount(); --i >= 0; ) {
+            for (int i = nameAndTypeInterval.count; --i >= 0; ) {
                 buffer.put((byte) 12); // ClassWriter.NAME_TYPE
                 buffer.putShort(utfInterval.readIndexCompact(in));
                 buffer.putShort(utfInterval.readIndexCompact(in));
             }
 
-            generatedStrIndex = utfInterval.getFirstIndex();
+            generatedStrIndex = utfInterval.firstIndex;
             generatedStrDataOutput = new DataOutputStream(new OpenByteOutputStream(buffer.array, buffer.pos));
 
             int generatedStrSize = Utils.readSmallShort3(in);
@@ -238,7 +238,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             extractCommonUtf();
 
             // Packed utf
-            int packedStrCount = in.readLimitedShort(utfInterval.getCount());
+            int packedStrCount = in.readLimitedShort(utfInterval.count);
 
             HuffmanInputStream<byte[]> huffmanInputStream = new HuffmanInputStream<byte[]>(in, packedStrHuffmanTree);
             for (int i = 0; i < packedStrCount; i++) {
@@ -248,7 +248,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 buffer.put(str);
             }
 
-            int notPackedStrCount = in.readLimitedShort(utfInterval.getCount());
+            int notPackedStrCount = in.readLimitedShort(utfInterval.count);
             for (int i = 0; i < notPackedStrCount; i++) {
                 buffer.put((byte) 1);
                 int utfSize = defDataIn.readUnsignedShort();
@@ -679,7 +679,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             buffer.skip(4 + 2);
 
             do {
-                int classIndex = Utils.readLimitedShort(defDataIn, classesInterval.getCount());
+                int classIndex = Utils.readLimitedShort(defDataIn, classesInterval.count);
                 if (classIndex == 0) break;
 
                 buffer.putShort(classIndex);
@@ -782,7 +782,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                         int ref = defDataIn.readUnsignedShort();
 
                         if (opcode == 185 /*Opcodes.INVOKEINTERFACE*/) {
-                            int imethIndex = ref + imethodInterval.getFirstIndex();
+                            int imethIndex = ref + imethodInterval.firstIndex;
                             buffer.putShort(pos, imethIndex);
                             pos += 2;
 
@@ -792,10 +792,10 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                         else {
                             if (opcode == 180 /*Opcodes.GETFIELD*/ || opcode == 181 /*Opcodes.PUTFIELD*/
                                     || opcode == 178 /*Opcodes.GETSTATIC*/ || opcode == 179 /*Opcodes.PUTSTATIC*/) {
-                                ref += fieldInterval.getFirstIndex();
+                                ref += fieldInterval.firstIndex;
                             } else if (opcode == 182/*Opcodes.INVOKEVIRTUAL*/ || opcode == 183/*Opcodes.INVOKESPECIAL*/
                                     || opcode == 184 /*Opcodes.INVOKESTATIC*/) {
-                                ref += methodInterval.getFirstIndex();
+                                ref += methodInterval.firstIndex;
                             }
                             else {
                                 throw new UnsupportedOperationException(String.valueOf(opcode));
