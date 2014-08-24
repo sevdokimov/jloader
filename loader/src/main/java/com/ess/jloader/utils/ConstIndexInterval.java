@@ -34,6 +34,15 @@ public class ConstIndexInterval {
         return x - 1 + firstIndex;
     }
 
+    public int readIndexCompactNullable(DataInputStream defDataIn) throws IOException {
+        int x = Utils.readLimitedShort(defDataIn, count);
+        if (x == 0) {
+            return 0;
+        }
+
+        return x - 1 + firstIndex;
+    }
+
     public int readIndexCompact(DataInputStream in) throws IOException {
         return Utils.readLimitedShort(in, count - 1) + firstIndex;
     }

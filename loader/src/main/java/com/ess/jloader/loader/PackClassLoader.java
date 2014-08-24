@@ -517,9 +517,23 @@ public class PackClassLoader extends ClassLoader implements Closeable {
                 putGeneratedStr(className + '$' + i);
             }
 
-            int length = defDataIn.readInt();
-            buffer.putInt(length);
-            buffer.readFully(defDataIn, length);
+            int length = in.readLimitedShort(classesInterval.count);
+            buffer.putInt(2 + length*4*2);
+            buffer.putShort(length);
+
+            for (int i = 0; i < length; i++) {
+                int innerClassIndex = classesInterval.readIndexCompact(in);
+                buffer.putShort(innerClassIndex);
+
+                int outerClassIndex = classesInterval.readIndexCompactNullable(defDataIn);
+                buffer.putShort(outerClassIndex);
+
+                int innerName = utfInterval.readIndexCompactNullable(in);
+                buffer.putShort(innerName);
+
+                int access = defDataIn.readUnsignedShort();
+                buffer.putShort(access);
+            }
         }
 
         private void processCodeAttr() throws IOException {

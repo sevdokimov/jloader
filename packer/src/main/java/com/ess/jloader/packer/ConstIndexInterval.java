@@ -64,6 +64,17 @@ public class ConstIndexInterval {
         }
     }
 
+    public void writeIndexCompactNullable(DataOutputStream out, int index) throws IOException {
+        assert index == 0 || (index >= firstIndex && index < firstIndex + count);
+
+        if (index == 0) {
+            PackUtils.writeLimitedNumber(out, 0, count);
+        }
+        else {
+            PackUtils.writeLimitedNumber(out, index + 1 - firstIndex, count);
+        }
+    }
+
     public void writeIndexCompact(DataOutputStream out, int index) throws IOException {
         assert index >= firstIndex && index < firstIndex + count;
 
