@@ -45,7 +45,7 @@ public class PackUtils {
         codeBuffer.position(position + len);
     }
 
-    public static void writeLimitedNumber(DataOutput out, int x, int limit) throws IOException {
+    public static void writeLimitedNumber(DataOutputStream out, int x, int limit) throws IOException {
         assert x >= 0;
         assert x <= limit;
 

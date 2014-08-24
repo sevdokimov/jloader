@@ -1,6 +1,7 @@
 package com.ess.jloader.utils;
 
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.zip.CRC32;
@@ -106,7 +107,7 @@ public class Utils {
         }
     }
 
-    public static int readLimitedShort(DataInput in, int limit) throws IOException {
+    public static int readLimitedShort(DataInputStream in, int limit) throws IOException {
         if (CHECK_LIMITS) {
             int storedLimit = in.readUnsignedShort();
             assert storedLimit == limit;

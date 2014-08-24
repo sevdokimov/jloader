@@ -1,10 +1,7 @@
 package com.ess.jloader.packer;
 
-import com.ess.jloader.utils.BitInputStream;
 import com.ess.jloader.utils.BitOutputStream;
-import com.ess.jloader.utils.Utils;
 
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
@@ -35,14 +32,6 @@ public class ConstIndexInterval {
 
     public int getCount() {
         return count;
-    }
-
-    public int readIndexCompact(BitInputStream in) throws IOException {
-        return in.readBits(bitsCount) + firstIndex;
-    }
-
-    public int readIndexCompact(DataInputStream in) throws IOException {
-        return Utils.readLimitedShort(in, count - 1) + firstIndex;
     }
 
     public void writeIndexCompact(BitOutputStream out, int index) throws IOException {
