@@ -65,12 +65,13 @@ public class AttributeLocalVariable extends Attribute {
 
         int i = 0;
         if ("this".equals(descriptor.getUtfByIndex(elements[0].nameIndex))
+                && elements[0].len == codeLen
                 && elements[0].codePos == 0
                 && elements[0].index == 0
                 && ("L" + descriptor.getClassName() + ';').equals(descriptor.getUtfByIndex(elements[0].descriptorIndex))) {
-            if (elements[0].len != codeLen) {
-                throw new InvalidJarException(); // !!!
-            }
+//            if (elements[0].len != codeLen) {
+//                throw new InvalidJarException(); // !!!
+//            }
 
             i = 1;
             hasThis = 1;

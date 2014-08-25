@@ -77,6 +77,7 @@ public class GenerateStrCollector {
                 for (LocalVariableNode localVariable : method.localVariables) {
                     if (localVariable.start.getPrevious() == null
                         // && localVariable.end == method.codeLength
+                            && localVariable.end.getNext() == null
                             && localVariable.index == 0
                             && localVariable.name.equals("this")
                             && localVariable.desc.equals(classType)) {
