@@ -330,4 +330,15 @@ public class PackUtils {
             zipFile.close();
         }
     }
+
+    public static void writeShortInt(DataOutput out, int size) throws IOException {
+        if (size < 0x8000) {
+            out.writeShort(size);
+        }
+        else {
+            out.writeShort(-(size >>> 15));
+            out.writeShort(size & 0x7FFF);
+        }
+    }
+
 }

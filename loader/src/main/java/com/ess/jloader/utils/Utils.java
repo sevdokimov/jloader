@@ -159,4 +159,19 @@ public class Utils {
         crc.update(data, off, len);
         return (int) crc.getValue();
     }
+
+    public static int readShortInt(DataInput in) throws IOException {
+//        int size = in.readShort();
+//        if (size < 0) {
+//            size = ((-((short)size)) << 15) | in.readUnsignedShort();
+//        }
+
+        int size = in.readUnsignedShort();
+        if (size >= 0x8000) {
+            size = ((-((short)size)) << 15) | in.readUnsignedShort();
+        }
+
+        return size;
+    }
+
 }

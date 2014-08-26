@@ -1,8 +1,10 @@
 package com.ess.jloader.packer.tests;
 
+import com.ess.jloader.packer.PackUtils;
 import com.ess.jloader.utils.BitOutputStream;
 import com.ess.jloader.utils.BitInputStream;
 import com.ess.jloader.utils.OpenByteOutputStream;
+import com.ess.jloader.utils.Utils;
 import com.google.common.base.Throwables;
 import com.google.common.primitives.Bytes;
 import org.junit.Before;
@@ -116,6 +118,23 @@ public class BitStreamTest {
 
         for (int x : data) {
             int read = in.readSmall_0_3_8_16();
+            assert read == x;
+        }
+    }
+
+    @Test
+    public void testReadClassSize() throws IOException {
+        int[] data = {0, 12, 4000, 32000, 50000, 1000000};
+        TestBitOutputStream out = new TestBitOutputStream();
+
+        for (int x : data) {
+            PackUtils.writeShortInt(out, x);
+        }
+
+        BitInputStream in = out.toInputStream();
+
+        for (int x : data) {
+            int read = Utils.readShortInt(in);
             assert read == x;
         }
     }

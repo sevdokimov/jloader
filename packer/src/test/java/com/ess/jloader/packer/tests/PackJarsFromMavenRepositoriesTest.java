@@ -27,6 +27,11 @@ public class PackJarsFromMavenRepositoriesTest {
         doTest("freemarker/core/Assignment.class");
     }
 
+    @Test
+    public void packGroovyAll() throws IOException, ClassNotFoundException {
+        doTest("org/codehaus/groovy/transform/stc/Receiver.class");
+    }
+
     private void doTest(String marker) throws IOException {
         File sourceJar = TestUtils.getJarByMarker(marker);
 

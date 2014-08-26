@@ -73,16 +73,6 @@ public class ClassDescriptor extends PropertiesHolder {
         generatedStr = GenerateStrCollector.collectGeneratedStr(classReader, consts);
     }
 
-    private void writeClassSize(BitOutputStream out, int size) throws IOException {
-        if (size < 0x8000) {
-            out.writeShort(size);
-        }
-        else {
-            out.writeShort(-(size >>> 15));
-            out.writeShort(size & 0x7FFF);
-        }
-    }
-
     public Set<String> getGeneratedStr() {
         return generatedStr;
     }
@@ -205,8 +195,8 @@ public class ClassDescriptor extends PropertiesHolder {
                 constNameAndType, allUtf);
 
         ByteBuffer buffer = ByteBuffer.wrap(repackedClass);
-
-        writeClassSize(plainData, repackedClass.length);
+        System.out.println(repackedClass.length);
+        PackUtils.writeShortInt(plainData, repackedClass.length);
 
         buffer.getInt(); // Skip 0xCAFEBABE
 
@@ -434,9 +424,8 @@ public class ClassDescriptor extends PropertiesHolder {
 
     public void writeTo(OutputStream out, byte[] dictionary) throws IOException {
         ByteArrayOutputStream plainDataArray = (ByteArrayOutputStream) plainData.getDelegate();
-        if (plainDataArray.size() > 0xFFFF) throw new InvalidJarException();
 
-        new DataOutputStream(out).writeShort(plainDataArray.size());
+        PackUtils.writeShortInt(new DataOutputStream(out), plainDataArray.size());
 
         plainDataArray.writeTo(out);
 

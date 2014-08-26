@@ -96,7 +96,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         try {
             DataInputStream dataInputStream = new DataInputStream(inputStream);
-            int plainSize = dataInputStream.readUnsignedShort();
+            int plainSize = Utils.readShortInt(dataInputStream);
             byte[] plainData = new byte[plainSize];
             dataInputStream.readFully(plainData);
 
@@ -178,7 +178,7 @@ public class PackClassLoader extends ClassLoader implements Closeable {
         }
 
         public byte[] unpack() throws IOException {
-            FastBuffer buffer = new FastBuffer(readClassSize());
+            FastBuffer buffer = new FastBuffer(Utils.readShortInt(in));
             this.buffer = buffer;
 
             // Magic
@@ -318,15 +318,6 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             }
 
             return res;
-        }
-
-        private int readClassSize() throws IOException {
-            int size = in.readShort();
-            if (size < 0) {
-                size = (-size) << 15 | in.readShort();
-            }
-
-            return size;
         }
 
         private void extractCommonUtf() throws IOException {
