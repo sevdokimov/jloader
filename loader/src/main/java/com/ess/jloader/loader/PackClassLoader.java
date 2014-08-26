@@ -106,9 +106,13 @@ public class PackClassLoader extends ClassLoader implements Closeable {
             inflater.setDictionary(dictionary);
             InflaterInputStream defIn = new InflaterInputStream(new BufferedInputStream(inputStream), inflater);
 
-            Unpacker unpacker = new Unpacker(in, defIn, jvmClassName);
+            try {
+                Unpacker unpacker = new Unpacker(in, defIn, jvmClassName);
 
-            return unpacker.unpack();
+                return unpacker.unpack();
+            } finally {
+                inflater.end();
+            }
         } finally {
             inputStream.close();
         }

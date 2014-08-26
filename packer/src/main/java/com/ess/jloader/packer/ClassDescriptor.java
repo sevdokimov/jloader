@@ -446,6 +446,7 @@ public class ClassDescriptor extends PropertiesHolder {
         DeflaterOutputStream defOut = new DeflaterOutputStream(out, deflater);
         forCompressionDataArray.writeTo(defOut);
         defOut.close();
+        deflater.end();
     }
 
     private int skipClassConst(ByteBuffer buffer, String className) {
