@@ -195,7 +195,7 @@ public class ClassDescriptor extends PropertiesHolder {
                 constNameAndType, allUtf);
 
         ByteBuffer buffer = ByteBuffer.wrap(repackedClass);
-        System.out.println(repackedClass.length);
+
         PackUtils.writeShortInt(plainData, repackedClass.length);
 
         buffer.getInt(); // Skip 0xCAFEBABE
