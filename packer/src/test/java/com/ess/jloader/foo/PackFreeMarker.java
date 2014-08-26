@@ -1,9 +1,10 @@
-package com.ess.jloader.packer.tests;
+package com.ess.jloader.foo;
 
 import com.ess.jloader.packer.ClassDescriptor;
 import com.ess.jloader.packer.Config;
 import com.ess.jloader.packer.JarPacker;
 import com.ess.jloader.packer.LiteralsCache;
+import com.ess.jloader.packer.tests.TestUtils;
 import com.google.common.util.concurrent.AtomicLongMap;
 import org.junit.Test;
 import org.objectweb.asm.ClassReader;
