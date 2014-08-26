@@ -32,13 +32,6 @@ public class JarPacker {
 
     private final Map<String, ClassDescriptor> classMap = new LinkedHashMap<String, ClassDescriptor>();
 
-    private final Collection<ClassReader> classReaders = Collections2.transform(classMap.values(), new Function<ClassDescriptor, ClassReader>() {
-        @Override
-        public ClassReader apply(ClassDescriptor classDescriptor) {
-            return classDescriptor.getClassReader();
-        }
-    });
-
     private final Map<String, byte[]> resourceMap = new LinkedHashMap<String, byte[]>();
 
     private final Map<String, JarEntry> resourceEntries = new LinkedHashMap<String, JarEntry>();
@@ -209,10 +202,6 @@ public class JarPacker {
 
     public Map<String, ClassDescriptor> getClassMap() {
         return classMap;
-    }
-
-    public Collection<ClassReader> getClassReaders() {
-        return classReaders;
     }
 
 }

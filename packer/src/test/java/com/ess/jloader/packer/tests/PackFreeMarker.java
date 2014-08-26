@@ -1,5 +1,6 @@
 package com.ess.jloader.packer.tests;
 
+import com.ess.jloader.packer.ClassDescriptor;
 import com.ess.jloader.packer.Config;
 import com.ess.jloader.packer.JarPacker;
 import com.ess.jloader.packer.LiteralsCache;
@@ -17,8 +18,6 @@ import java.util.zip.GZIPOutputStream;
 public class PackFreeMarker {
 
     private void printStats(JarPacker packer) throws IOException {
-        Collection<ClassReader> classes = packer.getClassReaders();
-
         System.out.println("Strings in literal cache: " + new LiteralsCache(packer.getClassMap().values()).getStringsMap().size());
 
         AtomicLongMap<String> map = AtomicLongMap.create();
@@ -33,7 +32,8 @@ public class PackFreeMarker {
         GZIPOutputStream codeStream = new GZIPOutputStream(codeArray);
 
 
-        for (ClassReader aClass : classes) {
+        for (ClassDescriptor cd : packer.getClassMap().values()) {
+            ClassReader aClass = cd.getClassReader();
             totalSize += aClass.b.length;
 
             byte[] copyB = aClass.b.clone();
@@ -68,7 +68,7 @@ public class PackFreeMarker {
         codeStream.finish();
         utfStream.finish();
 
-        System.out.printf("Class count: %d (%d bytes)\n", classes.size(), totalSize);
+        System.out.printf("Class count: %d (%d bytes)\n", packer.getClassMap().size(), totalSize);
         System.out.printf("UTF count: %d (%d bytes, %d%%), distinctSize: %d\n", map.size(), utfSize, utfSize * 100 / totalSize, utfDistinctSize);
 
         System.out.printf("Code packed: %d , Utf packed: %d, Sum: %d\n", codeArray.size(), utfArray.size(), codeArray.size() + utfArray.size());
