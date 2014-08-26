@@ -71,7 +71,7 @@ public class FastBuffer {
     }
 
     public int getShort(int pos) {
-        return (array[pos] & 0xFF << 8) + (array[pos + 1] & 0xFF);
+        return ((array[pos] & 0xFF) << 8) | (array[pos + 1] & 0xFF);
     }
 
     public void readFully(DataInputStream in, int len) throws IOException {
