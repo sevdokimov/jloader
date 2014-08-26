@@ -4,16 +4,12 @@ import com.ess.jloader.packer.ClassDescriptor;
 import com.ess.jloader.packer.InvalidJarException;
 import com.ess.jloader.utils.BitOutputStream;
 import com.ess.jloader.utils.Key;
-import com.ess.jloader.utils.Utils;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.LineNumberNode;
-import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.*;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Sergey Evdokimov
@@ -55,7 +51,7 @@ public class AttributeLineNumberTable extends Attribute {
     public void writeTo(DataOutputStream defOut, BitOutputStream bitOut, ClassDescriptor descriptor) throws IOException {
         Integer bitCount = descriptor.getProperty(LINE_NUMBER_BIT_COUNT_KEY);
         if (bitCount == null) {
-            bitCount = evaluateLineNumbersBitCount(descriptor.getClassNode());
+            bitCount = evaluateLineNumbersBitCount(descriptor.getClassReader());
             descriptor.putProperty(LINE_NUMBER_BIT_COUNT_KEY, bitCount);
 
             bitOut.writeBits(bitCount - 1, 4);
@@ -111,25 +107,26 @@ public class AttributeLineNumberTable extends Attribute {
         }
     }
 
-    public static int evaluateLineNumbersBitCount(ClassNode classNode) {
-        int maxLineNumber = 1; // avoid return 0
+    public static int evaluateLineNumbersBitCount(ClassReader classReader) {
+        final AtomicInteger maxLineNumber = new AtomicInteger(1); // avoid return 0
 
-        for (MethodNode method : classNode.methods) {
-            for (Iterator<AbstractInsnNode> itr = method.instructions.iterator(); itr.hasNext(); ) {
-                AbstractInsnNode insnNode = itr.next();
-
-                if (insnNode instanceof LineNumberNode) {
-                    int lineNumber = ((LineNumberNode) insnNode).line;
-                    if (lineNumber > maxLineNumber) {
-                        maxLineNumber = lineNumber;
+        classReader.accept(new ClassVisitor(Opcodes.ASM5) {
+            @Override
+            public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+                return new MethodVisitor(Opcodes.ASM5) {
+                    @Override
+                    public void visitLineNumber(int line, Label start) {
+                        if (line > maxLineNumber.get()) {
+                            maxLineNumber.set(line);
+                        }
                     }
-                }
+                };
             }
-        }
+        }, 0);
 
-        assert maxLineNumber < 0x10000;
+        assert maxLineNumber.get() < 0x10000;
 
-        return 32 - Integer.numberOfLeadingZeros(maxLineNumber);
+        return 32 - Integer.numberOfLeadingZeros(maxLineNumber.get());
     }
 
     private static class Element {

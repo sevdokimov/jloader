@@ -58,8 +58,6 @@ public class ClassDescriptor extends PropertiesHolder {
 
     private final Set<String> generatedStr;
 
-    private final ClassNode classNode;
-
     private byte[] repackedClass;
 
     public ClassDescriptor(ClassReader classReader) {
@@ -67,15 +65,12 @@ public class ClassDescriptor extends PropertiesHolder {
 
         className = classReader.getClassName();
 
-        classNode = new ClassNode();
-        classReader.accept(classNode, 0);
-
         consts = Resolver.resolveAll(classReader);
         consts.retainAll(Resolver.resolveAll(PackUtils.repack(classReader)));
 
         constCount = PackUtils.getConstPoolSize(consts);
 
-        generatedStr = GenerateStrCollector.collectGeneratedStr(classNode, consts);
+        generatedStr = GenerateStrCollector.collectGeneratedStr(classReader, consts);
     }
 
     private void writeClassSize(BitOutputStream out, int size) throws IOException {
@@ -312,7 +307,7 @@ public class ClassDescriptor extends PropertiesHolder {
     private void processInterfaces(ByteBuffer buffer) throws IOException {
         int interfaceCount = buffer.getShort() & 0xFFFF;
 
-        assert interfaceCount == classNode.interfaces.size();
+        assert interfaceCount == classReader.getInterfaces().length;
 
         plainData.writeSmall_0_3_8_16(interfaceCount);
 
@@ -556,10 +551,6 @@ public class ClassDescriptor extends PropertiesHolder {
 
     public String getClassName() {
         return className;
-    }
-
-    public ClassNode getClassNode() {
-        return classNode;
     }
 
     public byte[] getRepackedClass() {

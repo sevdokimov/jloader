@@ -6,13 +6,14 @@ import com.ess.jloader.packer.consts.ConstDouble;
 import com.ess.jloader.packer.consts.ConstLong;
 import com.ess.jloader.utils.Utils;
 import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.InnerClassNode;
+import org.objectweb.asm.Opcodes;
 
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipFile;
@@ -260,38 +261,46 @@ public class PackUtils {
         return res;
     }
 
-    public static int evaluateAnonymousClassCount(ClassNode cn) {
-        Set<Integer> anonymousIndexes = new HashSet<Integer>();
-        int maxAnonymousClassIndex = 0;
-        for (InnerClassNode innerClass : cn.innerClasses) {
-            if (innerClass.innerName == null) {
-                int dollarIndex = innerClass.name.lastIndexOf('$');
-                if (dollarIndex == cn.name.length() && innerClass.name.startsWith(cn.name)) {
-                    try {
-                        int index = Integer.parseInt(innerClass.name.substring(dollarIndex + 1));
+    public static int evaluateAnonymousClassCount(final ClassReader cr) {
+        final Set<Integer> anonymousIndexes = new HashSet<Integer>();
 
-                        if (index == 0) {
-                            return 0;
+        final String className = cr.getClassName();
+
+        final AtomicInteger maxAnonymousClassIndex = new AtomicInteger();
+
+        cr.accept(new ClassVisitor(Opcodes.ASM5) {
+            @Override
+            public void visitInnerClass(String name, String outerName, String innerName, int access) {
+                if (innerName == null) {
+                    int dollarIndex = name.lastIndexOf('$');
+
+                    if (dollarIndex == className.length() && name.startsWith(className)) {
+                        try {
+                            int index = Integer.parseInt(name.substring(dollarIndex + 1));
+
+                            if (index > maxAnonymousClassIndex.get()) {
+                                maxAnonymousClassIndex.set(index);
+                            }
+                            anonymousIndexes.add(index);
+                        } catch (NumberFormatException ignored) {
+
                         }
-
-                        if (index > maxAnonymousClassIndex) {
-                            maxAnonymousClassIndex = index;
-                        }
-                        anonymousIndexes.add(index);
-                    } catch (NumberFormatException ignored) {
-
                     }
                 }
             }
+        }, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG);
+
+        if (anonymousIndexes.contains(0)) {
+            return 0;
         }
 
-        for (int i = 1; i < maxAnonymousClassIndex; i++) {
+        for (int i = 1; i < maxAnonymousClassIndex.get(); i++) {
             if (!anonymousIndexes.contains(i)) {
                 return 0;
             }
         }
 
-        return maxAnonymousClassIndex;
+        return maxAnonymousClassIndex.get();
     }
 
     public static ClassReader repack(ClassReader classReader) {

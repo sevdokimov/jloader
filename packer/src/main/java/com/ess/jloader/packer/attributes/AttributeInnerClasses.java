@@ -48,7 +48,7 @@ public class AttributeInnerClasses extends Attribute {
 //            }
 //        });
 
-        anonymousClassCount = PackUtils.evaluateAnonymousClassCount(ctx.getClassDescriptor().getClassNode());
+        anonymousClassCount = PackUtils.evaluateAnonymousClassCount(ctx.getClassDescriptor().getClassReader());
     }
 
 //    private static int getAnonymousIndex(String anonymousClassName, String thisClassName) {

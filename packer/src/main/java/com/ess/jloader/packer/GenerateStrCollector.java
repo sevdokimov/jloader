@@ -1,12 +1,12 @@
 package com.ess.jloader.packer;
 
-import com.ess.jloader.packer.attributes.AttributeEnclosingMethod;
 import com.ess.jloader.packer.consts.AbstractConst;
 import com.ess.jloader.packer.consts.ConstUtf;
 import com.ess.jloader.utils.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Attribute;
+import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.*;
 
 import java.lang.reflect.Modifier;
@@ -29,10 +29,10 @@ public class GenerateStrCollector {
         return null;
     }
 
-    public static Set<String> collectGeneratedStr(ClassNode classNode, Collection<AbstractConst> consts) {
+    public static Set<String> collectGeneratedStr(ClassReader classReader, Collection<AbstractConst> consts) {
         Set<String> res = new LinkedHashSet<String>();
 
-        res.add(classNode.name);
+        res.add(classReader.getClassName());
 
         Set<String> allUtfs = new HashSet<String>();
         for (AbstractConst aConst : consts) {
@@ -46,6 +46,9 @@ public class GenerateStrCollector {
                 res.add(s);
             }
         }
+
+        ClassNode classNode = new ClassNode();
+        classReader.accept(classNode, 0);
 
 //        if (classNode.superName.equals("java/lang/Object")) {
 //            res.add("java/lang/Object");
@@ -116,7 +119,7 @@ public class GenerateStrCollector {
         if (classNode.innerClasses.size() > 0) {
             res.add("InnerClasses");
 
-            int anonymousClassCount = PackUtils.evaluateAnonymousClassCount(classNode);
+            int anonymousClassCount = PackUtils.evaluateAnonymousClassCount(classReader);
 
             for (int i = 1; i <= anonymousClassCount; i++) {
                 res.add(classNode.name + '$' + i);
