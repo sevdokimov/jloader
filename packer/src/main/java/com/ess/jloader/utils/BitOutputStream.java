@@ -45,7 +45,8 @@ public class BitOutputStream extends FilterOutputStream implements DataOutput {
         }
     }
 
-    public void writeSmall_0_3_8_16(int x) throws IOException {
+    public void writeSmall_0_3_8_16(int value) throws IOException {
+        int x = value;
         if (x == 0) {
             writeBit(0);
             return;
@@ -69,7 +70,7 @@ public class BitOutputStream extends FilterOutputStream implements DataOutput {
         }
         writeByte(0xFF);
 
-        writeShort(x);
+        writeShort(value);
     }
 
     public void writeSmall2__0_1_4_8(int x) throws IOException {

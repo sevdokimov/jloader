@@ -104,6 +104,23 @@ public class BitStreamTest {
     }
 
     @Test
+    public void testWriteSmall_0_3_8_16() throws IOException {
+        int[] data = {0, 1, 4, 7, 9, 20, 127, 255, 300};
+        TestBitOutputStream out = new TestBitOutputStream();
+
+        for (int x : data) {
+            out.writeSmall_0_3_8_16(x);
+        }
+
+        BitInputStream in = out.toInputStream();
+
+        for (int x : data) {
+            int read = in.readSmall_0_3_8_16();
+            assert read == x;
+        }
+    }
+
+    @Test
     public void testWriteByBytesReadArray() throws IOException {
         TestBitOutputStream out = new TestBitOutputStream();
 

@@ -1,19 +1,13 @@
 package com.ess.jloader.packer.tests;
 
-import com.ess.jloader.packer.ClassDescriptor;
 import com.ess.jloader.packer.Config;
 import com.ess.jloader.packer.JarPacker;
-import com.ess.jloader.packer.LiteralsCache;
-import com.google.common.util.concurrent.AtomicLongMap;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
-import org.junit.runners.JUnit4;
-import org.objectweb.asm.ClassReader;
 
-import java.io.*;
-import java.util.*;
-import java.util.zip.GZIPOutputStream;
+import java.io.File;
+import java.io.IOException;
 
 /**
  * @author Sergey Evdokimov
@@ -22,6 +16,11 @@ public class PackJarsFromMavenRepositoriesTest {
 
     @Rule
     public TestName name = new TestName();
+
+    @Test
+    public void packJRuby() throws IOException, ClassNotFoundException {
+        doTest("META-INF/maven/org.jruby/jrubyparser/pom.xml");
+    }
 
     @Test
     public void packFreeMarker() throws IOException, ClassNotFoundException {
