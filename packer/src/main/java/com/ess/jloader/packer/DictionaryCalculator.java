@@ -17,6 +17,7 @@ import java.util.LinkedHashSet;
 public class DictionaryCalculator {
 
     private static final int W_SIZE = 1024*32;
+    private static final int W_SIZE_MASK = W_SIZE - 1;
 
     private final byte[] window = new byte[W_SIZE];
 
@@ -36,14 +37,14 @@ public class DictionaryCalculator {
 
             int maxLength = 0;
 
-            for (int i = 0; i < W_SIZE; i++) {
+            for (int i = 0; i < window.length; i++) {
                 if (firstB == window[i]) {
                     int dataI = pos;
                     int winI = i;
 
                     do {
                         dataI++;
-                        winI = (winI + 1) & (W_SIZE - 1);
+                        winI = (winI + 1) & W_SIZE_MASK;
                     } while (dataI < end && winI != windowPos && window[winI] == data[dataI]);
 
                     int len = dataI - pos;
@@ -64,7 +65,7 @@ public class DictionaryCalculator {
 
             for (int i = 0; i < maxLength; i++) {
                 window[windowPos] = data[pos + i];
-                windowPos = (windowPos + 1) & (W_SIZE - 1);
+                windowPos = (windowPos + 1) & W_SIZE_MASK;
             }
 
             pos += maxLength;
