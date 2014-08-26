@@ -6,7 +6,10 @@ import java.io.*;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.PriorityQueue;
-import java.util.zip.*;
+import java.util.zip.Inflater;
+import java.util.zip.InflaterInputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 /**
  * @author Sergey Evdokimov
@@ -102,19 +105,23 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
             BitInputStream in = new BitInputStream(plainData, 0, plainSize);
 
-            Inflater inflater = new Inflater(true);
-            inflater.setDictionary(dictionary);
-            InflaterInputStream defIn = new InflaterInputStream(new BufferedInputStream(inputStream), inflater);
-
-            try {
-                Unpacker unpacker = new Unpacker(in, defIn, jvmClassName);
-
-                return unpacker.unpack();
-            } finally {
-                inflater.end();
-            }
+            return unpackClass(in, new BufferedInputStream(inputStream), jvmClassName);
         } finally {
             inputStream.close();
+        }
+    }
+
+    public byte[] unpackClass(BitInputStream in, InputStream dataIn, String jvmClassName) throws IOException {
+        Inflater inflater = new Inflater(true);
+        inflater.setDictionary(dictionary);
+        InflaterInputStream defIn = new InflaterInputStream(dataIn, inflater);
+
+        try {
+            Unpacker unpacker = new Unpacker(in, defIn, jvmClassName);
+
+            return unpacker.unpack();
+        } finally {
+            inflater.end();
         }
     }
 

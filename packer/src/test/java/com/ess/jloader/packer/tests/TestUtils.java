@@ -1,6 +1,7 @@
 package com.ess.jloader.packer.tests;
 
 import com.ess.jloader.loader.PackClassLoader;
+import com.ess.jloader.utils.Utils;
 import com.google.common.collect.Ordering;
 
 import java.io.File;
@@ -13,16 +14,7 @@ import java.util.*;
 public class TestUtils {
 
     public static File getJarByMarker(String marker) {
-        String path = Thread.currentThread().getContextClassLoader().getResource(marker).getPath();
-        int idx = path.lastIndexOf("!/");
-        assert idx > 0;
-
-        path = path.substring(0, idx);
-        if (path.startsWith("file:")) {
-            path = path.substring("file:".length());
-        }
-
-        return new File(path);
+        return Utils.getJarByMarker(Thread.currentThread().getContextClassLoader(), marker);
     }
 
     public static File createTmpPackFile(String prefix) {

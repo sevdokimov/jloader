@@ -1,9 +1,6 @@
 package com.ess.jloader.utils;
 
-import java.io.DataInput;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.zip.CRC32;
 
 /**
@@ -172,6 +169,19 @@ public class Utils {
         }
 
         return size;
+    }
+
+    public static File getJarByMarker(ClassLoader classLoader, String marker) {
+        String path = classLoader.getResource(marker).getPath();
+        int idx = path.lastIndexOf("!/");
+        assert idx > 0;
+
+        path = path.substring(0, idx);
+        if (path.startsWith("file:")) {
+            path = path.substring("file:".length());
+        }
+
+        return new File(path);
     }
 
 }
