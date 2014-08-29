@@ -1,5 +1,6 @@
-package com.ess.jloader.packer;
+package com.ess.jloader.packer.dictionary;
 
+import com.ess.jloader.packer.CountMap;
 import com.ess.jloader.utils.ByteArrayString;
 import com.ess.jloader.utils.OpenByteOutputStream;
 import com.google.common.base.Throwables;

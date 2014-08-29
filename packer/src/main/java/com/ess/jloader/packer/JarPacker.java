@@ -1,6 +1,7 @@
 package com.ess.jloader.packer;
 
 import com.ess.jloader.loader.PackClassLoader;
+import com.ess.jloader.packer.dictionary.DictionaryCalculator;
 import com.ess.jloader.utils.ClassComparator;
 import com.ess.jloader.utils.OpenByteOutputStream;
 import com.ess.jloader.utils.Utils;
