@@ -1,12 +1,16 @@
 package com.ess.jloader.packer;
 
-import com.google.common.base.Predicate;
-import org.apache.commons.cli.*;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.maven.shared.utils.io.DirectoryScanner;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Sergey Evdokimov
@@ -14,6 +18,9 @@ import java.util.*;
 public class Main {
 
     private static final Options options = new Options()
+            .addOption("t", "target", true, "Target file.")
+            .addOption("rm", "removeSource", false, "Remove source files after packaging.")
+            .addOption("d", "directory", true, "Base directory.")
             .addOption("e", "exclude", true, "Exclude files from transformation.");
 
     public static void main(String[] args) throws IOException {
@@ -29,87 +36,103 @@ public class Main {
         String[] freeArgs = commandLine.getArgs();
         if (freeArgs.length == 0) {
             System.out.println("Usages:\n" +
-                    "java -jar packer.jar result.jar source1.jar source2.jar ...\n" +
-                    "java -jar transformedArchive.jar\n" +
-                    "java -jar directoryToTransform");
+                    "java -jar packer.jar -r result.jar source1.jar source2.jar ...\n");
             return;
         }
 
-        if (freeArgs.length > 1) {
-            File result = new File(freeArgs[0]);
+        DirectoryScanner sc = new DirectoryScanner();
+        sc.setIncludes(freeArgs);
+
+        String[] excludes = commandLine.getOptionValues('e');
+        if (excludes != null && excludes.length > 0) {
+            sc.setExcludes(excludes);
+        }
+
+        String basedir = commandLine.getOptionValue('d');
+        if (basedir == null) {
+            basedir = new File("").getAbsolutePath();
+        }
+
+        sc.setBasedir(basedir);
+
+        sc.scan();
+
+        String resultPath = commandLine.getOptionValue('t');
+
+        if (resultPath == null) {
+            for (String path : sc.getIncludedFiles()) {
+                File file = new File(sc.getBasedir(), path);
+                if (file.isFile()) {
+                    transformFile(file);
+                }
+            }
+        }
+        else {
+            File resultFile = new File(resultPath);
+            if (!resultFile.isAbsolute()) {
+                resultFile = new File(sc.getBasedir(), resultPath);
+            }
+            if (resultFile.exists()) {
+                System.out.println("Target file already exists: " + resultFile);
+                return;
+            }
 
             JarPacker packer = new JarPacker(new Config());
 
-            for (int i = 1; i < freeArgs.length; i++) {
-                File jarFile = new File(freeArgs[i]);
+            long sourceSize = 0;
 
-                if (!jarFile.isFile()) {
-                    System.out.println("Failed to read source jar file: " + jarFile);
-                    return;
+            List<File> processedFile = new ArrayList<File>();
+
+            for (String path : sc.getIncludedFiles()) {
+                File file = new File(sc.getBasedir(), path);
+                if (file.isFile()) {
+                    System.out.println("Reading jar: " + path);
+                    packer.addJar(file);
+
+                    sourceSize += file.length();
+                    processedFile.add(file);
                 }
-
-                packer.addJar(jarFile);
             }
 
-            packer.writeResult(result);
+            System.out.println("Creation " + resultFile);
+
+            packer.writeResult(resultFile);
+
+            System.out.printf("Done (%d%%)\n", resultFile.length() * 100 / sourceSize);
+
+            if (commandLine.hasOption("rm")) {
+                System.out.println("Deleting source files... ");
+                for (File file : processedFile) {
+                    boolean deleted = file.delete();
+                    if (!deleted) {
+                        System.out.println("Failed to delete " + file);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void transformFile(@NotNull File file) throws IOException {
+        System.out.printf("Packing %s ...", file.getPath());
+
+        if (PackUtils.isPackedJar(file)) {
+            System.out.println(" already packed");
             return;
         }
 
-        File file = new File(freeArgs[0]);
+        long size = file.length();
 
-        if (!file.exists()) {
-            System.out.printf("File %s is not exists.", file);
+        JarPacker packer = new JarPacker(new Config());
+        packer.addJar(file);
+        if (packer.hasClasses()) {
+            packer.writeResult(file);
+
+            packer.checkResult(file);
+
+            System.out.printf(" done (%d%%)\n", file.length() * 100 / size);
         }
-
-        final String[] excludes = commandLine.getOptionValues('e');
-
-        transform(file, new Predicate<File>() {
-            Set<String> excludedFiles = new HashSet<String>(excludes == null ? Collections.<String>emptyList() : Arrays.<String>asList(excludes));
-            @Override
-            public boolean apply(File file) {
-                return excludedFiles.contains(file.getName());
-            }
-        });
-    }
-
-    private static void transform(@NotNull File file, Predicate<File> excludeFiles) throws IOException {
-        if (file.isFile()) {
-            if (file.getName().endsWith(".jar")) {
-                if (excludeFiles.apply(file)) {
-                    System.out.println("Skip " + file);
-                    return;
-                }
-
-                System.out.printf("Packing %s ...", file.getPath());
-
-                if (PackUtils.isPackedJar(file)) {
-                    System.out.println(" already packed");
-                    return;
-                }
-
-                long size = file.length();
-
-                JarPacker packer = new JarPacker(new Config());
-                packer.addJar(file);
-                if (packer.hasClasses()) {
-                    packer.writeResult(file);
-
-                    packer.checkResult(file);
-
-                    System.out.printf(" done (%d%%)\n", file.length() * 100 / size);
-                }
-                else {
-                    System.out.println(" has no classes");
-                }
-            }
-        }
-        else if (file.isDirectory()) {
-            File[] listFiles = file.listFiles();
-            if (listFiles != null) {
-                for (File f : listFiles) {
-                    transform(f, excludeFiles);
-                }
-            }
+        else {
+            System.out.println(" has no classes");
         }
     }
 
