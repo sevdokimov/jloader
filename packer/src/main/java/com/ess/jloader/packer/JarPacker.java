@@ -13,6 +13,7 @@ import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.ClassReader;
 
 import java.io.*;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -59,9 +60,11 @@ public class JarPacker {
     }
 
     public void addJar(JarInputStream jarInputStream) throws IOException {
-        JarEntry entry = jarInputStream.getNextJarEntry();
-        while (entry != null) {
+        JarEntry entry;
+        while ((entry = jarInputStream.getNextJarEntry()) != null) {
             String fileName = entry.getName();
+
+            if (fileName.equals("META-INF/MANIFEST.MF")) continue;
 
             if (!entry.isDirectory()) {
                 if (fileName.endsWith(".class")) {
@@ -69,16 +72,23 @@ public class JarPacker {
                     ClassReader classReader = new ClassReader(jarInputStream);
                     if (!classReader.getClassName().equals(className)) throw new InvalidJarException();
 
-                    classMap.put(className, new ClassDescriptor(classReader));
+                    ClassDescriptor existingClass = classMap.put(className, new ClassDescriptor(classReader));
+                    if (existingClass != null) {
+                        if (!Arrays.equals(classReader.b, existingClass.getClassReader().b)) {
+                            throw new InvalidJarException("Duplicated class name: " + className);
+                        }
+                    }
                 }
                 else {
-                    resourceMap.put(fileName, ByteStreams.toByteArray(jarInputStream));
+                    byte[] data = ByteStreams.toByteArray(jarInputStream);
+                    byte[] existingResource = resourceMap.put(fileName, data);
+                    if (existingResource != null && !Arrays.equals(data, existingResource)) {
+                        System.out.println("Duplicated resource: " + fileName);
+                    }
                 }
             }
 
             resourceEntries.put(fileName, entry);
-
-            entry = jarInputStream.getNextJarEntry();
         }
     }
 
@@ -138,6 +148,10 @@ public class JarPacker {
             OpenByteOutputStream buff = new OpenByteOutputStream();
 
             for (Map.Entry<String, JarEntry> entry : resourceEntries.entrySet()) {
+                if (entry.getKey().equals("META-INF/MANIFEST.MF")) {
+                    continue;
+                }
+
                 JarEntry jarEntry = entry.getValue();
 
                 jarEntry.setCompressedSize(-1);
