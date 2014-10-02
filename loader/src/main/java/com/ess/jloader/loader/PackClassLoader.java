@@ -133,9 +133,9 @@ public class PackClassLoader extends ClassLoader implements Closeable {
 
         try {
             classData = unpackClass(jvmClassName);
-            if (classData == null) throw new ClassNotFoundException();
+            if (classData == null) throw new ClassNotFoundException(name);
         } catch (IOException e) {
-            throw new ClassNotFoundException();
+            throw new ClassNotFoundException(name);
         }
 
         return defineClass(name, classData, 0, classData.length);
